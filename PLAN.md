@@ -26,10 +26,16 @@
 - [x] Git repo initialized + pushed to `github.com/realsaraf/plotto` (2026-04-21)
 - [x] Bundle ID locked: `com.getplotto.app` (iOS + Android) (2026-04-21)
 - [x] EAS project ID locked: `21f4e83b-291f-4f05-a738-c0d06986a885` (2026-04-21)
+- [x] Supabase project `plotto` (ref `cwntnjqjtuldceowoxts`) + keys + DB password (2026-04-21)
+- [x] OpenAI API key captured (2026-04-21)
+- [x] Expo/EAS login + project link (`@realsaraf/plotto`) (2026-04-21)
+- [x] Vercel project `plotto-web` imported + env vars + live at https://plotto-web.vercel.app (2026-04-21)
+- [x] Langfuse project `plotto` (US cloud) + API keys (2026-04-21)
+- [x] Sentry org `plotto` + projects `plotto-web` (Next.js) + `plotto-mobile` (React Native) + DSNs (2026-04-21)
+- [x] PostHog project + API key (2026-04-21)
 
 ### 🚧 In Progress
 - [ ] Phase 0 — Verify `pnpm dev:mobile` on simulator
-- [ ] Phase 0 — Playwright-MCP-assisted account setup (Supabase, OpenAI, Vercel, Expo, Langfuse, Sentry, PostHog)
 
 ### ⏳ Remaining (High-Level)
 - [ ] Phase 0 — Accounts, tooling, monorepo scaffold

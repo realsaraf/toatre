@@ -65,6 +65,8 @@ coverage/
 
 # Playwright MCP artifacts (dashboard snapshots)
 .playwright-mcp/
+# Ad-hoc dashboard screenshots dumped at workspace root
+/*.png
 
 # Memory / internal
 /memories/
