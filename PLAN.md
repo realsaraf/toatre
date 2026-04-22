@@ -52,6 +52,12 @@
 - [x] Web expansion foundation — settings/people/link schema migration `0004_settings_people_links.sql` applied to Supabase (2026-04-22)
 - [x] Web expansion foundation — Twilio Verify service + Vercel env vars configured for phone OTP flows (2026-04-22)
 - [x] Web expansion foundation — phone verification API routes added in `apps/web` (2026-04-22)
+- [x] Web expansion — settings page (work schedule, email-reminder toggle UI, phone OTP verify) + `PATCH /api/settings` with Zod (2026-04-22)
+- [x] Web expansion — timeline cards render start + optional end time (2026-04-22)
+- [x] Web expansion — user-facing copy rebranded from "event/meeting" to "plotto" across landing, timeline, capture, sign-in (2026-04-22)
+- [x] Web auth — Google + Apple OAuth buttons on sign-in, server-side error surfacing, hardened `/auth/callback` redirect (same-email accounts auto-link via Supabase) (2026-04-22)
+- [x] Brand — `PlottoMark` SVG component + `app/icon.svg` favicon/apple-touch, wired across landing, app shell, sign-in (2026-04-22)
+- [x] Legal — public `/privacy` and `/tos` pages (force-static) + footer + sign-in legal links for Google OAuth verification (2026-04-22)
 
 ### 🚧 In Progress
 - [ ] Web expansion — settings page, multi-plotto extraction, people graph, action links, reminders
@@ -440,12 +446,15 @@ Each phase has a clear deliverable and demo criterion. Status is updated after e
 - [ ] Capture warnings: when a newly extracted plotto conflicts with the saved work schedule, warn and let the user save anyway
 - [ ] Action links: detect Zoom/Google Meet/Teams/Webex/general URLs and phone numbers from capture details
 - [ ] Plotto cards + detail view: render one-tap buttons for meeting links and tap-to-dial numbers
-- [ ] Reminder settings: add an email reminder toggle and send email 5 minutes before any `hard_block` plotto
+- [x] Reminder settings: email-reminder toggle in settings UI + persisted in DB (2026-04-22)
+- [ ] Reminder delivery: send email 5 minutes before any `hard_block` plotto when toggle is on (cron/job + Resend send path)
 - [x] Phone settings: let users add a mobile number and complete OTP verification from settings (2026-04-22)
 - [ ] Multi-plotto capture: a single capture can create multiple plottos when multiple real-world items are described
 - [x] Timeline cards: show both start and end times when `ends_at` exists (2026-04-22)
 - [ ] People graph: extract named people as first-class records, display them as color pills, and support searching/filtering plottos by person
-- [ ] Rebrand touched web copy from "event/meeting" to "plotto"
+- [x] Rebrand touched web copy from "event/meeting" to "plotto" (2026-04-22)
+- [x] Auth: Google + Apple OAuth with same-email account unification (2026-04-22)
+- [x] Brand icon + /privacy + /tos for Google OAuth verification (2026-04-22)
 
 **Implementation order:**
 1. Settings page: work schedule, email reminder toggle, phone verification UI
