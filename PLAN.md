@@ -43,6 +43,11 @@
 - [x] Phase 7 — Sentry + PostHog + Langfuse wired in web app (2026-04-22)
 - [x] Domain `www.getplotto.com` attached in Vercel + Supabase Auth redirect URLs configured (2026-04-22)
 - [x] Production deploy triggered via `git push` to main (2026-04-22)
+- [x] Fixed client env inlining: `lib/env.ts` uses literal `process.env.NEXT_PUBLIC_*` so Next.js actually inlines values into client bundle (2026-04-22)
+- [x] Fixed `permission denied for table events` — migration `0002_grant_table_privileges.sql` grants CRUD on `users`/`captures`/`events`/`reminders` + default privileges to `authenticated` role (2026-04-22)
+- [x] Custom SMTP via Resend configured in Supabase (hello@getplotto.com, DKIM verified via Squarespace DNS) (2026-04-22)
+- [x] "Confirm email" disabled in Supabase Auth (true one-click magic-link UX for first-time users) (2026-04-22)
+- [x] Magic Link email template rebranded to Plotto tone + styled button (2026-04-22)
 
 ### 🚧 In Progress
 - [ ] Phase 3 — Mobile app (Expo) — timeline + capture + auth
