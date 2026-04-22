@@ -8,7 +8,7 @@
 ## 📊 Status Summary
 
 **Last updated:** 2026-04-22
-**Current phase:** Phase 2 complete (web). Mobile Phase 3 next.
+**Current phase:** Web expansion on top of Phase 6 MVP (settings, people, links, reminders).
 **Platforms:** iOS + Android + Web (dashboard)
 **Build mode:** AI-driven. User directs, agent builds end-to-end.
 
@@ -48,9 +48,13 @@
 - [x] Custom SMTP via Resend configured in Supabase (hello@getplotto.com, DKIM verified via Squarespace DNS) (2026-04-22)
 - [x] "Confirm email" disabled in Supabase Auth (true one-click magic-link UX for first-time users) (2026-04-22)
 - [x] Magic Link email template rebranded to Plotto tone + styled button (2026-04-22)
+- [x] Phase 6 — timeline timezone rendering fixed in browser local time on web (2026-04-22)
+- [x] Web expansion foundation — settings/people/link schema migration `0004_settings_people_links.sql` applied to Supabase (2026-04-22)
+- [x] Web expansion foundation — Twilio Verify service + Vercel env vars configured for phone OTP flows (2026-04-22)
+- [x] Web expansion foundation — phone verification API routes added in `apps/web` (2026-04-22)
 
 ### 🚧 In Progress
-- [ ] Phase 3 — Mobile app (Expo) — timeline + capture + auth
+- [ ] Web expansion — settings page, multi-plotto extraction, people graph, action links, reminders
 - [ ] Verify production web at https://www.getplotto.com end-to-end with real sign-in
 
 ### ⏳ Remaining (High-Level)

@@ -59,6 +59,10 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey(), // mirrors auth.uid()
   email: text('email').notNull(),
   timezone: text('timezone').notNull().default('UTC'),
+  workSchedule: jsonb('work_schedule'),
+  phone: text('phone'),
+  phoneVerified: boolean('phone_verified').notNull().default(false),
+  emailRemindersEnabled: boolean('email_reminders_enabled').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
