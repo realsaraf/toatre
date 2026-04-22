@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   title: 'Plotto — Your life, plotted out.',
   description:
     'A calm timeline that captures every date, reminder, and thing-to-remember.',
-  icons: { icon: '/favicon.ico' },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

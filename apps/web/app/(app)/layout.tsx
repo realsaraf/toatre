@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import PlottoMark from '@/components/plotto-mark';
 import { supabaseServer } from '@/lib/supabase/server';
 import SignOutButton from './sign-out-button';
 
@@ -15,8 +16,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-paper-50 text-ink-900">
       <header className="sticky top-0 z-30 border-b border-ink-100 bg-paper-50/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-          <Link href="/timeline" className="flex items-center gap-2">
-            <div className="h-7 w-2 rounded-full bg-coral-500" aria-hidden />
+          <Link href="/timeline" className="flex items-center gap-3">
+            <PlottoMark className="h-8 w-8 shrink-0" />
             <span className="text-lg font-semibold tracking-tight">Plotto</span>
           </Link>
           <nav className="flex items-center gap-2 text-sm">

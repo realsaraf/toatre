@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PlottoMark from '@/components/plotto-mark';
 import SignInForm from './sign-in-form';
 
 export const metadata = {
@@ -15,8 +16,8 @@ export default async function SignInPage({
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper-50 px-4 py-12">
       <div className="w-full max-w-md">
-        <Link href="/" className="mb-8 flex items-center gap-2 text-ink-900">
-          <div className="h-8 w-2 rounded-full bg-coral-500" aria-hidden />
+        <Link href="/" className="mb-8 flex items-center gap-3 text-ink-900">
+          <PlottoMark className="h-10 w-10 shrink-0" />
           <span className="text-xl font-semibold tracking-tight">Plotto</span>
         </Link>
         <div className="rounded-2xl border border-ink-100 bg-white p-8 shadow-sm">

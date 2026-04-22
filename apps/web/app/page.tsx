@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import PlottoMark from '@/components/plotto-mark';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export const metadata = {
@@ -18,8 +19,8 @@ export default async function LandingPage() {
   return (
     <main className="min-h-screen bg-paper-50 text-ink-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-2 rounded-full bg-coral-500" aria-hidden />
+        <div className="flex items-center gap-3">
+          <PlottoMark className="h-9 w-9 shrink-0" />
           <span className="text-lg font-semibold tracking-tight">Plotto</span>
         </div>
         <nav className="flex items-center gap-3">
