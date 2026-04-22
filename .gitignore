@@ -63,5 +63,8 @@ supabase/.temp/
 # Testing
 coverage/
 
+# Playwright MCP artifacts (dashboard snapshots)
+.playwright-mcp/
+
 # Memory / internal
 /memories/

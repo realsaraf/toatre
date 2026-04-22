@@ -29,7 +29,7 @@
 
 ### 🚧 In Progress
 - [ ] Phase 0 — Verify `pnpm dev:mobile` on simulator
-- [ ] Phase 0 — Playwright-MCP-assisted account setup (Supabase, Anthropic, Vercel, Expo, Langfuse, Sentry, PostHog)
+- [ ] Phase 0 — Playwright-MCP-assisted account setup (Supabase, OpenAI, Vercel, Expo, Langfuse, Sentry, PostHog)
 
 ### ⏳ Remaining (High-Level)
 - [ ] Phase 0 — Accounts, tooling, monorepo scaffold
@@ -82,16 +82,17 @@ Single Supabase backend serves all three. Single Zod schema package owns the eve
           │  Storage (voice recordings)                         │
           │  Realtime (future: household sync)                  │
           │  Edge Functions:                                    │
-          │   ├─ /extract-event   (calls Claude Haiku)          │
-          │   ├─ /clarify-event   (Claude follow-up)            │
+          │   ├─ /extract-event   (calls OpenAI GPT)           │
+          │   ├─ /clarify-event   (GPT follow-up)               │
           │   └─ /resolve-conflicts                             │
           └────────────────────┬────────────────────────────────┘
                                │
                                ▼
                 ┌─────────────────────────────────┐
-                │  ANTHROPIC CLAUDE API           │
-                │  - Haiku 3.5 (primary, 95%)     │
-                │  - Sonnet 4 (escalation, 5%)    │
+                │  OPENAI API                     │
+                │  - GPT-4o-mini (primary, 95%)   │
+                │  - GPT-4o (escalation, 5%)      │
+                │  - Whisper (voice transcription)│
                 │  - All calls logged to Langfuse │
                 └─────────────────────────────────┘
 ```
@@ -116,7 +117,7 @@ Single Supabase backend serves all three. Single Zod schema package owns the eve
 | Local DB (mobile) | **Expo SQLite + Drizzle ORM** | ✅ locked |
 | Backend | **Supabase** (Postgres + Auth + Edge Functions + Storage + Realtime) | ✅ locked |
 | DB ORM (backend) | **Drizzle** (auto-sync with Supabase types) | ✅ locked |
-| LLM | **Anthropic Claude 3.5 Haiku** primary, **Sonnet 4** escalation | ✅ locked |
+| LLM | **OpenAI GPT-4o-mini** primary, **GPT-4o** escalation | ✅ locked (may revisit Anthropic later) |
 | Voice transcription | **OpenAI Whisper API** (v1) | ✅ locked |
 | LLM observability | **Langfuse** (cloud free tier) | ✅ locked |
 | Error tracking | **Sentry** (Expo + Next.js) | ✅ locked |
@@ -154,7 +155,7 @@ PLOTTO/
 ├── packages/
 │   ├── schema/               # Zod schemas (source of truth)
 │   ├── db/                   # Drizzle schema + migrations
-│   ├── ai/                   # Claude prompts + extraction logic
+│   ├── ai/                   # OpenAI prompts + extraction logic
 │   ├── ui-tokens/            # Shared colors, typography
 │   └── tsconfig/             # Shared tsconfig
 ├── supabase/
@@ -216,8 +217,8 @@ Core entities — finalized in Phase 1.
 - `raw_content` (text) — the original shared text
 - `source` (enum: `share_sheet` | `voice` | `manual` | `email` | `screenshot`)
 - `media_url` (text, nullable) — for voice recordings
-- `llm_input` (jsonb) — what we sent to Claude
-- `llm_output` (jsonb) — what Claude returned
+- `llm_input` (jsonb) — what we sent to the LLM
+- `llm_output` (jsonb) — what the LLM returned
 - `llm_model` (text)
 - `llm_cost_cents` (int)
 - `processed` (bool)
@@ -248,7 +249,7 @@ Each phase has a clear deliverable and demo criterion. Status is updated after e
 
 **User tasks (blocks until done):**
 - [ ] Create Supabase project named `plotto` (free tier) — provide project URL + anon key + service role key
-- [ ] Create Anthropic account + add $20 credit → provide API key
+- [ ] Create OpenAI account + add $20 prepaid credit → provide API key
 - [ ] Create Expo account → login via CLI when prompted
 - [ ] Verify Apple Developer account is active
 - [ ] Verify Google Play Console account is active
@@ -292,16 +293,16 @@ Each phase has a clear deliverable and demo criterion. Status is updated after e
 **Goal:** Paste any text → get a validated Event back in the DB.
 
 **Agent tasks:**
-- [ ] Write `packages/ai/extraction.ts` — typed Claude call with Zod response validation
+- [ ] Write `packages/ai/extraction.ts` — typed OpenAI call (structured outputs) with Zod response validation
 - [ ] Design extraction system prompt (v1) with few-shot examples
 - [ ] Implement `supabase/functions/extract-event/index.ts` Edge Function
 - [ ] Add `captures` table write before LLM call (audit trail)
-- [ ] Implement confidence threshold logic — escalate to Sonnet 4 if < 0.7
+- [ ] Implement confidence threshold logic — escalate to GPT-4o if < 0.7
 - [ ] Implement clarifying-question path for confidence < 0.5
 - [ ] Wire Langfuse tracing on every LLM call
 - [ ] Cost accounting: write `llm_cost_cents` to every capture
 - [ ] Write golden test set (30 example inputs → expected outputs)
-- [ ] Add prompt caching (Anthropic)
+- [ ] Add prompt caching (OpenAI — when available on chosen model)
 
 **Done when:**
 - POST to `/extract-event` with `"dentist friday 9am"` returns a valid Event
@@ -516,4 +517,4 @@ At the end of every session:
 
 Waiting on user to:
 1. Give the go-ahead to begin Phase 0
-2. Be ready to open Supabase dashboard, Anthropic console, and Vercel for Playwright-MCP-assisted setup when reached
+2. Be ready to open Supabase dashboard, OpenAI platform, and Vercel for Playwright-MCP-assisted setup when reached
