@@ -7,8 +7,8 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-04-21
-**Current phase:** Phase 0 — Foundation (in progress)
+**Last updated:** 2026-04-22
+**Current phase:** Phase 2 complete (web). Mobile Phase 3 next.
 **Platforms:** iOS + Android + Web (dashboard)
 **Build mode:** AI-driven. User directs, agent builds end-to-end.
 
@@ -33,19 +33,30 @@
 - [x] Langfuse project `plotto` (US cloud) + API keys (2026-04-21)
 - [x] Sentry org `plotto` + projects `plotto-web` (Next.js) + `plotto-mobile` (React Native) + DSNs (2026-04-21)
 - [x] PostHog project + API key (2026-04-21)
+- [x] Phase 1 — DB schema + RLS applied to Supabase via session pooler (2026-04-22)
+- [x] Phase 1 — `handle_new_user` trigger + `touch_updated_at` triggers + all indexes (2026-04-22)
+- [x] Phase 2 — `@plotto/ai` extraction pipeline with OpenAI Structured Outputs + cost tracking (2026-04-22)
+- [x] Phase 2 — Langfuse trace logging in `/api/extract` (2026-04-22)
+- [x] Phase 6 — Web app: Supabase SSR auth, magic link sign-in, auth callback (2026-04-22)
+- [x] Phase 6 — Web app: landing page, timeline (today/this week/upcoming/past), capture, event editor (2026-04-22)
+- [x] Phase 6 — Web app: middleware auth guard, event status + delete API routes (2026-04-22)
+- [x] Phase 7 — Sentry + PostHog + Langfuse wired in web app (2026-04-22)
+- [x] Domain `www.getplotto.com` attached in Vercel + Supabase Auth redirect URLs configured (2026-04-22)
+- [x] Production deploy triggered via `git push` to main (2026-04-22)
 
 ### 🚧 In Progress
-- [ ] Phase 0 — Verify `pnpm dev:mobile` on simulator
+- [ ] Phase 3 — Mobile app (Expo) — timeline + capture + auth
+- [ ] Verify production web at https://www.getplotto.com end-to-end with real sign-in
 
 ### ⏳ Remaining (High-Level)
-- [ ] Phase 0 — Accounts, tooling, monorepo scaffold
-- [ ] Phase 1 — Core data model + Supabase backend
-- [ ] Phase 2 — LLM extraction pipeline
+- [x] Phase 0 — Accounts, tooling, monorepo scaffold (2026-04-21)
+- [x] Phase 1 — Core data model + Supabase backend (2026-04-22)
+- [x] Phase 2 — LLM extraction pipeline (2026-04-22, web only)
 - [ ] Phase 3 — Mobile app (iOS + Android)
 - [ ] Phase 4 — Share Extension / Share Intent
 - [ ] Phase 5 — Notifications engine
-- [ ] Phase 6 — Web dashboard
-- [ ] Phase 7 — Polish, analytics, observability
+- [x] Phase 6 — Web dashboard (2026-04-22, MVP — timeline + capture + edit)
+- [x] Phase 7 — Polish, analytics, observability (2026-04-22, web only)
 - [ ] Phase 8 — Store submissions + launch
 - [ ] Phase 9 — Post-launch iteration
 
