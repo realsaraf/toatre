@@ -23,8 +23,8 @@ export const EventSchema = z.object({
   userId: z.string().uuid(),
   title: z.string().min(1).max(500),
   description: z.string().nullable(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime().nullable(),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }).nullable(),
   location: z.string().nullable(),
   allDay: z.boolean(),
   recurrenceRule: z.string().nullable(),
@@ -34,8 +34,8 @@ export const EventSchema = z.object({
   sourceCaptureId: z.string().uuid().nullable(),
   parentEventId: z.string().uuid().nullable(),
   status: EventStatusSchema,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type Event = z.infer<typeof EventSchema>;
 
@@ -46,8 +46,8 @@ export type Event = z.infer<typeof EventSchema>;
 export const ExtractedEventSchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().nullable().default(null),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime().nullable().default(null),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }).nullable().default(null),
   location: z.string().nullable().default(null),
   allDay: z.boolean().default(false),
   recurrenceRule: z.string().nullable().default(null),

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { extractEvent, estimateCostCents } from '@plotto/ai';
+import { extractEvent, estimateCostCents, ExtractionValidationError } from '@plotto/ai';
 import { supabaseServer } from '@/lib/supabase/server';
 import { env } from '@/lib/env';
 
@@ -59,15 +59,22 @@ export async function POST(req: NextRequest) {
       apiKey: env.OPENAI_API_KEY,
     });
   } catch (e) {
+    const details =
+      e instanceof ExtractionValidationError
+        ? { issues: e.issues }
+        : undefined;
     await supabase
       .from('captures')
       .update({
         llm_input: { timezone: body.timezone, model: env.OPENAI_MODEL },
-        llm_output: { error: (e as Error).message },
+        llm_output: { error: (e as Error).message, ...details },
         processed: false,
       })
       .eq('id', capture.id);
-    return NextResponse.json({ error: (e as Error).message }, { status: 502 });
+    return NextResponse.json(
+      { error: (e as Error).message, ...details },
+      { status: 502 },
+    );
   }
   const latencyMs = Date.now() - started;
   const costCents = estimateCostCents(result.model, result.usage);
