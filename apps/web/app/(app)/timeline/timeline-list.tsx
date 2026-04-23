@@ -6,9 +6,10 @@ import { format, isPast, isSameDay, isThisWeek, isThisYear, isToday, isTomorrow 
 import type { EventRow } from '@/lib/types';
 import EventStatusControls from './event-status-controls';
 import { ActionLinks, PersonPills } from '@/components/plotto-bits';
-import { EyeIcon, MapPinIcon, PencilIcon } from '@/components/icons';
+import { EyeIcon, MapPinIcon } from '@/components/icons';
 
 type StatusFilter = 'all' | 'active' | 'snoozed' | 'done';
+type LiveStatus = EventRow['status'];
 
 function formatTimeRange(startsAt: Date, endsAt: string | null): string {
   if (!endsAt) return format(startsAt, 'h:mm a');
@@ -47,34 +48,58 @@ function bucketize(events: EventRow[]) {
 }
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'snoozed', label: 'Snoozed' },
   { value: 'done', label: 'Done' },
+  { value: 'all', label: 'All' },
 ];
 
 export default function TimelineList({ events }: { events: EventRow[] }) {
   const [mounted, setMounted] = useState(false);
-  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [filter, setFilter] = useState<StatusFilter>('active');
+  // Optimistic per-event status overrides so a click immediately
+  // re-filters the list without waiting for a server refresh.
+  const [overrides, setOverrides] = useState<Record<string, LiveStatus>>({});
 
   useEffect(() => setMounted(true), []);
+  // Server has caught up — clear stale overrides for events whose
+  // server-side status now matches the override (or has diverged for
+  // some other reason).
+  useEffect(() => {
+    setOverrides((prev) => {
+      const next: Record<string, LiveStatus> = {};
+      for (const [id, st] of Object.entries(prev)) {
+        const ev = events.find((e) => e.id === id);
+        if (ev && ev.status !== st) next[id] = st;
+      }
+      return next;
+    });
+  }, [events]);
+
+  const liveStatus = (e: EventRow): LiveStatus => overrides[e.id] ?? e.status;
 
   const filtered = useMemo(() => {
     if (filter === 'all') return events;
-    return events.filter((e) => e.status === filter);
-  }, [events, filter]);
+    return events.filter((e) => liveStatus(e) === filter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, filter, overrides]);
 
   const grouped = useMemo(() => bucketize(filtered), [filtered]);
 
   const counts = useMemo(() => {
     const c = { all: events.length, active: 0, snoozed: 0, done: 0 };
     for (const e of events) {
-      if (e.status === 'active') c.active++;
-      else if (e.status === 'snoozed') c.snoozed++;
-      else if (e.status === 'done') c.done++;
+      const st = overrides[e.id] ?? e.status;
+      if (st === 'active') c.active++;
+      else if (st === 'snoozed') c.snoozed++;
+      else if (st === 'done') c.done++;
     }
     return c;
-  }, [events]);
+  }, [events, overrides]);
+
+  const onStatusChange = (id: string, next: LiveStatus) => {
+    setOverrides((prev) => ({ ...prev, [id]: next }));
+  };
 
   if (!mounted) {
     return (
@@ -119,9 +144,9 @@ export default function TimelineList({ events }: { events: EventRow[] }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Bucket title="Today" items={grouped.today} />
-        <Bucket title="This week" items={grouped.thisWeek} />
-        <Bucket title="Upcoming" items={grouped.upcoming} />
+        <Bucket title="Today" items={grouped.today} liveStatus={liveStatus} onStatusChange={onStatusChange} />
+        <Bucket title="This week" items={grouped.thisWeek} liveStatus={liveStatus} onStatusChange={onStatusChange} />
+        <Bucket title="Upcoming" items={grouped.upcoming} liveStatus={liveStatus} onStatusChange={onStatusChange} />
       </div>
       {grouped.past.length > 0 && (
         <section>
@@ -130,7 +155,7 @@ export default function TimelineList({ events }: { events: EventRow[] }) {
           </h2>
           <div className="space-y-1.5">
             {grouped.past.map((e) => (
-              <EventCard key={e.id} event={e} muted />
+              <EventCard key={e.id} event={e} muted liveStatus={liveStatus(e)} onStatusChange={onStatusChange} />
             ))}
           </div>
         </section>
@@ -139,7 +164,17 @@ export default function TimelineList({ events }: { events: EventRow[] }) {
   );
 }
 
-function Bucket({ title, items }: { title: string; items: EventRow[] }) {
+function Bucket({
+  title,
+  items,
+  liveStatus,
+  onStatusChange,
+}: {
+  title: string;
+  items: EventRow[];
+  liveStatus: (e: EventRow) => LiveStatus;
+  onStatusChange: (id: string, next: LiveStatus) => void;
+}) {
   return (
     <section>
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">{title}</h2>
@@ -150,7 +185,7 @@ function Bucket({ title, items }: { title: string; items: EventRow[] }) {
       ) : (
         <div className="space-y-1.5">
           {items.map((e) => (
-            <EventCard key={e.id} event={e} />
+            <EventCard key={e.id} event={e} liveStatus={liveStatus(e)} onStatusChange={onStatusChange} />
           ))}
         </div>
       )}
@@ -177,10 +212,20 @@ function statusBadge(status: EventRow['status']) {
   }
 }
 
-function EventCard({ event, muted = false }: { event: EventRow; muted?: boolean }) {
+function EventCard({
+  event,
+  muted = false,
+  liveStatus,
+  onStatusChange,
+}: {
+  event: EventRow;
+  muted?: boolean;
+  liveStatus: LiveStatus;
+  onStatusChange: (id: string, next: LiveStatus) => void;
+}) {
   const accent = importanceAccent(event.importance);
-  const badge = statusBadge(event.status);
-  const dimmed = muted || event.status === 'done' || event.status === 'cancelled';
+  const badge = statusBadge(liveStatus);
+  const dimmed = muted || liveStatus === 'done' || liveStatus === 'cancelled';
 
   return (
     <article
@@ -192,7 +237,7 @@ function EventCard({ event, muted = false }: { event: EventRow; muted?: boolean 
       <div className="px-4 py-3 pl-5">
         {/* Row 1: title + time */}
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className={`min-w-0 truncate text-sm font-medium text-fg ${event.status === 'done' ? 'line-through decoration-fg-subtle' : ''}`}>
+          <h3 className={`min-w-0 truncate text-sm font-medium text-fg ${liveStatus === 'done' ? 'line-through decoration-fg-subtle' : ''}`}>
             {event.title}
           </h3>
           <span className="shrink-0 text-[11px] tabular-nums text-fg-muted">
@@ -224,25 +269,19 @@ function EventCard({ event, muted = false }: { event: EventRow; muted?: boolean 
 
         {/* Row 4: action toolbar */}
         <div className="mt-2 flex items-center justify-between border-t border-line/60 pt-2">
-          <div className="flex items-center gap-0.5">
-            <Link
-              href={`/event/${event.id}`}
-              aria-label="View details"
-              title="View details"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-subtle transition hover:bg-surface-sunken hover:text-fg"
-            >
-              <EyeIcon size={14} />
-            </Link>
-            <Link
-              href={`/event/${event.id}?edit=1`}
-              aria-label="Edit"
-              title="Edit"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-subtle transition hover:bg-surface-sunken hover:text-fg"
-            >
-              <PencilIcon size={14} />
-            </Link>
-          </div>
-          <EventStatusControls eventId={event.id} status={event.status} />
+          <Link
+            href={`/event/${event.id}`}
+            aria-label="View details"
+            title="View details"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-subtle transition hover:bg-surface-sunken hover:text-fg"
+          >
+            <EyeIcon size={14} />
+          </Link>
+          <EventStatusControls
+            eventId={event.id}
+            status={liveStatus}
+            onChange={(next) => onStatusChange(event.id, next)}
+          />
         </div>
       </div>
     </article>

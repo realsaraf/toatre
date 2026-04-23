@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { CheckIcon, ClockIcon, XIcon } from '@/components/icons';
 
 type Status = 'active' | 'snoozed' | 'done' | 'cancelled';
@@ -22,24 +22,35 @@ const ACTIONS: Action[] = [
 export default function EventStatusControls({
   eventId,
   status,
+  onChange,
 }: {
   eventId: string;
   status: Status;
+  onChange?: (next: Status) => void;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [local, setLocal] = useState<Status>(status);
 
+  // Keep in sync if the parent (e.g. server refresh) hands us a new status.
+  useEffect(() => {
+    setLocal(status);
+  }, [status]);
+
   async function update(next: Status) {
     const target = local === next ? 'active' : next;
     setLocal(target);
+    onChange?.(target);
     start(async () => {
       const res = await fetch(`/api/events/${eventId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: target }),
       });
-      if (!res.ok) setLocal(status);
+      if (!res.ok) {
+        setLocal(status);
+        onChange?.(status);
+      }
       router.refresh();
     });
   }
