@@ -293,7 +293,8 @@ Each phase has a clear deliverable and demo criterion. Status is updated after e
 
 **Agent will handle via Playwright MCP** (see `CLAUDE.md`):
 - [ ] Navigate user through Supabase dashboard screens
-- [ ] Auto-configure Supabase auth providers (Apple + Google)
+- [x] Configure Supabase Google OAuth provider (client ID + secret + redirect URIs) (2026-04-22)
+- [ ] Auto-configure Supabase auth providers (Apple)
 - [ ] Set up Vercel project with correct env vars
 - [ ] Connect Expo to EAS
 
@@ -312,7 +313,8 @@ Each phase has a clear deliverable and demo criterion. Status is updated after e
 - [ ] Write Drizzle schema matching §5
 - [ ] Generate SQL migrations → apply to Supabase
 - [ ] Enable RLS policies on all tables
-- [ ] Configure Supabase Auth: email magic link, Apple Sign-In, Google Sign-In
+- [x] Configure Supabase Auth: email magic link + Google Sign-In (2026-04-22)
+- [ ] Configure Supabase Auth: Apple Sign-In
 - [ ] Write `packages/schema/event.ts` (Zod) — single source of truth
 - [ ] Create Supabase client wrappers in `apps/mobile/lib/supabase.ts` and `apps/web/lib/supabase.ts`
 - [ ] Implement sign-in screens (mobile + web)
