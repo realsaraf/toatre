@@ -65,9 +65,6 @@ async function run(req: NextRequest) {
   if (auth !== `Bearer ${env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  if (!env.RESEND_API_KEY) {
-    return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
-  }
 
   const admin = supabaseAdmin();
 
@@ -129,16 +126,20 @@ async function run(req: NextRequest) {
 
     // Email channel.
     if (wantEmail && u.email && !firedKey.has(`${ev.id}:email`)) {
-      try {
-        await sendReminderEmail({
-          toEmail: u.email,
-          timezone: u.timezone || 'UTC',
-          event: ev,
-        });
-        await recordReminder(admin, ev, 'email');
-        sentEmail++;
-      } catch (e) {
-        errors.push(`${ev.id} email: ${(e as Error).message}`);
+      if (!env.RESEND_API_KEY) {
+        errors.push(`${ev.id} email: skipped \u2014 RESEND_API_KEY not configured`);
+      } else {
+        try {
+          await sendReminderEmail({
+            toEmail: u.email,
+            timezone: u.timezone || 'UTC',
+            event: ev,
+          });
+          await recordReminder(admin, ev, 'email');
+          sentEmail++;
+        } catch (e) {
+          errors.push(`${ev.id} email: ${(e as Error).message}`);
+        }
       }
     }
 
