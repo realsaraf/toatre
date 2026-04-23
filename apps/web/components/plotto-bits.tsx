@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import type { MeetingLink, PersonPill, PhoneNumber } from '@/lib/types';
 
