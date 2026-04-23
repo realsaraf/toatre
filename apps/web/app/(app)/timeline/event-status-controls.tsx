@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { CheckIcon, ClockIcon, XIcon } from '@/components/icons';
+import { CheckIcon, ClockIcon } from '@/components/icons';
 
 type Status = 'active' | 'snoozed' | 'done' | 'cancelled';
 
@@ -16,7 +16,6 @@ type Action = {
 const ACTIONS: Action[] = [
   { next: 'done', label: 'Mark done', icon: CheckIcon, activeClass: 'bg-success text-surface' },
   { next: 'snoozed', label: 'Snooze', icon: ClockIcon, activeClass: 'bg-warn text-surface' },
-  { next: 'cancelled', label: 'Cancel', icon: XIcon, activeClass: 'bg-danger text-surface' },
 ];
 
 export default function EventStatusControls({
