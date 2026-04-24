@@ -25,7 +25,7 @@ export default async function SignInPage({
             Welcome back
           </h1>
           <p className="mb-6 text-sm text-fg-muted">
-            Use Google, Apple, or a magic link. If the email is the same and verified,
+            Use Google, Apple, or a 6-digit email code. If the email is the same and verified,
             Supabase will keep it in the same Plotto account.
           </p>
           <SignInForm initialError={error ?? null} />
