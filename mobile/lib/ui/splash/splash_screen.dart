@@ -26,10 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeIn,
-    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
     _animController.forward();
     _initApp();
   }
@@ -43,9 +40,7 @@ class _SplashScreenState extends State<SplashScreen>
     final user = await auth.authStateChanges.first;
     if (!mounted) return;
 
-    final dest = user != null
-        ? const TimelineScreen()
-        : const LoginScreen();
+    final dest = user != null ? const TimelineScreen() : const LoginScreen();
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -87,10 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'your mic-first timeline',
-                style: TextStyles.small,
-              ),
+              Text('your mic-first timeline', style: TextStyles.small),
             ],
           ),
         ),

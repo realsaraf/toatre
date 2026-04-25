@@ -7,18 +7,12 @@ class GradientText extends StatelessWidget {
   final TextStyle? style;
   final TextAlign? textAlign;
 
-  const GradientText(
-    this.text, {
-    super.key,
-    this.style,
-    this.textAlign,
-  });
+  const GradientText(this.text, {super.key, this.style, this.textAlign});
 
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
-      shaderCallback: (bounds) =>
-          AppColors.brandGradient.createShader(bounds),
+      shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
       blendMode: BlendMode.srcIn,
       child: Text(
         text,

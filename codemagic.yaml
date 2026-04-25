@@ -43,18 +43,15 @@ workflows:
       app_store_connect: app-store-connect
 
     environment:
+      groups:
+        - firebase
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.toatre.app
       vars:
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
-        # Set after App Store Connect app record is created (Phase 0 §0.9)
-        APP_STORE_APPLE_ID: "REPLACE_AFTER_ASC_SETUP"
-        # Firebase options + config — set in Codemagic UI as encrypted vars:
-        # FIREBASE_OPTIONS_B64 — base64 of mobile/lib/firebase_options.dart
-        # GOOGLESERVICE_INFO_PLIST_B64 — base64 of GoogleService-Info.plist
-        # GOOGLE_SERVICES_JSON_B64 — base64 of google-services.json
+        APP_STORE_APPLE_ID: "6763710445"
       flutter: stable
 
     triggering:

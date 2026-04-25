@@ -39,22 +39,13 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 64),
               // TODO: Phase 1 — implement Google sign-in
-              _SignInButton(
-                label: 'Continue with Google',
-                onTap: () {},
-              ),
+              _SignInButton(label: 'Continue with Google', onTap: () {}),
               const SizedBox(height: 12),
               // TODO: Phase 1 — implement Apple sign-in
-              _SignInButton(
-                label: 'Continue with Apple',
-                onTap: () {},
-              ),
+              _SignInButton(label: 'Continue with Apple', onTap: () {}),
               const SizedBox(height: 12),
               // TODO: Phase 1 — implement email magic link
-              _SignInButton(
-                label: 'Continue with Email',
-                onTap: () {},
-              ),
+              _SignInButton(label: 'Continue with Email', onTap: () {}),
             ],
           ),
         ),

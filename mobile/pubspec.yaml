@@ -60,6 +60,8 @@ dependencies:
 
   # Analytics
   posthog_flutter: ^4.6.0
+  mixpanel_flutter: ^2.3.4
+  purchases_flutter: ^8.10.0
 
 dev_dependencies:
   flutter_test:

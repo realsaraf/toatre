@@ -17,8 +17,7 @@ class ToatreMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
-      shaderCallback: (bounds) =>
-          AppColors.brandGradient.createShader(bounds),
+      shaderCallback: (bounds) => AppColors.brandGradient.createShader(bounds),
       blendMode: BlendMode.srcIn,
       child: Text(
         'toatre',
