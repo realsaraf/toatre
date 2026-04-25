@@ -1,0 +1,140 @@
+name: toatre
+region: nyc
+
+# ─── Web service (Next.js) ────────────────────────────────────────────────────
+services:
+  - name: web
+    github:
+      repo: realsaraf/toatre
+      branch: main
+      deploy_on_push: true
+    source_dir: web
+    build_command: npm ci && npm run build
+    run_command: npm start
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 30
+      period_seconds: 30
+      failure_threshold: 3
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # ── Firebase Admin ───────────────────────────────────────────────────
+      - key: FIREBASE_PROJECT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_CLIENT_EMAIL
+        scope: RUN_TIME
+        type: SECRET
+      - key: FIREBASE_PRIVATE_KEY
+        scope: RUN_TIME
+        type: SECRET
+      # ── MongoDB ──────────────────────────────────────────────────────────
+      - key: MONGODB_URI
+        scope: RUN_TIME
+        type: SECRET
+      - key: MONGODB_DB_NAME
+        value: toatre_prod
+      # ── OpenAI ───────────────────────────────────────────────────────────
+      - key: OPENAI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: OPENAI_WHISPER_MODEL
+        value: whisper-1
+      # ── Langfuse ─────────────────────────────────────────────────────────
+      - key: LANGFUSE_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: LANGFUSE_PUBLIC_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: LANGFUSE_HOST
+        value: https://cloud.langfuse.com
+      # ── Twilio ───────────────────────────────────────────────────────────
+      - key: TWILIO_ACCOUNT_SID
+        scope: RUN_TIME
+        type: SECRET
+      - key: TWILIO_AUTH_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: TWILIO_FROM_NUMBER
+        scope: RUN_TIME
+        type: SECRET
+      # ── Resend ───────────────────────────────────────────────────────────
+      - key: RESEND_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: RESEND_FROM_EMAIL
+        value: hello@toatre.com
+      # ── DO Spaces ────────────────────────────────────────────────────────
+      - key: DO_SPACES_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: DO_SPACES_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: DO_SPACES_BUCKET
+        value: toatre-prod
+      - key: DO_SPACES_REGION
+        value: nyc3
+      # ── Sentry ───────────────────────────────────────────────────────────
+      - key: SENTRY_DSN
+        scope: RUN_TIME
+        type: SECRET
+      # ── PostHog ──────────────────────────────────────────────────────────
+      - key: NEXT_PUBLIC_POSTHOG_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+      - key: NEXT_PUBLIC_POSTHOG_HOST
+        value: https://app.posthog.com
+      # ── Cron secret (auth for scheduled job routes) ───────────────────────
+      - key: CRON_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+# ─── Scheduled jobs ───────────────────────────────────────────────────────────
+jobs:
+  - name: fire-pings
+    github:
+      repo: realsaraf/toatre
+      branch: main
+    source_dir: web
+    build_command: npm ci && npm run build
+    run_command: npm run job:fire-pings
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    kind: CRON
+    cron: "* * * * *"
+
+  - name: cleanup-captures
+    github:
+      repo: realsaraf/toatre
+      branch: main
+    source_dir: web
+    build_command: npm ci && npm run build
+    run_command: npm run job:cleanup-captures
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    kind: CRON
+    cron: "0 3 * * *"
+
+# ─── Static site (marketing) — optional, can be added later ──────────────────
+# static_sites:
+#   - name: landing
+#     github:
+#       repo: realsaraf/toatre
+#       branch: main
+#     source_dir: web
+#     build_command: npm ci && npm run build
+#     output_dir: out
+
+# ─── DO Spaces CDN (voice clips, avatars) ─────────────────────────────────────
+# Managed separately: bucket toatre-prod in nyc3.
+# Created via DO Console / Playwright session in Phase 0.

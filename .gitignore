@@ -1,0 +1,135 @@
+# =====================================================================
+# Toatre — gitignore
+# Covers: Flutter (mobile/), Next.js (web/), Windows + macOS, IDEs,
+# secrets, build artifacts.
+# =====================================================================
+
+# ---- Secrets & env (NEVER commit) ----
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+*.pem
+*.p12
+*.p8
+*.mobileprovision
+*.keystore
+*.jks
+GoogleService-Info.plist
+google-services.json
+firebase-adminsdk-*.json
+
+# ---- OS / IDE ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# ---- Memory / agent state (local only) ----
+/memories/
+/.copilot/
+
+# =====================================================================
+# Flutter / Dart (mobile/)
+# =====================================================================
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/.metadata
+mobile/coverage/
+mobile/pubspec.lock
+# ^ commit lock for app projects? YES — but not in libraries. We're an app.
+!mobile/pubspec.lock
+
+# Flutter generated
+mobile/lib/firebase_options.dart
+mobile/lib/generated_plugin_registrant.dart
+
+# Flutter Web build (we don't use Flutter web)
+mobile/web/
+
+# ---- iOS ----
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/ephemeral/
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/flutter_assets/
+mobile/ios/ServiceDefinitions.json
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/ios/.generated/
+mobile/ios/build/
+mobile/ios/DerivedData/
+mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/Runner.xcodeproj/xcuserdata/
+mobile/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+
+# ---- Android ----
+mobile/android/.gradle/
+mobile/android/captures/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/**/build/
+mobile/android/**/.cxx/
+mobile/android/app/release/
+mobile/android/app/profile/
+mobile/android/app/debug/
+mobile/android/app/src/release/
+mobile/android/app/src/debug/
+
+# =====================================================================
+# Next.js / Node (web/)
+# =====================================================================
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/dist/
+web/.turbo/
+web/coverage/
+web/.swc/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+web/*.tsbuildinfo
+
+# Sentry
+web/.sentryclirc
+
+# Vercel (we don't deploy to Vercel but the CLI may drop these)
+web/.vercel/
+
+# =====================================================================
+# Misc
+# =====================================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.npm/
+.yarn/
+.pnp.*
+
+# Generated brand assets (committed under specific paths only)
+# - mobile/assets/icon.png is committed
+# - web/public/icon-*.png is committed
+# - source remains: assets/brand/icon-source.png
+# - intermediate generation outputs go here:
+.tmp/
+tmp/

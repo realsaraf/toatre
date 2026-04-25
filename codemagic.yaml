@@ -1,0 +1,199 @@
+workflows:
+
+  # ─────────────────────────────────────────────────────────
+  # Tests — runs on every PR
+  # ─────────────────────────────────────────────────────────
+  flutter-test:
+    name: Flutter Analyze + Test
+    max_build_duration: 30
+    instance_type: linux_x2
+
+    environment:
+      flutter: stable
+
+    scripts:
+      - name: Get Flutter packages
+        script: cd mobile && flutter pub get
+
+      - name: Analyze
+        script: cd mobile && flutter analyze
+
+      - name: Run tests
+        script: cd mobile && flutter test
+
+    publishing:
+      email:
+        recipients:
+          - realsaraf@gmail.com
+        notify:
+          success: false
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────
+  # iOS — App Store → TestFlight
+  # Triggered on every push to main.
+  # ─────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS Release (TestFlight)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: app-store-connect
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.toatre.app
+      vars:
+        XCODE_WORKSPACE: ios/Runner.xcworkspace
+        XCODE_SCHEME: Runner
+        # Set after App Store Connect app record is created (Phase 0 §0.9)
+        APP_STORE_APPLE_ID: "REPLACE_AFTER_ASC_SETUP"
+      flutter: stable
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Get Flutter packages
+        script: cd mobile && flutter pub get
+
+      - name: Install CocoaPods
+        script: |
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999
+          git config --global http.postBuffer 524288000
+          pod repo update trunk || true
+          cd mobile/ios
+          pod install --repo-update
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Flutter build iOS (release)
+        script: |
+          cd mobile
+          flutter build ipa --release \
+            --dart-define=TOATRE_ENV=production \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+      email:
+        recipients:
+          - realsaraf@gmail.com
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────
+  # iOS — Ad Hoc (manual trigger only)
+  # ─────────────────────────────────────────────────────────
+  ios-adhoc:
+    name: iOS Ad Hoc (Internal)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: app-store-connect
+
+    environment:
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: com.toatre.app
+      flutter: stable
+
+    scripts:
+      - name: Get Flutter packages
+        script: cd mobile && flutter pub get
+
+      - name: Install CocoaPods
+        script: |
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999
+          git config --global http.postBuffer 524288000
+          pod repo update trunk || true
+          cd mobile/ios
+          pod install --repo-update
+
+      - name: Flutter build iOS (ad hoc)
+        script: |
+          cd mobile
+          flutter build ipa --release \
+            --dart-define=TOATRE_ENV=staging
+
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - realsaraf@gmail.com
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────
+  # Android — Play Store Internal Track
+  # DISABLED — enabled in Phase 8.
+  # ─────────────────────────────────────────────────────────
+  android-release:
+    name: Android Release (Play Internal)
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      android_signing:
+        - toatre-keystore
+      flutter: stable
+      vars:
+        PACKAGE_NAME: com.toatre.app
+
+    # Uncomment triggering block when enabling Phase 8:
+    # triggering:
+    #   events:
+    #     - push
+    #   branch_patterns:
+    #     - pattern: main
+    #       include: true
+
+    scripts:
+      - name: Get Flutter packages
+        script: cd mobile && flutter pub get
+
+      - name: Flutter build Android (release)
+        script: |
+          cd mobile
+          flutter build appbundle --release \
+            --dart-define=TOATRE_ENV=production
+
+    artifacts:
+      - mobile/build/app/outputs/bundle/release/*.aab
+
+    publishing:
+      # Uncomment when Phase 8 is activated:
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+      email:
+        recipients:
+          - realsaraf@gmail.com
+        notify:
+          success: true
+          failure: true

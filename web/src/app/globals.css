@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* ─── Single source of truth: Toatre brand colours ───────────────────────── */
+/* NEVER hardcode these hex values outside this file.                          */
+:root {
+  /* Brand gradient */
+  --color-gradient-start: #4F46E5; /* Indigo */
+  --color-gradient-end:   #F59E0B; /* Amber  */
+
+  /* Backgrounds (dark-only) */
+  --color-bg:          #0A0A0F;
+  --color-bg-elevated: #13131A;
+  --color-card:        rgba(19, 19, 26, 0.7);
+
+  /* Text */
+  --color-text:           #E8EDF5;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #6B7A94;
+
+  /* Border */
+  --color-border: rgba(148, 155, 168, 0.10);
+
+  /* Status */
+  --color-success: #22C55E;
+  --color-error:   #EF4444;
+  --color-warning: #F59E0B;
+
+  /* Tier */
+  --color-tier-urgent:    #EF4444;
+  --color-tier-important: #F59E0B;
+  --color-tier-regular:   #6B7A94;
+
+  /* Backward compat shims for Next.js template */
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Utilities ───────────────────────────────────────────────────────────── */
+.brand-gradient-text {
+  background: linear-gradient(90deg, var(--color-gradient-start), var(--color-gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
