@@ -46,8 +46,10 @@ workflows:
       groups:
         - firebase
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.toatre.app
+        provisioning_profiles:
+          - toatre-appstore-profile
+        certificates:
+          - toatre-ios-distribution
       vars:
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner

@@ -136,3 +136,6 @@ tmp/
 
 # Firebase base64 temp files
 *.b64.tmp
+
+# Local code signing artifacts (private key)
+.codesign/
