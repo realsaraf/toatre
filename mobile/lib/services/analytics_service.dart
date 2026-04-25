@@ -13,10 +13,7 @@ class AnalyticsService {
 
   static Future<void> init({required String mixpanelToken}) async {
     _fa = FirebaseAnalytics.instance;
-    _mp = await Mixpanel.init(
-      mixpanelToken,
-      trackAutomaticEvents: true,
-    );
+    _mp = await Mixpanel.init(mixpanelToken, trackAutomaticEvents: true);
   }
 
   // ─── Identity ──────────────────────────────────────────────────────────────
@@ -61,7 +58,10 @@ class AnalyticsService {
       name: 'voice_capture_stopped',
       parameters: {'duration_ms': durationMs},
     );
-    _mp?.track('Voice Capture Stopped', properties: {'duration_ms': durationMs});
+    _mp?.track(
+      'Voice Capture Stopped',
+      properties: {'duration_ms': durationMs},
+    );
   }
 
   static Future<void> logToatCreated({
@@ -73,11 +73,10 @@ class AnalyticsService {
       name: 'toat_created',
       parameters: {'kind': kind, 'tier': tier, 'from_voice': fromVoice ? 1 : 0},
     );
-    _mp?.track('Toat Created', properties: {
-      'kind': kind,
-      'tier': tier,
-      'from_voice': fromVoice,
-    });
+    _mp?.track(
+      'Toat Created',
+      properties: {'kind': kind, 'tier': tier, 'from_voice': fromVoice},
+    );
   }
 
   static Future<void> logToatCompleted({required String kind}) async {

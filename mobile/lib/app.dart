@@ -10,6 +10,7 @@ import 'package:toatre/providers/people_provider.dart';
 import 'package:toatre/providers/share_provider.dart';
 import 'package:toatre/providers/settings_provider.dart';
 import 'package:toatre/providers/connectivity_provider.dart';
+import 'package:toatre/providers/revenue_cat_provider.dart';
 import 'package:toatre/ui/splash/splash_screen.dart';
 
 class ToatreApp extends StatelessWidget {
@@ -27,6 +28,7 @@ class ToatreApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ShareProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => RevenueCatProvider()),
       ],
       child: MaterialApp(
         title: 'Toatre',

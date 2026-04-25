@@ -23,9 +23,7 @@ class RevenueCatService {
   }
 
   Future<void> init({required String apiKey, String? userId}) async {
-    await Purchases.setLogLevel(
-      kDebugMode ? LogLevel.debug : LogLevel.error,
-    );
+    await Purchases.setLogLevel(kDebugMode ? LogLevel.debug : LogLevel.error);
 
     final config = PurchasesConfiguration(apiKey);
     await Purchases.configure(config);
@@ -62,7 +60,9 @@ class RevenueCatService {
       AnalyticsService.logProPurchaseStarted();
       final offerings = await Purchases.getOfferings();
       final proPackage = offerings.current?.availablePackages.firstWhere(
-        (p) => p.identifier.contains('pro') || p.packageType == PackageType.monthly,
+        (p) =>
+            p.identifier.contains('pro') ||
+            p.packageType == PackageType.monthly,
         orElse: () => offerings.current!.availablePackages.first,
       );
 
@@ -71,7 +71,9 @@ class RevenueCatService {
       final result = await Purchases.purchasePackage(proPackage);
       _customerInfo = result;
 
-      final purchased = result.entitlements.active.containsKey(_kEntitlementPro);
+      final purchased = result.entitlements.active.containsKey(
+        _kEntitlementPro,
+      );
       if (purchased) {
         AnalyticsService.logProPurchaseCompleted();
       }

@@ -133,3 +133,6 @@ yarn-error.log*
 # - intermediate generation outputs go here:
 .tmp/
 tmp/
+
+# Firebase base64 temp files
+*.b64.tmp

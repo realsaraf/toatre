@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
 import 'package:toatre/services/revenue_cat_service.dart';
-import 'package:toatre/services/analytics_service.dart';
 
 /// Provides RevenueCat Pro state and purchase flow to the widget tree.
 class RevenueCatProvider extends ChangeNotifier {
@@ -16,7 +14,7 @@ class RevenueCatProvider extends ChangeNotifier {
 
   /// Called after RevenueCatService.init() — refreshes local state.
   Future<void> refresh() async {
-    final info = await RevenueCatService.instance.refresh();
+    await RevenueCatService.instance.refresh();
     _isPro = RevenueCatService.instance.isPro;
     notifyListeners();
   }
