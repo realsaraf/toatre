@@ -64,7 +64,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { users } = await getCollections();
+  let users;
+  try {
+    ({ users } = await getCollections());
+  } catch {
+    return NextResponse.json(
+      { error: "Database unavailable." },
+      { status: 503 }
+    );
+  }
+
   const now = new Date();
 
   await users.updateOne(
@@ -112,14 +121,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     updated_at: mongoUser.updatedAt as Date,
   };
 
-  const response = NextResponse.json({ ok: true, user: dbUser });
+  // Save the session cookie before building the response so the cookie
+  // is flushed into the Next.js response headers.
+  try {
+    const session = await getAppRouterSession();
+    session.firebaseUid = decodedToken.uid;
+    session.userId = dbUser._id;
+    session.email = dbUser.email;
+    await session.save();
+  } catch {
+    // Non-fatal: if SESSION_SECRET is missing in dev we still return the
+    // user payload so the client can operate with the Firebase token alone.
+  }
 
-  // Set iron-session cookie on the response.
-  const session = await getAppRouterSession();
-  session.firebaseUid = decodedToken.uid;
-  session.userId = dbUser._id;
-  session.email = dbUser.email;
-  await session.save();
-
-  return response;
+  return NextResponse.json({ ok: true, user: dbUser });
 }

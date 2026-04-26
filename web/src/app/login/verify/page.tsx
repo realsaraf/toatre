@@ -1,31 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { verifyEmailMagicLink } from "@/lib/firebase/client";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function MagicLinkVerifyPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [error, setError] = useState(false);
+  const attempted = useRef(false);
 
+  // Step 1: verify the link on mount (once only).
   useEffect(() => {
-    async function verify() {
-      try {
-        const credential = await verifyEmailMagicLink();
-        const idToken = await credential.user.getIdToken();
-        await fetch("/api/auth/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        router.replace("/timeline");
-      } catch {
-        setError(true);
-      }
+    if (attempted.current) return;
+    attempted.current = true;
+    verifyEmailMagicLink().catch(() => setError(true));
+  }, []);
+
+  // Step 2: once AuthProvider has synced the session (loading:false, user set),
+  // navigate to the timeline.
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/timeline");
     }
-    verify();
-  }, [router]);
+  }, [user, loading, router]);
 
   if (error) {
     return (

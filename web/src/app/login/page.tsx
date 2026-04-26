@@ -7,7 +7,7 @@ import {
   signInWithGoogle,
   sendEmailMagicLink,
   sendPhoneOtp,
-  auth,
+  getClientAuth,
 } from "@/lib/firebase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { RecaptchaVerifier, type ConfirmationResult } from "firebase/auth";
@@ -40,7 +40,10 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
 
-  // Redirect if already signed in
+  // Redirect once AuthProvider has synced the session and user is confirmed.
+  // AuthProvider's onIdTokenChanged calls syncSession, which POSTs the cookie
+  // server-side before setting loading:false. So when we see !loading && user
+  // the cookie is already set and the (authed) layout will let us through.
   useEffect(() => {
     if (!loading && user) {
       router.replace("/timeline");
@@ -51,7 +54,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (activeTab === "phone" && recaptchaRef.current && !recaptchaVerifierRef.current) {
       recaptchaVerifierRef.current = new RecaptchaVerifier(
-        auth,
+        getClientAuth(),
         recaptchaRef.current,
         { size: "invisible" }
       );
@@ -62,19 +65,14 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setGoogleError("");
     try {
-      const credential = await signInWithGoogle();
-      const idToken = await credential.user.getIdToken();
-      await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      router.push("/timeline");
+      await signInWithGoogle();
+      // AuthProvider's onIdTokenChanged fires, calls syncSession (POST /api/auth/session),
+      // then sets loading:false — the useEffect above handles the redirect.
     } catch {
       setGoogleError("I didn't quite catch that. Mind trying again?");
-    } finally {
       setGoogleLoading(false);
     }
+    // Keep googleLoading true while AuthProvider redirects — page unmounts naturally.
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -115,19 +113,14 @@ export default function LoginPage() {
     setPhoneError("");
     try {
       if (!confirmationResult) throw new Error("No confirmation result.");
-      const credential = await confirmationResult.confirm(otpCode);
-      const idToken = await credential.user.getIdToken();
-      await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      router.push("/timeline");
+      await confirmationResult.confirm(otpCode);
+      // AuthProvider's onIdTokenChanged fires, syncs session, and the useEffect
+      // above handles the redirect — same pattern as Google sign-in.
     } catch {
       setPhoneError("That code didn't match. Try again?");
-    } finally {
       setPhoneLoading(false);
     }
+    // Keep phoneLoading true while AuthProvider redirects — page unmounts naturally.
   }
 
   if (loading) {

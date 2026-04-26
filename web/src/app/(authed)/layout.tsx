@@ -7,8 +7,17 @@ export default async function AuthedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getAppRouterSession();
-  if (!session.firebaseUid) {
+  let isAuthed = false;
+  try {
+    const session = await getAppRouterSession();
+    isAuthed = Boolean(session.firebaseUid);
+  } catch {
+    // If session check fails (e.g. SESSION_SECRET not configured), treat as
+    // unauthenticated and redirect to login rather than crashing.
+    isAuthed = false;
+  }
+
+  if (!isAuthed) {
     redirect("/login");
   }
 

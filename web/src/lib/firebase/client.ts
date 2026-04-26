@@ -9,6 +9,7 @@ import {
   signInWithPhoneNumber,
   type ApplicationVerifier,
   type UserCredential,
+  type Auth,
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -20,16 +21,36 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app: FirebaseApp =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]!;
+/**
+ * Return (or create) the Firebase client app.
+ * Called lazily — never at module evaluation time — so Next.js SSR/RSC
+ * passes don't throw when NEXT_PUBLIC_* env vars are absent on the server.
+ */
+function getClientApp(): FirebaseApp {
+  if (getApps().length > 0) return getApps()[0]!;
+  return initializeApp(firebaseConfig);
+}
 
-export const firebaseApp = app;
-export const auth = getAuth(app);
+/** Lazy Firebase Auth singleton — safe to call only on the client. */
+let _auth: Auth | null = null;
+export function getClientAuth(): Auth {
+  if (!_auth) {
+    _auth = getAuth(getClientApp());
+  }
+  return _auth;
+}
+
+/** The Firebase app instance (lazy). */
+export const firebaseApp = {
+  get current(): FirebaseApp {
+    return getClientApp();
+  },
+};
 
 /** Sign in with Google via popup. */
 export async function signInWithGoogle(): Promise<UserCredential> {
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
+  return signInWithPopup(getClientAuth(), provider);
 }
 
 /**
@@ -38,13 +59,11 @@ export async function signInWithGoogle(): Promise<UserCredential> {
  */
 export async function sendEmailMagicLink(email: string): Promise<void> {
   const actionCodeSettings = {
-    url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/login/verify`,
+    url: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/login/verify`,
     handleCodeInApp: true,
   };
-  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem("toatre_magic_email", email);
-  }
+  await sendSignInLinkToEmail(getClientAuth(), email, actionCodeSettings);
+  window.localStorage.setItem("toatre_magic_email", email);
 }
 
 /**
@@ -52,21 +71,16 @@ export async function sendEmailMagicLink(email: string): Promise<void> {
  * Retrieves the stored email from localStorage.
  */
 export async function verifyEmailMagicLink(): Promise<UserCredential> {
-  const href = typeof window !== "undefined" ? window.location.href : "";
-  if (!isSignInWithEmailLink(auth, href)) {
+  const href = window.location.href;
+  if (!isSignInWithEmailLink(getClientAuth(), href)) {
     throw new Error("Not a valid sign-in link.");
   }
-  const email =
-    (typeof window !== "undefined"
-      ? window.localStorage.getItem("toatre_magic_email")
-      : null) ?? "";
+  const email = window.localStorage.getItem("toatre_magic_email") ?? "";
   if (!email) {
     throw new Error("Could not find the email address. Please sign in again.");
   }
-  const result = await signInWithEmailLink(auth, email, href);
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem("toatre_magic_email");
-  }
+  const result = await signInWithEmailLink(getClientAuth(), email, href);
+  window.localStorage.removeItem("toatre_magic_email");
   return result;
 }
 
@@ -78,7 +92,5 @@ export async function sendPhoneOtp(
   phone: string,
   recaptchaVerifier: ApplicationVerifier
 ) {
-  return signInWithPhoneNumber(auth, phone, recaptchaVerifier);
+  return signInWithPhoneNumber(getClientAuth(), phone, recaptchaVerifier);
 }
-
-export default app;

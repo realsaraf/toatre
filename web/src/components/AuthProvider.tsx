@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { onIdTokenChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { getClientAuth } from "@/lib/firebase/client";
 
 interface AuthContextValue {
   user: User | null;
@@ -27,17 +27,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Push the Firebase ID token to /api/auth/session to keep the HttpOnly
+   * session cookie in sync with the Firebase auth state.  We await this
+   * before setting loading:false so that any code that reads !loading && user
+   * can trust the cookie is already written server-side.
+   */
   const syncSession = useCallback(async (firebaseUser: User | null) => {
     if (firebaseUser) {
       try {
         const idToken = await firebaseUser.getIdToken();
-        await fetch("/api/auth/session", {
+        const res = await fetch("/api/auth/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken }),
         });
-      } catch {
-        // Non-fatal — cookie sync failed, but user is still signed in client-side.
+        if (!res.ok) {
+          console.error("[toatre] session sync failed:", res.status);
+        }
+      } catch (err) {
+        console.error("[toatre] session sync error:", err);
       }
     } else {
       try {
@@ -49,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onIdTokenChanged(getClientAuth(), async (firebaseUser) => {
       setUser(firebaseUser);
       await syncSession(firebaseUser);
       setLoading(false);
@@ -58,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [syncSession]);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut(auth);
-    // syncSession(null) is called automatically via onIdTokenChanged
+    await firebaseSignOut(getClientAuth());
+    // syncSession(null) is called automatically by onIdTokenChanged above.
   }, []);
 
   return (
