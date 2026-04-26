@@ -4,6 +4,25 @@ Screen-by-screen build spec mapped to phases. Source images live alongside this 
 
 ---
 
+## Web — Landing Page
+
+![Home landing page](home%20landing%20page%20web.png)
+
+**Status:** Live at `toatre.com` — implemented 2026-04-25.
+
+**Layout (top → bottom):**
+- **Nav** (sticky, white/blur): logo left · "How it works / Use cases / Pricing" centered · "Log in" + "Sign up free" (indigo pill) right
+- **Hero**: sparkle pill badge · H1 "Say it. / **Toatre gets it**." (pink period) · subtext · CTA row ("Sign up for free →" + "▶ Watch how it works") · trust line · iPhone mockup (lavender→pink gradient screen, mic circle)
+- **How it works**: 3-card grid — "You talk." / "We understand." / "You stay on track."
+- **Use cases**: 3-card grid — Work / Family / Personal with italic example toats
+- **Pricing**: "Free while in beta." copy + "Get early access free →" CTA
+- **Final CTA block**: indigo gradient box — "Ready to simplify your day?" + "Sign up free"
+- **Footer**: logo · Privacy · Terms · Contact · © 2026 Toatre
+
+**Proxy behaviour:** Unauthenticated `GET /` renders landing page. Authenticated users are redirected to `/timeline` by `proxy.ts` before the page renders.
+
+---
+
 ## Phase 0 — Scaffold (current)
 
 No screens. CI, accounts, brand assets.
