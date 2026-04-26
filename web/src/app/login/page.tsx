@@ -169,7 +169,7 @@ export default function LoginPage() {
 
         <p style={styles.legal}>
           By continuing you agree to our{" "}
-          <a href="/terms" style={{ color: "var(--color-primary)" }}>Terms</a>{" "}
+          <a href="/tos" style={{ color: "var(--color-primary)" }}>Terms</a>{" "}
           and{" "}
           <a href="/privacy" style={{ color: "var(--color-primary)" }}>Privacy Policy</a>.
         </p>
