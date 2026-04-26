@@ -1,29 +1,181 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'dart:math';
 
-enum CaptureStatus { idle, recording, processing, done, error }
+import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+
+import 'package:toatre/models/toat_summary.dart';
+import 'package:toatre/services/analytics_service.dart';
+import 'package:toatre/services/api_service.dart';
+
+enum CaptureStatus { idle, recording, processing, review, error }
 
 class CaptureProvider extends ChangeNotifier {
+  final ApiService _api = ApiService.instance;
+  final AudioRecorder _recorder = AudioRecorder();
+  final Random _random = Random();
+
   CaptureStatus _status = CaptureStatus.idle;
   String? _error;
+  String _transcript = '';
+  int _elapsedSeconds = 0;
+  String? _recordingPath;
+  List<double> _waveform = List<double>.filled(18, 0.15);
+  List<ToatSummary> _toats = <ToatSummary>[];
+  Set<String> _selectedIds = <String>{};
+
+  Timer? _elapsedTimer;
+  Timer? _waveformTimer;
 
   CaptureStatus get status => _status;
   String? get error => _error;
+  String get transcript => _transcript;
+  int get elapsedSeconds => _elapsedSeconds;
+  List<double> get waveform => _waveform;
+  List<ToatSummary> get toats => _toats;
+  int get selectedCount => _selectedIds.length;
   bool get isRecording => _status == CaptureStatus.recording;
+  bool get isProcessing => _status == CaptureStatus.processing;
+  bool get isReviewing => _status == CaptureStatus.review;
 
-  void startRecording() {
+  bool isSelected(String toatId) => _selectedIds.contains(toatId);
+
+  Future<void> startRecording() async {
+    _error = null;
+    _transcript = '';
+    _toats = <ToatSummary>[];
+    _selectedIds = <String>{};
+    _elapsedSeconds = 0;
+    _waveform = List<double>.filled(18, 0.15);
+
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      _status = CaptureStatus.error;
+      _error = 'Microphone permission is required.';
+      notifyListeners();
+      return;
+    }
+
+    final dir = await getTemporaryDirectory();
+    _recordingPath = p.join(
+      dir.path,
+      'capture-${DateTime.now().millisecondsSinceEpoch}.m4a',
+    );
+
+    await _recorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: _recordingPath!,
+    );
+
     _status = CaptureStatus.recording;
+    notifyListeners();
+    await AnalyticsService.logVoiceCaptureStarted();
+
+    _elapsedTimer?.cancel();
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _elapsedSeconds += 1;
+      notifyListeners();
+    });
+
+    _waveformTimer?.cancel();
+    _waveformTimer = Timer.periodic(const Duration(milliseconds: 120), (_) {
+      _waveform = List<double>.generate(
+        18,
+        (_) => 0.15 + (_random.nextDouble() * 0.85),
+      );
+      notifyListeners();
+    });
+  }
+
+  Future<void> stopRecording() async {
+    if (_status != CaptureStatus.recording) {
+      return;
+    }
+
+    _elapsedTimer?.cancel();
+    _waveformTimer?.cancel();
+    _status = CaptureStatus.processing;
+    notifyListeners();
+
+    final recordedPath = await _recorder.stop();
+    await AnalyticsService.logVoiceCaptureStopped(
+      durationMs: _elapsedSeconds * 1000,
+    );
+
+    if (recordedPath == null || recordedPath.isEmpty) {
+      _status = CaptureStatus.error;
+      _error = 'No audio was captured. Try again.';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final response = await _api.postMultipart(
+        '/api/captures',
+        fileField: 'audio',
+        filePath: recordedPath,
+        authenticated: true,
+      );
+
+      _transcript = response['transcript'] as String? ?? '';
+      final toatsJson = response['toats'];
+      final list = toatsJson is List<dynamic> ? toatsJson : const <dynamic>[];
+      _toats = list
+          .whereType<Map<String, dynamic>>()
+          .map(ToatSummary.fromJson)
+          .toList();
+      _selectedIds = _toats.map((toat) => toat.id).toSet();
+      _status = CaptureStatus.review;
+      _waveform = List<double>.filled(18, 0.25);
+
+      for (final toat in _toats) {
+        await AnalyticsService.logToatCreated(
+          kind: toat.kind,
+          tier: toat.tier,
+          fromVoice: true,
+        );
+      }
+    } on ApiServiceException catch (error) {
+      _status = CaptureStatus.error;
+      _error = error.message;
+    } catch (_) {
+      _status = CaptureStatus.error;
+      _error = 'Capture failed. Try again.';
+    }
+
     notifyListeners();
   }
 
-  void stopRecording() {
-    _status = CaptureStatus.processing;
+  void toggleSelection(String toatId) {
+    if (_selectedIds.contains(toatId)) {
+      _selectedIds.remove(toatId);
+    } else {
+      _selectedIds.add(toatId);
+    }
     notifyListeners();
-    // TODO: implement transcription + AI extraction
   }
 
   void reset() {
+    _elapsedTimer?.cancel();
+    _waveformTimer?.cancel();
     _status = CaptureStatus.idle;
     _error = null;
+    _transcript = '';
+    _elapsedSeconds = 0;
+    _recordingPath = null;
+    _waveform = List<double>.filled(18, 0.15);
+    _toats = <ToatSummary>[];
+    _selectedIds = <String>{};
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _elapsedTimer?.cancel();
+    _waveformTimer?.cancel();
+    _recorder.dispose();
+    super.dispose();
   }
 }

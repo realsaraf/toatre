@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:toatre/providers/auth_provider.dart';
+import 'package:toatre/ui/auth/handle_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/ui/auth/login_screen.dart';
@@ -32,15 +33,32 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initApp() async {
-    // Minimum splash display time
-    await Future.delayed(const Duration(milliseconds: 2000));
+    await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
     final auth = context.read<AuthProvider>();
-    final user = await auth.authStateChanges.first;
+
+    while (mounted && auth.status == AuthStatus.unknown) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
     if (!mounted) return;
 
-    final dest = user != null ? const TimelineScreen() : const LoginScreen();
+    final Widget dest;
+    switch (auth.status) {
+      case AuthStatus.authenticated:
+        dest = const TimelineScreen();
+        break;
+      case AuthStatus.needsHandle:
+        dest = const HandleScreen();
+        break;
+      case AuthStatus.unauthenticated:
+      case AuthStatus.error:
+      case AuthStatus.authenticating:
+      case AuthStatus.unknown:
+        dest = const LoginScreen();
+        break;
+    }
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

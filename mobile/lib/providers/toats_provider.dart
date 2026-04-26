@@ -1,22 +1,47 @@
 ﻿import 'package:flutter/material.dart';
 
+import 'package:toatre/models/toat_summary.dart';
+import 'package:toatre/services/api_service.dart';
+
 enum ToatsStatus { idle, loading, loaded, error }
 
 class ToatsProvider extends ChangeNotifier {
+  final ApiService _api = ApiService.instance;
+
   ToatsStatus _status = ToatsStatus.idle;
-  List<Map<String, dynamic>> _toats = [];
+  List<ToatSummary> _toats = <ToatSummary>[];
   String? _error;
 
   ToatsStatus get status => _status;
-  List<Map<String, dynamic>> get toats => _toats;
+  List<ToatSummary> get toats => _toats;
   String? get error => _error;
 
   Future<void> fetchToats() async {
     _status = ToatsStatus.loading;
+    _error = null;
     notifyListeners();
-    // TODO: implement API fetch
-    _toats = [];
-    _status = ToatsStatus.loaded;
+
+    try {
+      final response = await _api.getJson(
+        '/api/toats',
+        authenticated: true,
+        queryParameters: const <String, String>{'range': 'all'},
+      );
+      final toatsJson = response['toats'];
+      final list = toatsJson is List<dynamic> ? toatsJson : const <dynamic>[];
+      _toats = list
+          .whereType<Map<String, dynamic>>()
+          .map(ToatSummary.fromJson)
+          .toList();
+      _status = ToatsStatus.loaded;
+    } on ApiServiceException catch (error) {
+      _error = error.message;
+      _status = ToatsStatus.error;
+    } catch (_) {
+      _error = 'Could not load your timeline.';
+      _status = ToatsStatus.error;
+    }
+
     notifyListeners();
   }
 }

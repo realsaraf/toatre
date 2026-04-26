@@ -18,6 +18,8 @@
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
+**Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
 ### Session 2026-04-25 (CI unblocking) — completed
 - Created iOS Distribution cert `SJ5FF9432Y` (iPhone Distribution: Saraf Talukder, expires 2027-04-25)
 - Generated private key + P12 (`ios_distribution.p12`, password: `toatre2026`)
@@ -38,6 +40,14 @@
 - `.do/app.yaml`: DO App Platform spec + 2 cron jobs
 - First commit `2f6a81d` (126 files)
 - **Blocked on Playwright session:** git push, Firebase, Apple Dev, ASC, Codemagic, MongoDB, DO deployment, Resend, Twilio, domain wiring
+
+### Session 2026-04-25 (feature pass) — completed
+- Web landing page redesigned to the shipped two-column hero with mountain phone mockup; design spec updated to `docs/designs/toatre home.png`
+- Web auth is live; capture pipeline now uses Whisper + GPT extraction + Mongo persistence through `/api/captures`
+- Web toats CRUD routes are live; timeline loads real data from `/api/toats`
+- Mobile auth now has `auth_service.dart`, a real `AuthProvider`, splash routing, login, and handle creation screens
+- Mobile timeline now fetches real toats; mobile capture records audio and posts to `/api/captures`
+- Validation: `npm run build`, `flutter analyze`, and `flutter test` all clean on 2026-04-25
 
 ### Decisions locked 2026-04-25
 - Apple team: **Saraf Talukder** (`8B9NZ6FRKF`)
@@ -246,14 +256,16 @@ empty TestFlight build is queued.
 - [ ] Rate-limit `POST /api/auth/session` per-IP
 
 ### 1.2 — Mobile auth UI
-- [ ] `mobile/lib/services/auth_service.dart` — Firebase Auth + Google + Apple + email link + phone OTP
-- [ ] `mobile/lib/providers/auth_provider.dart` — state machine (unknown / signed_out / signing_in / signed_in / error)
+- [x] `mobile/lib/services/auth_service.dart` — Firebase Auth + Google + Apple (2026-04-25)
+- [ ] Email link + phone OTP in mobile auth service
+- [x] `mobile/lib/providers/auth_provider.dart` — state machine for sign-in + handle flow (2026-04-25)
 - [ ] `mobile/lib/services/token_manager.dart` — attaches Firebase ID token to every API request
 - [ ] `mobile/lib/services/api_service.dart` — http wrapper with retry + token refresh on 401
-- [ ] `mobile/lib/ui/auth/login_screen.dart` — tabbed (Google / Apple / Email / Phone)
+- [x] `mobile/lib/ui/auth/login_screen.dart` — Google + Apple entry screen (2026-04-25)
 - [ ] `mobile/lib/ui/auth/email_link_screen.dart`
 - [ ] `mobile/lib/ui/auth/phone_otp_screen.dart`
-- [ ] `mobile/lib/ui/splash/splash_screen.dart` — routes to login or timeline based on auth state
+- [x] `mobile/lib/ui/auth/handle_screen.dart` — handle creation step (2026-04-25)
+- [x] `mobile/lib/ui/splash/splash_screen.dart` — routes to login, handle, or timeline based on auth state (2026-04-25)
 - [ ] iOS native: Apple sign-in capability enabled in `ios/Runner/Runner.entitlements`
 - [ ] Android native: Google sign-in SHA fingerprints registered in Firebase Console (Playwright + user)
 
@@ -287,8 +299,8 @@ empty TestFlight build is queued.
 ### 2.1 — Mobile capture
 - [ ] `mobile/lib/services/audio_service.dart` — record (m4a), silence detect, save to temp
 - [ ] `mobile/lib/services/stt_service.dart` — Apple Speech (iOS), `speech_to_text` (Android), fallback flag
-- [ ] `mobile/lib/providers/capture_provider.dart` — state machine (idle → recording → transcribing → extracting → done | error)
-- [ ] `mobile/lib/ui/capture/capture_screen.dart` — full-screen modal with `MicButton`
+- [x] `mobile/lib/providers/capture_provider.dart` — state machine (idle → recording → processing → review | error) (2026-04-25)
+- [x] `mobile/lib/ui/capture/capture_screen.dart` — full-screen capture + review flow wired to `/api/captures` (2026-04-25)
 - [ ] `mobile/lib/ui/capture/components/mic_button.dart` — pulse animation, haptics, accessibility
 - [ ] `mobile/lib/ui/capture/components/transcript_preview.dart`
 - [ ] `mobile/lib/ui/capture/components/extracted_toats_list.dart` — confirm/edit before save
@@ -298,12 +310,12 @@ empty TestFlight build is queued.
 ### 2.2 — Server-side extraction pipeline
 - [ ] `web/src/lib/ai/openai.ts` — client + retry + cost capture
 - [ ] `web/src/lib/ai/langfuse.ts` — trace wrapper
-- [ ] `web/src/lib/ai/prompts/extract.system.md` — locked extraction prompt
+- [x] `web/src/lib/ai/prompts/extract.system.md` — locked extraction prompt (2026-04-25)
 - [ ] `web/src/lib/ai/prompts/extract.examples.md` — few-shot examples
-- [ ] `web/src/lib/ai/extract.ts` — Structured Outputs call, returns Zod-validated `ExtractionResult`
-- [ ] `POST /api/captures` — store capture, kick off extraction (sync for now; queue in Phase 7)
+- [x] `web/src/lib/ai/extract.ts` — Structured Outputs call, returns Zod-validated `ExtractionResult` (2026-04-25)
+- [x] `POST /api/captures` — store capture, transcribe/extract, persist toats (sync for now) (2026-04-25)
 - [ ] `POST /api/extract` — runs the pipeline, low-confidence escalation to GPT-4o
-- [ ] `POST /api/transcribe` — Whisper fallback when on-device STT failed/unconfident
+- [x] `POST /api/transcribe` — Whisper fallback when on-device STT failed/unconfident (2026-04-25)
 - [ ] People resolution + dedup
 - [ ] Insert toats + capture + initial pings inside one Mongo session (transactional)
 
@@ -322,11 +334,11 @@ empty TestFlight build is queued.
 ## 3. Phase 3 — Timeline + Detail Editor
 
 ### 3.1 — Mobile timeline
-- [ ] `mobile/lib/providers/toats_provider.dart` — fetch, group, cache, sync
-- [ ] `mobile/lib/ui/timeline/timeline_screen.dart` — Today / Week / Upcoming / Past sections
+- [x] `mobile/lib/providers/toats_provider.dart` — fetch real data from `/api/toats` (2026-04-25)
+- [x] `mobile/lib/ui/timeline/timeline_screen.dart` — Today view + grouped sections + Up Next card (2026-04-25)
 - [ ] `mobile/lib/ui/timeline/components/toat_card.dart` — kind-aware rendering
 - [ ] Tier indicator + people pills + quick-action row (Done / Snooze)
-- [ ] Pull-to-refresh
+- [x] Pull-to-refresh (2026-04-25)
 - [ ] Empty states per section
 
 ### 3.2 — Mobile detail editor
@@ -339,8 +351,8 @@ empty TestFlight build is queued.
 - [ ] `web/src/app/toats/[id]/page.tsx` — editor
 
 ### 3.4 — APIs
-- [ ] `GET /api/toats?range=today|week|upcoming|past`
-- [ ] `POST /api/toats`, `GET /api/toats/[id]`, `PATCH /api/toats/[id]`, `DELETE /api/toats/[id]`
+- [x] `GET /api/toats?range=today|week|upcoming|past|all` (2026-04-25)
+- [x] `POST /api/toats`, `GET /api/toats/[id]`, `PATCH /api/toats/[id]`, `DELETE /api/toats/[id]` (2026-04-25)
 - [ ] Audit log written on every mutation
 - [ ] Optimistic updates on mobile + web
 
