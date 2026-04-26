@@ -6,13 +6,18 @@ Screen-by-screen build spec mapped to phases. Source images live alongside this 
 
 ## Web — Landing Page
 
-![Home landing page](home%20landing%20page%20web.png)
+![Updated home landing page](toatre%20home.png)
 
 **Status:** Live at `toatre.com` — implemented 2026-04-25.
 
+**Authoritative reference:** `toatre home.png` is the shipped layout. `home landing page web.png` is the earlier concept and should be treated as superseded for implementation work.
+
 **Layout (top → bottom):**
-- **Nav** (sticky, white/blur): logo left · "How it works / Use cases / Pricing" centered · "Log in" + "Sign up free" (indigo pill) right
-- **Hero**: sparkle pill badge · H1 "Say it. / **Toatre gets it**." (pink period) · subtext · CTA row ("Sign up for free →" + "▶ Watch how it works") · trust line · iPhone mockup (lavender→pink gradient screen, mic circle)
+- **Nav** (sticky, soft lavender/blur): custom Toatre mark left · "How it works / Use cases / Pricing / Blog" centered · "Log in" + "Sign up free" (indigo pill) right
+- **Hero**: two-column layout with copy on the left and device art on the right
+- **Hero copy**: sparkle pill badge · H1 "Say it. / **Toatre gets it**." (pink period) · subtext · CTA row ("Sign up for free →" + "Watch how it works") · no-credit-card line
+- **Trust row**: Apple / Google / Microsoft / Notion / Figma wordmarks under the CTA stack
+- **Device art**: full iPhone mockup with mountain-and-lake scene, in-app mic state, bottom tab bar, and floating mic sprite sourced from the provided design sheet
 - **How it works**: 3-card grid — "You talk." / "We understand." / "You stay on track."
 - **Use cases**: 3-card grid — Work / Family / Personal with italic example toats
 - **Pricing**: "Free while in beta." copy + "Get early access free →" CTA

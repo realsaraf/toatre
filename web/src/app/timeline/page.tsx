@@ -8,6 +8,16 @@ import { useAuth } from "@/lib/auth/auth-context";
 type ToatKind = "task" | "event" | "meeting" | "errand" | "deadline" | "idea";
 type ToatTier = "urgent" | "important" | "regular";
 
+interface ApiToat {
+  id: string;
+  kind: ToatKind;
+  tier: ToatTier;
+  title: string;
+  datetime: string | null;
+  location?: string | null;
+  link?: string | null;
+}
+
 interface DemoToat {
   id: string;
   kind: ToatKind;
@@ -22,7 +32,7 @@ interface DemoToat {
 
 const NOW = new Date();
 
-function classifyToat(t: { id: string; kind: ToatKind; tier: ToatTier; title: string; datetime: string | null; location?: string | null; link?: string | null }): DemoToat {
+function classifyToat(t: ApiToat): DemoToat {
   const dt = t.datetime ? new Date(t.datetime) : null;
   const timeStr = dt ? dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   let day: DemoToat["day"] = "later";
@@ -71,18 +81,25 @@ export default function TimelinePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
+
     (async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch("/api/toats?range=upcoming", {
+        const res = await fetch("/api/toats?range=all", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`${res.status}`);
-        const data = await res.json() as Array<{ id: string; kind: ToatKind; tier: ToatTier; title: string; datetime: string | null; location?: string | null; link?: string | null }>;
+
+        const data = (await res.json()) as { toats?: ApiToat[] };
+
         if (!cancelled) {
-          setToats(data.map(classifyToat));
+          setToats((data.toats ?? []).map(classifyToat));
         }
       } catch (e) {
         console.error("[timeline] fetch failed", e);
