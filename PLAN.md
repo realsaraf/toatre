@@ -23,6 +23,7 @@
 ### Session 2026-04-26 (web onboarding + timeline/detail polish) — completed
 - Reproduced the live `https://toatre.com/signup` handle-submit failure and traced the user-facing crash to an empty-body 500 response from `POST /api/auth/profile`
 - Fixed the production Mongo helper after DigitalOcean runtime logs showed the custom promise-like client export resolving to a value without `.db()`, causing the `POST /api/auth/profile` 500
+- Confirmed a second production-only blocker: DigitalOcean's auto-selected Node `22.22.2` breaks Atlas SRV/TLS connectivity for this app, so the web runtime is now pinned to Node `22.18.0`
 - Hardened handle onboarding by returning JSON errors from `POST /api/auth/profile` and by parsing non-JSON error responses safely in `web/src/app/signup/page.tsx`
 - Reworked `web/src/app/timeline/page.tsx` to match the latest mobile-style design direction with the bottom tab bar, floating capture mic, Up Next card, grouped sections, and direct tap-through into toat detail
 - Added shared `web/src/components/mobile-ui.tsx` primitives and a new `web/src/app/toats/[id]/page.tsx` full toat view with kind-aware layouts and quick actions
