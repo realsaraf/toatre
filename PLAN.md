@@ -13,12 +13,17 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-04-25
+**Last updated:** 2026-04-26
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-04-26 (web auth localhost fix) — completed
+- Added `web/src/app/auth/finish/page.tsx` so Firebase email magic-link sign-in has a real completion route
+- Reproduced localhost Google sign-in failure in Playwright MCP and traced it to a stale Next dev server where App Router `/api/*` handlers were returning 404
+- Cleared `web/.next`, restarted `npm run dev`, and verified `/api/auth/session` recovered and Google sign-in reached `/timeline`
 
 ### Session 2026-04-25 (CI unblocking) — completed
 - Created iOS Distribution cert `SJ5FF9432Y` (iPhone Distribution: Saraf Talukder, expires 2027-04-25)
