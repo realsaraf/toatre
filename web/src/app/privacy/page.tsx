@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = "April 25, 2026";
-const CONTACT_EMAIL = "privacy@toatre.com";
+const CONTACT_EMAIL = "contact@toatre.com";
 
 export default function PrivacyPage() {
   return (
