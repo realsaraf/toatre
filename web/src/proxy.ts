@@ -20,11 +20,13 @@ export function proxy(req: NextRequest) {
 
   const hasSession = !!req.cookies.get(COOKIE_NAME);
 
-  // Root: redirect based on auth state
+  // Root: authenticated users go straight to the app
   if (pathname === "/") {
-    return NextResponse.redirect(
-      new URL(hasSession ? "/timeline" : "/login", req.url)
-    );
+    if (hasSession) {
+      return NextResponse.redirect(new URL("/timeline", req.url));
+    }
+    // Unauthenticated: serve the landing page
+    return NextResponse.next();
   }
 
   // Public auth pages — pass through (login page handles redirect after sign-in)
