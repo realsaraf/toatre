@@ -1,0 +1,1 @@
+feat(web): redesign landing page to two-column hero with phone mockup + wire timeline to real API  

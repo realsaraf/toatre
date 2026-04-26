@@ -1,10 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
-
-/* ─── Demo data — replaced by real API calls in Phase 3 ─────────────────── */
+import { useAuth } from "@/lib/auth/auth-context";
 
 type ToatKind = "task" | "event" | "meeting" | "errand" | "deadline" | "idea";
 type ToatTier = "urgent" | "important" | "regular";
@@ -22,57 +21,29 @@ interface DemoToat {
 }
 
 const NOW = new Date();
-const todayStr = () =>
-  NOW.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const DEMO_TOATS: DemoToat[] = [
-  {
-    id: "1",
-    kind: "meeting",
-    tier: "important",
-    title: "Team standup",
-    time: "11:00 AM",
-    location: "Google Meet",
-    link: "https://meet.google.com",
-    day: "today",
-    isUpNext: true,
-  },
-  {
-    id: "2",
-    kind: "task",
-    tier: "regular",
-    title: "Call Mom",
-    time: "3:00 PM",
-    day: "today",
-  },
-  {
-    id: "3",
-    kind: "errand",
-    tier: "urgent",
-    title: "Dentist appointment",
-    time: "9:00 AM",
-    location: "Smile Care Clinic, Madison Ave",
-    day: "tomorrow",
-  },
-  {
-    id: "4",
-    kind: "task",
-    tier: "regular",
-    title: "Grocery run — weekly shop",
-    time: "5:30 PM",
-    location: "Trader Joe's",
-    day: "tomorrow",
-  },
-  {
-    id: "5",
-    kind: "event",
-    tier: "important",
-    title: "Taylor Swift — Madison Square Garden",
-    time: "7:30 PM",
-    location: "MSG, New York",
-    day: "later",
-  },
-];
+function classifyToat(t: { id: string; kind: ToatKind; tier: ToatTier; title: string; datetime: string | null; location?: string | null; link?: string | null }): DemoToat {
+  const dt = t.datetime ? new Date(t.datetime) : null;
+  const timeStr = dt ? dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  let day: DemoToat["day"] = "later";
+  if (dt) {
+    const tDay = new Date(dt); tDay.setHours(0,0,0,0);
+    const today = new Date(NOW); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    if (tDay.getTime() === today.getTime()) day = "today";
+    else if (tDay.getTime() === tomorrow.getTime()) day = "tomorrow";
+  }
+  return {
+    id: t.id,
+    kind: t.kind,
+    tier: t.tier,
+    title: t.title,
+    time: timeStr,
+    location: t.location ?? undefined,
+    link: t.link ?? undefined,
+    day,
+  };
+}
 
 /* ─── Kind metadata ──────────────────────────────────────────────────────── */
 
@@ -95,11 +66,48 @@ const TIER_COLOR: Record<ToatTier, string> = {
 
 export default function TimelinePage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [toats, setToats] = useState<DemoToat[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const upNext = DEMO_TOATS.find((t) => t.isUpNext);
-  const todayToats = DEMO_TOATS.filter((t) => t.day === "today" && !t.isUpNext);
-  const tomorrowToats = DEMO_TOATS.filter((t) => t.day === "tomorrow");
-  const laterToats = DEMO_TOATS.filter((t) => t.day === "later");
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/toats?range=upcoming", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        const data = await res.json() as Array<{ id: string; kind: ToatKind; tier: ToatTier; title: string; datetime: string | null; location?: string | null; link?: string | null }>;
+        if (!cancelled) {
+          setToats(data.map(classifyToat));
+        }
+      } catch (e) {
+        console.error("[timeline] fetch failed", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const now = new Date();
+  const upNext = toats
+    .filter((t) => t.day === "today" && t.time)
+    .sort((a, b) => a.time.localeCompare(b.time))
+    .find((t) => {
+      // first toat in the future today
+      const [h, m] = t.time.split(/[: ]/);
+      const isPm = t.time.toLowerCase().includes("pm");
+      const hour = parseInt(h ?? "0") + (isPm && parseInt(h ?? "0") !== 12 ? 12 : 0);
+      const toatMin = new Date(); toatMin.setHours(hour, parseInt(m ?? "0"), 0, 0);
+      return toatMin >= now;
+    });
+  const todayToats = toats.filter((t) => t.day === "today" && t !== upNext);
+  const tomorrowToats = toats.filter((t) => t.day === "tomorrow");
+  const laterToats = toats.filter((t) => t.day === "later");
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
@@ -187,8 +195,19 @@ export default function TimelinePage() {
           </Section>
         )}
 
+        {/* ── Loading state ── */}
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 16, paddingTop: 60, color: "var(--color-text-muted)", fontSize: 15 }}>
+            <svg width={28} height={28} viewBox="0 0 28 28" fill="none" className="animate-spin" aria-hidden>
+              <circle cx={14} cy={14} r={11} stroke="rgba(99,102,241,0.25)" strokeWidth={3} />
+              <path d="M14 3a11 11 0 0 1 11 11" stroke="#6366F1" strokeWidth={3} strokeLinecap="round" />
+            </svg>
+            Loading your timeline…
+          </div>
+        )}
+
         {/* ── Empty state ── */}
-        {DEMO_TOATS.length === 0 && (
+        {!loading && toats.length === 0 && (
           <div style={styles.emptyState}>
             <div style={styles.emptyIcon}>🎤</div>
             <p style={styles.emptyTitle}>You&apos;re all clear.</p>

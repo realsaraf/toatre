@@ -11,21 +11,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            // Belt-and-suspenders: also allow popups to close themselves.
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin-allow-popups",
-          },
-        ],
-      },
-    ];
-  },
 };
 
 export default nextConfig;
