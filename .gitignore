@@ -20,6 +20,7 @@
 GoogleService-Info.plist
 google-services.json
 firebase-adminsdk-*.json
+commit_msg.txt
 
 # ---- OS / IDE ----
 .DS_Store
