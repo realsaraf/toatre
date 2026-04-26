@@ -47,6 +47,9 @@
 - Web toats CRUD routes are live; timeline loads real data from `/api/toats`
 - Mobile auth now has `auth_service.dart`, a real `AuthProvider`, splash routing, login, and handle creation screens
 - Mobile timeline now fetches real toats; mobile capture records audio and posts to `/api/captures`
+- Pushed commits `108ee63`, `5f98e45`, and `6bf31df` to `main`
+- Verified live `https://toatre.com` homepage content after push: Blog nav present, updated hero copy present, trust logo row present
+- Mobile push should trigger Codemagic `flutter-test` + `ios-release`, but TestFlight verification still requires dashboard visibility
 - Validation: `npm run build`, `flutter analyze`, and `flutter test` all clean on 2026-04-25
 
 ### Decisions locked 2026-04-25
