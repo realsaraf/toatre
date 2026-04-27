@@ -20,6 +20,12 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-04-26 (web settings saves + Twilio verify rename) — completed
+- Fixed `/api/settings` upserts so profile, SMS Ping, and per-kind Ping preference saves no longer collide on Mongo update paths when defaults are inserted
+- Tightened the phone empty-timeline state so the no-toats view is materially smaller, with denser copy and smaller capture actions
+- Updated the live Twilio Verify service friendly name from `Plotto` to `Toatre` so SMS verification copy uses the current brand
+- Validation: `npm run build`
+
 ### Session 2026-04-26 (web share previews + mobile timeline density) — completed
 - Tightened the phone-sized Up Next card on the web timeline so the first card reads denser and wastes less vertical space
 - Added branded Toatre OG/Twitter metadata and app-icon metadata at the app level so shared links no longer render as blank previews

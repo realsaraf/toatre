@@ -176,13 +176,17 @@ export async function PATCH(request: NextRequest) {
     typeof userDoc.timezone === "string" && userDoc.timezone ? userDoc.timezone : "UTC",
   );
 
+  const insertDefaults = Object.fromEntries(
+    Object.entries(defaults).filter(([key]) => !(key in updates)),
+  );
+
   await settings.updateOne(
     { userId: user.mongoId },
     {
       $set: updates,
       $setOnInsert: {
         userId: user.mongoId,
-        ...defaults,
+        ...insertDefaults,
       },
     },
     { upsert: true },

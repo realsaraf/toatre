@@ -335,26 +335,40 @@ function getUpNext(toats: TimelineToat[], now: Date) {
     });
 }
 
-function EmptyTimeline({ onCapture, onTextCapture }: { onCapture: () => void; onTextCapture: () => void }) {
+function EmptyTimeline({
+  onCapture,
+  onTextCapture,
+  compact = false,
+}: {
+  onCapture: () => void;
+  onTextCapture: () => void;
+  compact?: boolean;
+}) {
   return (
-    <section style={styles.emptyCard}>
-      <div style={styles.emptySun} />
-      <div style={styles.emptyGlow} />
+    <section style={{ ...styles.emptyCard, ...(compact ? styles.emptyCardCompact : {}) }}>
+      <div style={{ ...styles.emptySun, ...(compact ? styles.emptySunCompact : {}) }} />
+      <div style={{ ...styles.emptyGlow, ...(compact ? styles.emptyGlowCompact : {}) }} />
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={styles.emptyBadgeWrap}>
-          <span style={styles.emptyBadge}><SparkleIcon size={18} /></span>
+        <div style={{ ...styles.emptyBadgeWrap, ...(compact ? styles.emptyBadgeWrapCompact : {}) }}>
+          <span style={{ ...styles.emptyBadge, ...(compact ? styles.emptyBadgeCompact : {}) }}><SparkleIcon size={compact ? 14 : 18} /></span>
         </div>
-        <h2 style={styles.emptyTitle}>You&apos;re all clear.</h2>
-        <p style={styles.emptyBody}>Tap the mic and say what needs to happen next. Toatre will turn it into toats and drop them into your timeline.</p>
-        <div style={styles.emptyActions}>
-          <button type="button" onClick={onCapture} style={styles.emptyCaptureButton}>Start capturing</button>
-          <button type="button" onClick={onTextCapture} style={styles.emptyTextButton}>Type it instead</button>
+        <h2 style={{ ...styles.emptyTitle, ...(compact ? styles.emptyTitleCompact : {}) }}>You&apos;re all clear.</h2>
+        <p style={{ ...styles.emptyBody, ...(compact ? styles.emptyBodyCompact : {}) }}>
+          Tap the mic and say what needs to happen next. Toatre will turn it into toats and drop them into your timeline.
+        </p>
+        <div style={{ ...styles.emptyActions, ...(compact ? styles.emptyActionsCompact : {}) }}>
+          <button type="button" onClick={onCapture} style={{ ...styles.emptyCaptureButton, ...(compact ? styles.emptyCaptureButtonCompact : {}) }}>
+            Start capture
+          </button>
+          <button type="button" onClick={onTextCapture} style={{ ...styles.emptyTextButton, ...(compact ? styles.emptyTextButtonCompact : {}) }}>
+            Type capture
+          </button>
         </div>
       </div>
-      <div style={styles.landscape}>
-        <div style={styles.sunDisc} />
-        <div style={styles.hillOne} />
-        <div style={styles.hillTwo} />
+      <div style={{ ...styles.landscape, ...(compact ? styles.landscapeCompact : {}) }}>
+        <div style={{ ...styles.sunDisc, ...(compact ? styles.sunDiscCompact : {}) }} />
+        <div style={{ ...styles.hillOne, ...(compact ? styles.hillOneCompact : {}) }} />
+        <div style={{ ...styles.hillTwo, ...(compact ? styles.hillTwoCompact : {}) }} />
       </div>
     </section>
   );
@@ -539,7 +553,7 @@ export default function TimelinePage() {
             </section>
           ) : null}
 
-        {!loading && !toats.length ? <EmptyTimeline onCapture={openCapture} onTextCapture={openTextCapture} /> : null}
+        {!loading && !toats.length ? <EmptyTimeline onCapture={openCapture} onTextCapture={openTextCapture} compact={isPhoneViewport} /> : null}
 
         <div style={{ height: isPhoneViewport ? 128 : 176 }} />
       </main>
@@ -1343,8 +1357,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(255,255,255,0.9)",
     boxShadow: "0 30px 90px rgba(31,41,55,0.08)",
   },
+  emptyCardCompact: {
+    minHeight: 238,
+    borderRadius: 24,
+    padding: "16px 14px 12px",
+  },
   emptyBadgeWrap: {
     marginBottom: 16,
+  },
+  emptyBadgeWrapCompact: {
+    marginBottom: 10,
   },
   emptyBadge: {
     width: 46,
@@ -1356,6 +1378,10 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
+  emptyBadgeCompact: {
+    width: 34,
+    height: 34,
+  },
   emptyTitle: {
     fontSize: "clamp(28px, 8vw, 36px)",
     lineHeight: 1,
@@ -1364,12 +1390,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#0F1B4C",
     marginBottom: 12,
   },
+  emptyTitleCompact: {
+    fontSize: 18,
+    marginBottom: 8,
+  },
   emptyBody: {
     maxWidth: 540,
     fontSize: "clamp(15px, 4.4vw, 19px)",
     lineHeight: 1.55,
     color: "#6B7280",
     marginBottom: 18,
+  },
+  emptyBodyCompact: {
+    fontSize: 12,
+    lineHeight: 1.45,
+    marginBottom: 12,
+    maxWidth: 280,
   },
   emptyCaptureButton: {
     minHeight: 52,
@@ -1383,11 +1419,21 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     boxShadow: "0 22px 44px rgba(91,61,245,0.22)",
   },
+  emptyCaptureButtonCompact: {
+    minHeight: 40,
+    padding: "0 14px",
+    borderRadius: 13,
+    fontSize: 13,
+    boxShadow: "0 16px 30px rgba(91,61,245,0.18)",
+  },
   emptyActions: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     flexWrap: "wrap",
+  },
+  emptyActionsCompact: {
+    gap: 8,
   },
   emptyTextButton: {
     minHeight: 52,
@@ -1401,6 +1447,13 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     boxShadow: "0 18px 38px rgba(31,41,55,0.06)",
   },
+  emptyTextButtonCompact: {
+    minHeight: 40,
+    padding: "0 14px",
+    borderRadius: 13,
+    fontSize: 13,
+    boxShadow: "0 12px 24px rgba(31,41,55,0.05)",
+  },
   emptySun: {
     position: "absolute",
     top: -30,
@@ -1409,6 +1462,12 @@ const styles: Record<string, React.CSSProperties> = {
     height: 220,
     borderRadius: "50%",
     background: "radial-gradient(circle, rgba(253,224,71,0.18), rgba(253,224,71,0))",
+  },
+  emptySunCompact: {
+    top: -44,
+    right: -56,
+    width: 156,
+    height: 156,
   },
   emptyGlow: {
     position: "absolute",
@@ -1419,12 +1478,21 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "50%",
     background: "radial-gradient(circle, rgba(249,168,212,0.18), rgba(249,168,212,0))",
   },
+  emptyGlowCompact: {
+    left: -76,
+    bottom: 18,
+    width: 144,
+    height: 144,
+  },
   landscape: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     height: "clamp(112px, 34vw, 150px)",
+  },
+  landscapeCompact: {
+    height: 92,
   },
   sunDisc: {
     position: "absolute",
@@ -1434,6 +1502,12 @@ const styles: Record<string, React.CSSProperties> = {
     height: 88,
     borderRadius: "50%",
     background: "linear-gradient(180deg, #FDBA74, #FB923C)",
+  },
+  sunDiscCompact: {
+    right: 54,
+    bottom: 34,
+    width: 62,
+    height: 62,
   },
   hillOne: {
     position: "absolute",
@@ -1445,6 +1519,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderTopRightRadius: 120,
     background: "linear-gradient(90deg, rgba(244,114,182,0.26), rgba(139,92,246,0.28))",
   },
+  hillOneCompact: {
+    left: -24,
+    right: 88,
+    height: 58,
+  },
   hillTwo: {
     position: "absolute",
     left: 120,
@@ -1454,6 +1533,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderTopLeftRadius: 120,
     borderTopRightRadius: 120,
     background: "linear-gradient(90deg, rgba(139,92,246,0.22), rgba(56,189,248,0.18))",
+  },
+  hillTwoCompact: {
+    left: 96,
+    right: -10,
+    height: 46,
   },
   textCaptureDockButton: {
     position: "fixed",
