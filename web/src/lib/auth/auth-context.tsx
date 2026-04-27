@@ -1,11 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { auth } from "@/lib/firebase/client";
 import {
   onAuthStateChanged,
   signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
   OAuthProvider,
   sendSignInLinkToEmail,
@@ -42,32 +41,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingRedirect, setPendingRedirect] = useState<{ hasHandle: boolean } | null>(null);
+  const sessionUidRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    // Consume the redirect result (if any) once on mount.
     let cancelled = false;
-    (async () => {
-      try {
-        const result = await getRedirectResult(auth);
+
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      void (async () => {
         if (cancelled) return;
-        if (result?.user) {
-          const { hasHandle } = await createSession(result.user);
-          if (!cancelled) setPendingRedirect({ hasHandle });
+
+        setUser(firebaseUser);
+
+        if (!firebaseUser) {
+          sessionUidRef.current = null;
+          setPendingRedirect(null);
+          await fetch("/api/auth/logout", { method: "POST" }).catch((error) => {
+            console.error("[auth] logout cleanup failed", error);
+          });
+          if (!cancelled) setLoading(false);
+          return;
         }
-      } catch (e) {
-        console.error("[auth] getRedirectResult failed", e);
-      }
-    })();
+
+        try {
+          if (sessionUidRef.current !== firebaseUser.uid) {
+            const { hasHandle } = await createSession(firebaseUser);
+            sessionUidRef.current = firebaseUser.uid;
+            if (!cancelled) setPendingRedirect({ hasHandle });
+          }
+        } catch (error) {
+          console.error("[auth] session creation failed", error);
+          if (!cancelled) setPendingRedirect(null);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    });
+
     return () => {
       cancelled = true;
+      unsub();
     };
   }, []);
 

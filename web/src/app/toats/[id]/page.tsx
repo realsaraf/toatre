@@ -400,6 +400,12 @@ export default function ToatDetailPage() {
   }, []);
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace(`/login?next=/toats/${params.id}`);
+    }
+  }, [authLoading, params.id, router, user]);
+
+  useEffect(() => {
     if (!params.id) return;
     if (!user) {
       return;
@@ -542,6 +548,10 @@ export default function ToatDetailPage() {
   };
 
   const loading = authLoading || (Boolean(user) && !hasLoadedData);
+
+  if (!user && !authLoading) {
+    return null;
+  }
 
   if (loading) {
     return (

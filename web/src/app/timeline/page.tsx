@@ -392,6 +392,12 @@ export default function TimelinePage() {
   const openTextCapture = () => router.push("/capture?mode=text");
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?next=/timeline");
+    }
+  }, [authLoading, router, user]);
+
+  useEffect(() => {
     if (!user) {
       return;
     }
@@ -480,6 +486,10 @@ export default function TimelinePage() {
       setFinishingToatId(null);
     }
   };
+
+  if (!user && !authLoading) {
+    return null;
+  }
 
   return (
     <div style={styles.page}>

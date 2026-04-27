@@ -69,7 +69,7 @@ export default function CapturePage() {
 function CapturePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [status, setStatus] = useState<CaptureStatus>("idle");
   const [transcript, setTranscript] = useState("");
@@ -91,6 +91,14 @@ function CapturePageContent() {
 
   const captureMode: CaptureMode = searchParams.get("mode") === "text" ? "text" : "voice";
   const shouldAutoStart = searchParams.get("autostart") === "1";
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?next=/capture");
+    }
+  }, [authLoading, router, user]);
+
+  const routeIsLocked = !user && !authLoading;
 
   const resetWaveform = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
@@ -216,13 +224,13 @@ function CapturePageContent() {
   }, [clearTimer, closeAudioContext, getIdToken, resetWaveform, startWaveform, stopStream]);
 
   useEffect(() => {
-    if (!shouldAutoStart || captureMode !== "voice" || hasAutoStartedRef.current || status !== "idle") {
+    if (!user || authLoading || !shouldAutoStart || captureMode !== "voice" || hasAutoStartedRef.current || status !== "idle") {
       return;
     }
 
     hasAutoStartedRef.current = true;
     void startCapture();
-  }, [captureMode, shouldAutoStart, startCapture, status]);
+  }, [authLoading, captureMode, shouldAutoStart, startCapture, status, user]);
 
   const stopCapture = () => {
     clearTimer();
@@ -309,6 +317,10 @@ function CapturePageContent() {
   const isReview = status === "review";
   const selectedCount = selected.filter(Boolean).length;
   const isTextMode = captureMode === "text";
+
+  if (routeIsLocked) {
+    return null;
+  }
 
   if (isReview) {
     return (

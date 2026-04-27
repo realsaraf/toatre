@@ -11,6 +11,7 @@ export function proxy(req: NextRequest) {
   // Next.js internals + static assets: always pass through
   if (
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/__/auth") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/icon") ||
     pathname.startsWith("/api/") ||
