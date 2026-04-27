@@ -101,7 +101,9 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload to App Store Connect/TestFlight, but do not submit for external
+        # beta review until App Store Connect test information is completed.
+        submit_to_testflight: false
         submit_to_app_store: false
       email:
         recipients:
