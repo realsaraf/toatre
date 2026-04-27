@@ -12,12 +12,15 @@ import 'package:toatre/services/api_service.dart';
 
 enum CaptureStatus { idle, recording, processing, review, error }
 
+enum CaptureInputMode { voice, text }
+
 class CaptureProvider extends ChangeNotifier {
   final ApiService _api = ApiService.instance;
   final AudioRecorder _recorder = AudioRecorder();
   final Random _random = Random();
 
   CaptureStatus _status = CaptureStatus.idle;
+  CaptureInputMode _mode = CaptureInputMode.voice;
   String? _error;
   String _transcript = '';
   int _elapsedSeconds = 0;
@@ -30,6 +33,7 @@ class CaptureProvider extends ChangeNotifier {
   Timer? _waveformTimer;
 
   CaptureStatus get status => _status;
+  CaptureInputMode get mode => _mode;
   String? get error => _error;
   String get transcript => _transcript;
   int get elapsedSeconds => _elapsedSeconds;
@@ -39,8 +43,19 @@ class CaptureProvider extends ChangeNotifier {
   bool get isRecording => _status == CaptureStatus.recording;
   bool get isProcessing => _status == CaptureStatus.processing;
   bool get isReviewing => _status == CaptureStatus.review;
+  bool get isTextMode => _mode == CaptureInputMode.text;
 
   bool isSelected(String toatId) => _selectedIds.contains(toatId);
+
+  void setMode(CaptureInputMode mode) {
+    if (_status == CaptureStatus.processing) {
+      return;
+    }
+
+    _mode = mode;
+    _error = null;
+    notifyListeners();
+  }
 
   Future<void> startRecording() async {
     _error = null;
@@ -118,25 +133,41 @@ class CaptureProvider extends ChangeNotifier {
         filePath: recordedPath,
         authenticated: true,
       );
+      await _applyCaptureResponse(response, fromVoice: true);
+    } on ApiServiceException catch (error) {
+      _status = CaptureStatus.error;
+      _error = error.message;
+    } catch (_) {
+      _status = CaptureStatus.error;
+      _error = 'Capture failed. Try again.';
+    }
 
-      _transcript = response['transcript'] as String? ?? '';
-      final toatsJson = response['toats'];
-      final list = toatsJson is List<dynamic> ? toatsJson : const <dynamic>[];
-      _toats = list
-          .whereType<Map<String, dynamic>>()
-          .map(ToatSummary.fromJson)
-          .toList();
-      _selectedIds = _toats.map((toat) => toat.id).toSet();
-      _status = CaptureStatus.review;
-      _waveform = List<double>.filled(18, 0.25);
+    notifyListeners();
+  }
 
-      for (final toat in _toats) {
-        await AnalyticsService.logToatCreated(
-          kind: toat.kind,
-          tier: toat.tier,
-          fromVoice: true,
-        );
-      }
+  Future<void> submitTextCapture(String transcript) async {
+    final trimmed = transcript.trim();
+    if (trimmed.isEmpty) {
+      _status = CaptureStatus.error;
+      _error = 'Type something before sending it to Toatre.';
+      notifyListeners();
+      return;
+    }
+
+    _error = null;
+    _transcript = trimmed;
+    _toats = <ToatSummary>[];
+    _selectedIds = <String>{};
+    _status = CaptureStatus.processing;
+    notifyListeners();
+
+    try {
+      final response = await _api.postJson(
+        '/api/captures',
+        body: <String, Object?>{'transcript': trimmed},
+        authenticated: true,
+      );
+      await _applyCaptureResponse(response, fromVoice: false);
     } on ApiServiceException catch (error) {
       _status = CaptureStatus.error;
       _error = error.message;
@@ -161,6 +192,7 @@ class CaptureProvider extends ChangeNotifier {
     _elapsedTimer?.cancel();
     _waveformTimer?.cancel();
     _status = CaptureStatus.idle;
+    _mode = CaptureInputMode.voice;
     _error = null;
     _transcript = '';
     _elapsedSeconds = 0;
@@ -169,6 +201,30 @@ class CaptureProvider extends ChangeNotifier {
     _toats = <ToatSummary>[];
     _selectedIds = <String>{};
     notifyListeners();
+  }
+
+  Future<void> _applyCaptureResponse(
+    Map<String, dynamic> response, {
+    required bool fromVoice,
+  }) async {
+    _transcript = response['transcript'] as String? ?? _transcript;
+    final toatsJson = response['toats'];
+    final list = toatsJson is List<dynamic> ? toatsJson : const <dynamic>[];
+    _toats = list
+        .whereType<Map<String, dynamic>>()
+        .map(ToatSummary.fromJson)
+        .toList();
+    _selectedIds = _toats.map((toat) => toat.id).toSet();
+    _status = CaptureStatus.review;
+    _waveform = List<double>.filled(18, 0.25);
+
+    for (final toat in _toats) {
+      await AnalyticsService.logToatCreated(
+        kind: toat.kind,
+        tier: toat.tier,
+        fromVoice: fromVoice,
+      );
+    }
   }
 
   @override

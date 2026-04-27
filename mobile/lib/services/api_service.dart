@@ -55,6 +55,36 @@ class ApiService {
     return _decodeMap(response);
   }
 
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    required Map<String, Object?> body,
+    bool authenticated = false,
+  }) async {
+    final headers = await _headers(authenticated: authenticated);
+    headers['Content-Type'] = 'application/json';
+
+    final response = await _client.patch(
+      AppConfig.apiUri(path),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    return _decodeMap(response);
+  }
+
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    bool authenticated = false,
+  }) async {
+    final headers = await _headers(authenticated: authenticated);
+    final response = await _client.delete(
+      AppConfig.apiUri(path),
+      headers: headers,
+    );
+
+    return _decodeMap(response);
+  }
+
   Future<Map<String, dynamic>> postMultipart(
     String path, {
     required String fileField,

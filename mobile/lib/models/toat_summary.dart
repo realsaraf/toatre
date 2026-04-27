@@ -10,6 +10,10 @@ class ToatSummary {
     required this.link,
     required this.people,
     required this.notes,
+    required this.status,
+    required this.captureId,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -22,6 +26,10 @@ class ToatSummary {
   final String? link;
   final List<String> people;
   final String? notes;
+  final String status;
+  final String? captureId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   factory ToatSummary.fromJson(Map<String, dynamic> json) {
     final peopleJson = json['people'];
@@ -39,7 +47,70 @@ class ToatSummary {
           ? peopleJson.whereType<String>().toList()
           : const <String>[],
       notes: json['notes'] as String?,
+      status: json['status'] as String? ?? 'active',
+      captureId: json['captureId'] as String?,
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
     );
+  }
+
+  ToatSummary copyWith({
+    String? id,
+    String? kind,
+    String? tier,
+    String? title,
+    DateTime? datetime,
+    bool clearDatetime = false,
+    DateTime? endDatetime,
+    bool clearEndDatetime = false,
+    String? location,
+    bool clearLocation = false,
+    String? link,
+    bool clearLink = false,
+    List<String>? people,
+    String? notes,
+    bool clearNotes = false,
+    String? status,
+    String? captureId,
+    bool clearCaptureId = false,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ToatSummary(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      tier: tier ?? this.tier,
+      title: title ?? this.title,
+      datetime: clearDatetime ? null : datetime ?? this.datetime,
+      endDatetime: clearEndDatetime ? null : endDatetime ?? this.endDatetime,
+      location: clearLocation ? null : location ?? this.location,
+      link: clearLink ? null : link ?? this.link,
+      people: people ?? this.people,
+      notes: clearNotes ? null : notes ?? this.notes,
+      status: status ?? this.status,
+      captureId: clearCaptureId ? null : captureId ?? this.captureId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'kind': kind,
+      'tier': tier,
+      'title': title,
+      'datetime': datetime?.toIso8601String(),
+      'endDatetime': endDatetime?.toIso8601String(),
+      'location': location,
+      'link': link,
+      'people': people,
+      'notes': notes,
+      'status': status,
+      'captureId': captureId,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
   }
 
   static DateTime? _parseDate(Object? value) {

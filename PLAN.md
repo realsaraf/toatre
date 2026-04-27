@@ -20,6 +20,13 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-04-26 (mobile parity + Android build unblocking) — completed
+- Brought the Flutter mobile app much closer to the current web surface: tappable timeline cards, a full toat detail screen with quick actions, typed capture mode, a smaller empty-state capture CTA, and a real settings/profile flow for General, Phone, Handle, and Pings
+- Expanded the mobile data layer with settings models/provider support plus toat fetch/update/delete/duplicate helpers and capture-mode handling so the new UI is backed by the existing web APIs
+- Updated Android app build configuration for the current Flutter plugin set: `compileSdk 36`, `minSdk 23`, `ndkVersion 27.0.12077973`, core-library desugaring, a minimal `proguard-rules.pro`, and Android `.kotlin` ignore coverage
+- Validation: `flutter analyze`, `flutter test`
+- Local Windows note: release Android builds now clear the earlier SDK/NDK/desugaring/ProGuard blockers but still crash the Gradle/JVM during R8 minification on this 15 GB host; Codemagic remains the authoritative next build check
+
 ### Session 2026-04-26 (web settings saves + Twilio verify rename) — completed
 - Fixed `/api/settings` upserts so profile, SMS Ping, and per-kind Ping preference saves no longer collide on Mongo update paths when defaults are inserted
 - Tightened the phone empty-timeline state so the no-toats view is materially smaller, with denser copy and smaller capture actions

@@ -8,8 +8,27 @@ import 'package:toatre/ui/timeline/timeline_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
-class CaptureScreen extends StatelessWidget {
+class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key});
+
+  @override
+  State<CaptureScreen> createState() => _CaptureScreenState();
+}
+
+class _CaptureScreenState extends State<CaptureScreen> {
+  late final TextEditingController _textController;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +41,19 @@ class CaptureScreen extends StatelessWidget {
               return _ReviewState(capture: capture);
             }
 
-            return _ListeningState(capture: capture);
+            if (capture.isTextMode) {
+              return _TextCaptureState(
+                capture: capture,
+                controller: _textController,
+                onOpenVoiceMode: () =>
+                    capture.setMode(CaptureInputMode.voice),
+              );
+            }
+
+            return _ListeningState(
+              capture: capture,
+              onOpenTextMode: () => capture.setMode(CaptureInputMode.text),
+            );
           },
         ),
       ),
@@ -31,9 +62,13 @@ class CaptureScreen extends StatelessWidget {
 }
 
 class _ListeningState extends StatelessWidget {
-  const _ListeningState({required this.capture});
+  const _ListeningState({
+    required this.capture,
+    required this.onOpenTextMode,
+  });
 
   final CaptureProvider capture;
+  final VoidCallback onOpenTextMode;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +131,12 @@ class _ListeningState extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 18),
+          _ModeToggle(
+            activeMode: CaptureInputMode.voice,
+            onVoiceTap: () => capture.setMode(CaptureInputMode.voice),
+            onTextTap: onOpenTextMode,
           ),
           const SizedBox(height: 34),
           Center(
@@ -275,10 +316,11 @@ class _ListeningState extends StatelessWidget {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 child: _CircleAction(
                   icon: Icons.keyboard_alt_outlined,
                   label: 'Type instead',
+                  onTap: onOpenTextMode,
                 ),
               ),
             ],
@@ -327,6 +369,165 @@ class _ListeningState extends StatelessWidget {
     final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
     final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
     return '$minutes:$remainingSeconds';
+  }
+}
+
+class _TextCaptureState extends StatelessWidget {
+  const _TextCaptureState({
+    required this.capture,
+    required this.controller,
+    required this.onOpenVoiceMode,
+  });
+
+  final CaptureProvider capture;
+  final TextEditingController controller;
+  final VoidCallback onOpenVoiceMode;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: AppColors.brandGradient.createShader,
+                blendMode: BlendMode.srcIn,
+                child: Text(
+                  'toatre',
+                  style: TextStyles.heading2.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: const Color(0xFFF2F4F8),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          Text('Type a capture', style: TextStyles.display.copyWith(fontSize: 38)),
+          const SizedBox(height: 10),
+          Text(
+            'Write what needs to happen next and Toatre will turn it into toats.',
+            style: TextStyles.heading3.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 18),
+          _ModeToggle(
+            activeMode: CaptureInputMode.text,
+            onVoiceTap: onOpenVoiceMode,
+            onTextTap: () {},
+          ),
+          const SizedBox(height: 22),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x120F172A),
+                  blurRadius: 24,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: controller,
+              maxLines: 9,
+              minLines: 9,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: 'Call the dentist tomorrow, send Priya the deck, and remind me to buy groceries on the way home.',
+                hintStyle: TextStyles.body.copyWith(color: AppColors.textMuted),
+                border: InputBorder.none,
+              ),
+              style: TextStyles.body.copyWith(
+                color: const Color(0xFF111827),
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (capture.error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                capture.error!,
+                style: TextStyles.smallMedium.copyWith(color: AppColors.error),
+              ),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: capture.isProcessing
+                      ? null
+                      : () {
+                          capture.reset();
+                          Navigator.of(context).pop();
+                        },
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: capture.isProcessing
+                      ? null
+                      : () => capture.submitTextCapture(controller.text),
+                  child: Text(capture.isProcessing ? 'Thinking…' : 'Add text capture'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x120F172A),
+                  blurRadius: 20,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Tip: one typed capture can hold multiple toats, just like voice.',
+                    style: TextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -535,6 +736,76 @@ class _WaveMeter extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({
+    required this.activeMode,
+    required this.onVoiceTap,
+    required this.onTextTap,
+  });
+
+  final CaptureInputMode activeMode;
+  final VoidCallback onVoiceTap;
+  final VoidCallback onTextTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F1FF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ModeButton(
+            label: 'Voice',
+            active: activeMode == CaptureInputMode.voice,
+            onTap: onVoiceTap,
+          ),
+          _ModeButton(
+            label: 'Text',
+            active: activeMode == CaptureInputMode.text,
+            onTap: onTextTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeButton extends StatelessWidget {
+  const _ModeButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: active ? AppColors.brandGradient : null,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyles.smallMedium.copyWith(
+            color: active ? Colors.white : AppColors.primary,
+          ),
+        ),
+      ),
     );
   }
 }
