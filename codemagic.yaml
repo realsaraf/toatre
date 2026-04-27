@@ -88,7 +88,9 @@ workflows:
       - name: Flutter build iOS (release)
         script: |
           cd mobile
+          APP_BUILD_NUMBER="${BUILD_NUMBER:-2}"
           flutter build ipa --release \
+            --build-number="$APP_BUILD_NUMBER" \
             --dart-define=TOATRE_ENV=production \
             --export-options-plist=/Users/builder/export_options.plist
 
