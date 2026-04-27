@@ -1,31 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithApple, sendMagicLink } = useAuth();
+  const { signInWithGoogle, signInWithApple, sendMagicLink, pendingRedirect } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [linkSent, setLinkSent] = useState(false);
   const [busy, setBusy] = useState<"google" | "apple" | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // After a sign-in redirect returns, the AuthProvider exposes the result here.
+  useEffect(() => {
+    if (pendingRedirect) {
+      router.push(pendingRedirect.hasHandle ? "/timeline" : "/signup");
+    }
+  }, [pendingRedirect, router]);
+
   const handleGoogle = async () => {
     setBusy("google");
     setError(null);
     try {
-      const { hasHandle } = await signInWithGoogle();
-      router.push(hasHandle ? "/timeline" : "/signup");
+      await signInWithGoogle();
+      // Page navigates away; nothing to do.
     } catch (e: unknown) {
       const code = (e as { code?: string })?.code ?? "";
       const msg = e instanceof Error ? e.message : "";
       console.error("[login] google sign-in failed", { code, msg, raw: e });
-      if (!code.includes("popup-closed") && !msg.includes("cancelled")) {
-        setError(`Google sign-in failed${code ? ` (${code})` : ""}. Please try again.`);
-      }
-    } finally {
+      setError(`Google sign-in failed${code ? ` (${code})` : ""}. Please try again.`);
       setBusy(null);
     }
   };
@@ -34,16 +38,12 @@ export default function LoginPage() {
     setBusy("apple");
     setError(null);
     try {
-      const { hasHandle } = await signInWithApple();
-      router.push(hasHandle ? "/timeline" : "/signup");
+      await signInWithApple();
     } catch (e: unknown) {
       const code = (e as { code?: string })?.code ?? "";
       const msg = e instanceof Error ? e.message : "";
       console.error("[login] apple sign-in failed", { code, msg, raw: e });
-      if (!code.includes("popup-closed") && !msg.includes("cancelled")) {
-        setError(`Apple sign-in failed${code ? ` (${code})` : ""}. Please try again.`);
-      }
-    } finally {
+      setError(`Apple sign-in failed${code ? ` (${code})` : ""}. Please try again.`);
       setBusy(null);
     }
   };

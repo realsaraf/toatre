@@ -4,7 +4,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { auth } from "@/lib/firebase/client";
 import {
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   OAuthProvider,
   sendSignInLinkToEmail,
@@ -15,8 +16,10 @@ import {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<{ hasHandle: boolean }>;
-  signInWithApple: () => Promise<{ hasHandle: boolean }>;
+  /** Pending redirect-sign-in outcome consumed by the login page after a redirect. */
+  pendingRedirect: { hasHandle: boolean } | null;
+  signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -38,6 +41,7 @@ async function createSession(user: User): Promise<{ hasHandle: boolean }> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingRedirect, setPendingRedirect] = useState<{ hasHandle: boolean } | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
@@ -47,16 +51,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
-  const signInWithGoogle = async (): Promise<{ hasHandle: boolean }> => {
+  useEffect(() => {
+    // Consume the redirect result (if any) once on mount.
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (cancelled) return;
+        if (result?.user) {
+          const { hasHandle } = await createSession(result.user);
+          if (!cancelled) setPendingRedirect({ hasHandle });
+        }
+      } catch (e) {
+        console.error("[auth] getRedirectResult failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const signInWithGoogle = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return createSession(result.user);
+    await signInWithRedirect(auth, provider);
   };
 
-  const signInWithApple = async (): Promise<{ hasHandle: boolean }> => {
+  const signInWithApple = async (): Promise<void> => {
     const provider = new OAuthProvider("apple.com");
-    const result = await signInWithPopup(auth, provider);
-    return createSession(result.user);
+    await signInWithRedirect(auth, provider);
   };
 
   const sendMagicLink = async (email: string): Promise<void> => {
@@ -71,11 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
+    setPendingRedirect(null);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signInWithGoogle, signInWithApple, sendMagicLink, signOut }}
+      value={{
+        user,
+        loading,
+        pendingRedirect,
+        signInWithGoogle,
+        signInWithApple,
+        sendMagicLink,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
