@@ -11,6 +11,23 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Firebase signInWithPopup needs the opener page to be able to read
+  // window.closed on the popup. Modern browsers default to a strict COOP
+  // that blocks this and breaks Google/Apple popup sign-in. Allow popups
+  // explicitly while keeping cross-origin isolation otherwise.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
