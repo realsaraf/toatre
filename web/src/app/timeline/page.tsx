@@ -884,9 +884,9 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(20px)",
   },
   upNextCardCompact: {
-    borderRadius: 20,
-    padding: "11px 12px 12px",
-    marginBottom: 12,
+    borderRadius: 18,
+    padding: "8px 10px 10px",
+    marginBottom: 10,
   },
   upNextMetaRow: {
     display: "flex",
@@ -897,8 +897,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
   },
   upNextMetaRowCompact: {
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   upNextBadge: {
     display: "inline-flex",
@@ -912,9 +912,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
   },
   upNextBadgeCompact: {
-    padding: "6px 10px",
-    fontSize: 11,
-    gap: 6,
+    padding: "4px 8px",
+    fontSize: 10,
+    gap: 4,
   },
   upNextTimePill: {
     display: "inline-flex",
@@ -928,10 +928,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   upNextTimePillCompact: {
-    padding: "6px 10px",
-    borderRadius: 12,
-    fontSize: 11,
-    gap: 6,
+    padding: "4px 8px",
+    borderRadius: 10,
+    fontSize: 10,
+    gap: 4,
   },
   upNextBody: {
     display: "flex",
@@ -940,8 +940,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 14,
   },
   upNextBodyCompact: {
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   upNextActionRow: {
     display: "flex",
@@ -958,9 +958,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   iconPanelCompact: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
   },
   upNextTitle: {
     fontSize: "clamp(18px, 6vw, 24px)",
@@ -970,8 +970,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   upNextTitleCompact: {
-    fontSize: 15,
-    marginBottom: 3,
+    fontSize: 14,
+    marginBottom: 2,
   },
   upNextLocation: {
     display: "flex",
@@ -982,16 +982,16 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   upNextLocationCompact: {
-    fontSize: 10,
-    marginBottom: 3,
-    gap: 5,
+    fontSize: 9,
+    marginBottom: 2,
+    gap: 4,
   },
   upNextCountdown: {
     fontSize: "clamp(14px, 4.6vw, 18px)",
     fontWeight: 600,
   },
   upNextCountdownCompact: {
-    fontSize: 10,
+    fontSize: 9,
   },
   primaryPillButton: {
     display: "inline-flex",
@@ -1011,12 +1011,12 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 22px 44px rgba(91,61,245,0.24)",
   },
   primaryPillButtonCompact: {
-    minHeight: 30,
-    width: 96,
-    padding: "0 10px",
-    borderRadius: 11,
-    fontSize: 10,
-    gap: 5,
+    minHeight: 28,
+    width: 86,
+    padding: "0 8px",
+    borderRadius: 10,
+    fontSize: 9,
+    gap: 4,
   },
   sectionBlock: {
     marginBottom: 18,

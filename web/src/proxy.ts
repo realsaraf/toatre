@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "toatre_session";
 
 // Paths that don't require auth
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos", "/toats"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

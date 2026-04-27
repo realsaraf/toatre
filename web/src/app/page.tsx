@@ -13,6 +13,20 @@ export const metadata: Metadata = {
     description: "Capture your day using your voice. Toatre turns it into toats and keeps you on track.",
     url: "https://toatre.com",
     siteName: "Toatre",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Toatre app preview with the Toatre app icon",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Toatre — Say it. Toatre gets it.",
+    description: "Capture your day using your voice. Toatre turns it into toats and keeps you on track.",
+    images: ["/opengraph-image"],
   },
 };
 

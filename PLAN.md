@@ -20,6 +20,12 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-04-26 (web share previews + mobile timeline density) — completed
+- Tightened the phone-sized Up Next card on the web timeline so the first card reads denser and wastes less vertical space
+- Added branded Toatre OG/Twitter metadata and app-icon metadata at the app level so shared links no longer render as blank previews
+- Added a dedicated `opengraph-image` route using the Toatre app icon and opened `/toats/[id]` to crawlers for preview rendering while keeping those routes `noindex`
+- Validation: `npm run build`
+
 ### Session 2026-04-26 (web onboarding + timeline/detail polish) — completed
 - Reproduced the live `https://toatre.com/signup` handle-submit failure and traced the user-facing crash to an empty-body 500 response from `POST /api/auth/profile`
 - Fixed the production Mongo helper after DigitalOcean runtime logs showed the custom promise-like client export resolving to a value without `.db()`, causing the `POST /api/auth/profile` 500
