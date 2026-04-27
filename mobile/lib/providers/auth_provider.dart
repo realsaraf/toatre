@@ -139,12 +139,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final session = await _authService.syncSession();
-      _status = session.hasHandle
+      final profile = await _authService.fetchProfile();
+      _handle = profile.handle;
+      _status = profile.hasHandle
           ? AuthStatus.authenticated
           : AuthStatus.needsHandle;
-      _handle = session.hasHandle ? _handle : null;
-      await AnalyticsService.identifyUser(uid: user.uid, email: user.email);
+      await AnalyticsService.identifyUser(
+        uid: user.uid,
+        email: user.email,
+        handle: _handle,
+      );
     } on AuthServiceException catch (error) {
       _status = AuthStatus.error;
       _errorMessage = error.message;

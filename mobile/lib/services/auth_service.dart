@@ -13,10 +13,35 @@ class AuthServiceException implements Exception {
   String toString() => message;
 }
 
-class AuthSessionResult {
-  const AuthSessionResult({required this.hasHandle});
+/// Profile returned by `GET /api/auth/me`.
+///
+/// Pure Bearer-token auth — same pattern as Mutqin. The mobile app never
+/// posts an `idToken` to a `/session` endpoint; every request just sends
+/// `Authorization: Bearer <fresh-id-token>` and the server verifies it.
+class UserProfile {
+  const UserProfile({
+    required this.uid,
+    required this.email,
+    required this.handle,
+    required this.displayName,
+    required this.photoUrl,
+  });
 
-  final bool hasHandle;
+  final String uid;
+  final String? email;
+  final String? handle;
+  final String? displayName;
+  final String? photoUrl;
+
+  bool get hasHandle => (handle ?? '').isNotEmpty;
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
+    uid: json['uid'] as String,
+    email: json['email'] as String?,
+    handle: json['handle'] as String?,
+    displayName: json['displayName'] as String?,
+    photoUrl: json['photoUrl'] as String?,
+  );
 }
 
 class AuthService {
@@ -68,20 +93,11 @@ class AuthService {
     await _auth.signInWithCredential(oauthCredential);
   }
 
-  Future<AuthSessionResult> syncSession() async {
-    final user = _auth.currentUser;
-    final idToken = await user?.getIdToken();
-
-    if (idToken == null || idToken.isEmpty) {
-      throw const AuthServiceException('Missing auth token.');
-    }
-
-    final response = await _api.postJson(
-      '/api/auth/session',
-      body: {'idToken': idToken},
-    );
-
-    return AuthSessionResult(hasHandle: response['hasHandle'] == true);
+  /// Fetch the current user's profile (and discover handle status) using
+  /// the same Bearer-token flow every other authenticated call uses.
+  Future<UserProfile> fetchProfile() async {
+    final response = await _api.getJson('/api/auth/me', authenticated: true);
+    return UserProfile.fromJson(response);
   }
 
   Future<String> saveHandle(String handle) async {
