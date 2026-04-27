@@ -14,7 +14,7 @@
 ## 📊 Status Summary
 
 **Last updated:** 2026-04-27
-**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; remaining: Playwright account steps; mobile parity push queued through Codemagic)
+**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest mobile parity build #9 finished in Codemagic; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
@@ -33,7 +33,9 @@
 - Added a mobile People screen derived from people mentioned in toats, with person drilldowns and tap-through to related toats
 - Added a mobile Inbox placeholder surface for incoming shared toats/invites until the sharing backend is active
 - Matched the web capture review flow more closely by adding select-all/all-selected controls and disabling timeline confirmation when no toats are selected
-- Validation: `flutter analyze`, `flutter test`, VS Code Problems check
+- Fixed Codemagic iOS publishing after the parity push by using Codemagic's build number for `CFBundleVersion` and disabling external beta-review submission until App Store Connect TestFlight metadata is completed
+- Codemagic iOS Release build `#9` (`69efc5032b567ec8ad824de3`) finished successfully from `main` commit `4bb903a`, produced `toatre.ipa`, and completed publishing
+- Validation: `flutter analyze`, `flutter test`, VS Code Problems check, Codemagic build `#9`
 
 ### Session 2026-04-26 (web settings saves + Twilio verify rename) — completed
 - Fixed `/api/settings` upserts so profile, SMS Ping, and per-kind Ping preference saves no longer collide on Mongo update paths when defaults are inserted
