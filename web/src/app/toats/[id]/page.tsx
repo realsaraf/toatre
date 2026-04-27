@@ -274,7 +274,7 @@ function DetailBadge({ text, style, accent }: { text: string; style: "solid" | "
 
   return (
     <span style={{ ...styles.heroChip, ...badgeStyle }}>
-      <SparkleIcon size={16} /> {text}
+      <SparkleIcon size={13} /> {text}
     </span>
   );
 }
@@ -282,7 +282,7 @@ function DetailBadge({ text, style, accent }: { text: string; style: "solid" | "
 function SwitchVisual({ on }: { on: boolean }) {
   return (
     <span style={{ ...styles.switchBase, background: on ? "linear-gradient(135deg, #7C3AED, #5B3DF5)" : "rgba(209,213,219,0.8)" }}>
-      <span style={{ ...styles.switchThumb, transform: on ? "translateX(24px)" : "translateX(0)" }} />
+      <span style={{ ...styles.switchThumb, transform: on ? "translateX(19px)" : "translateX(0)" }} />
     </span>
   );
 }
@@ -1026,7 +1026,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   mainCompact: {
     width: "min(calc(100vw - 18px), 860px)",
-    padding: "16px 0 28px",
+    padding: "10px 0 22px",
   },
   topBar: {
     display: "flex",
@@ -1037,7 +1037,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   topBarCompact: {
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 14,
   },
   topBarRight: {
     display: "flex",
@@ -1054,8 +1054,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 24,
   },
   heroSectionCompact: {
-    gap: 14,
-    marginBottom: 18,
+    gap: 11,
+    marginBottom: 12,
   },
   heroIconWrap: {
     width: 138,
@@ -1068,16 +1068,16 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   heroIconWrapCompact: {
-    width: 88,
-    height: 88,
-    borderRadius: 26,
+    width: 64,
+    height: 64,
+    borderRadius: 20,
   },
   heroKickerRow: {
     display: "flex",
     alignItems: "center",
     gap: 12,
     flexWrap: "wrap",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   heroKicker: {
     fontSize: 16,
@@ -1089,10 +1089,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    minHeight: 42,
-    padding: "0 16px",
+    minHeight: 36,
+    padding: "0 13px",
     borderRadius: 999,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 700,
   },
   heroTitle: {
@@ -1104,8 +1104,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 14,
   },
   heroTitleCompact: {
-    fontSize: 34,
-    marginBottom: 10,
+    fontSize: 25,
+    marginBottom: 7,
   },
   heroLocation: {
     display: "flex",
@@ -1117,8 +1117,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   heroLocationCompact: {
     gap: 6,
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: 12,
+    marginBottom: 4,
   },
   heroSecondary: {
     display: "flex",
@@ -1129,7 +1129,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   heroSecondaryCompact: {
     gap: 6,
-    fontSize: 13,
+    fontSize: 11.5,
   },
   heroMeetingMeta: {
     display: "flex",
@@ -1220,29 +1220,29 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 18,
   },
   fullWidthPrimaryCompact: {
-    minHeight: 54,
-    borderRadius: 18,
-    fontSize: 16,
+    minHeight: 44,
+    borderRadius: 15,
+    fontSize: 13,
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   sectionCard: {
-    borderRadius: 26,
+    borderRadius: 20,
     background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.84))",
     border: "1px solid rgba(255,255,255,0.94)",
     boxShadow: "0 28px 80px rgba(31,41,55,0.08)",
-    padding: "20px 18px 18px",
-    marginBottom: 14,
+    padding: "14px 14px 13px",
+    marginBottom: 10,
   },
   sectionHeader: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   sectionHeading: {
-    fontSize: 14,
+    fontSize: 11.5,
     fontWeight: 700,
     color: "#6B7280",
     textTransform: "uppercase",
@@ -1252,20 +1252,20 @@ const styles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    minHeight: 36,
-    padding: "0 12px",
-    borderRadius: 14,
+    minHeight: 30,
+    padding: "0 10px",
+    borderRadius: 11,
     border: "1px solid rgba(123,92,246,0.18)",
     background: "rgba(123,92,246,0.08)",
     color: "#6D28D9",
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: 700,
   },
   inlineTextButton: {
     border: "none",
     background: "transparent",
     color: "#6D28D9",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 700,
     cursor: "pointer",
     padding: 0,
@@ -1273,8 +1273,8 @@ const styles: Record<string, React.CSSProperties> = {
   infoRow: {
     display: "flex",
     alignItems: "flex-start",
-    gap: 12,
-    padding: "14px 0",
+    gap: 10,
+    padding: "10px 0",
     borderTop: "1px solid rgba(229,231,235,0.6)",
   },
   infoRowButton: {
@@ -1285,81 +1285,81 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   infoRowIcon: {
-    width: 30,
+    width: 24,
     display: "flex",
     justifyContent: "center",
     color: "#6B7280",
     flexShrink: 0,
   },
   infoRowLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 700,
     color: "#6B7280",
     textTransform: "uppercase",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   infoRowTitle: {
-    fontSize: 20,
+    fontSize: 15,
     lineHeight: 1.12,
     color: "#0F172A",
     fontWeight: 700,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   infoRowSubtitle: {
-    fontSize: 15,
+    fontSize: 12,
     color: "#6B7280",
     lineHeight: 1.35,
   },
   buttonRow: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: 10,
   },
   primaryButton: {
-    minHeight: 54,
+    minHeight: 42,
     border: "none",
-    borderRadius: 18,
+    borderRadius: 14,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",
     boxShadow: "0 22px 46px rgba(91,61,245,0.22)",
   },
   secondaryButton: {
-    minHeight: 54,
+    minHeight: 42,
     border: "1px solid rgba(123,92,246,0.18)",
-    borderRadius: 18,
+    borderRadius: 14,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
     background: "rgba(255,255,255,0.9)",
     color: "#6D28D9",
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",
   },
   bodyText: {
-    fontSize: 16,
-    lineHeight: 1.55,
+    fontSize: 13,
+    lineHeight: 1.45,
     color: "#111827",
   },
   captureLine: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    marginTop: 16,
+    gap: 9,
+    marginTop: 12,
     color: "#6B7280",
-    fontSize: 14,
+    fontSize: 11.5,
   },
   captureAvatar: {
-    width: 34,
-    height: 34,
+    width: 28,
+    height: 28,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -1372,18 +1372,18 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 18,
-    padding: "14px 0",
+    gap: 12,
+    padding: "10px 0",
     borderTop: "1px solid rgba(229,231,235,0.6)",
   },
   toggleRowText: {
     display: "flex",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
   },
   toggleIcon: {
-    width: 42,
-    height: 42,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
@@ -1391,18 +1391,18 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   toggleTitle: {
-    fontSize: 17,
+    fontSize: 13.5,
     color: "#111827",
     fontWeight: 700,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   toggleSubtitle: {
-    fontSize: 14,
+    fontSize: 11.5,
     color: "#6B7280",
   },
   switchBase: {
-    width: 52,
-    height: 28,
+    width: 42,
+    height: 23,
     borderRadius: 999,
     display: "inline-flex",
     alignItems: "center",
@@ -1410,8 +1410,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   switchThumb: {
-    width: 24,
-    height: 24,
+    width: 19,
+    height: 19,
     borderRadius: "50%",
     background: "#FFFFFF",
     boxShadow: "0 6px 16px rgba(31,41,55,0.16)",
@@ -1724,12 +1724,12 @@ const styles: Record<string, React.CSSProperties> = {
   actionStrip: {
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-    gap: 10,
-    borderRadius: 24,
+    gap: 6,
+    borderRadius: 18,
     background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.88))",
     border: "1px solid rgba(255,255,255,0.92)",
     boxShadow: "0 26px 80px rgba(31,41,55,0.08)",
-    padding: "14px 10px",
+    padding: "10px 7px",
   },
   actionStripButton: {
     border: "none",
@@ -1737,13 +1737,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 8,
-    fontSize: 13,
+    gap: 5,
+    fontSize: 10.5,
     fontWeight: 600,
   },
   actionStripIcon: {
-    width: 44,
-    height: 44,
+    width: 34,
+    height: 34,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",

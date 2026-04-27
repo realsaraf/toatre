@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   AppBrand,
   BottomTabBar,
+  CalendarIcon,
   InboxIcon,
   PeopleIcon,
   SearchIcon,
-  SettingsIcon,
   TimelineIcon,
   UserAvatar,
 } from "@/components/mobile-ui";
@@ -647,7 +647,7 @@ export default function SettingsPage() {
           { label: "Search", icon: <SearchIcon /> },
           { label: "People", icon: <PeopleIcon /> },
           { label: "Inbox", icon: <InboxIcon /> },
-          { label: "Settings", icon: <SettingsIcon />, href: "/settings", active: true },
+          { label: "Calendar", icon: <CalendarIcon />, href: "/timeline" },
         ]}
       />
     </div>

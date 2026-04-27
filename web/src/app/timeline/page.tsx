@@ -10,21 +10,17 @@ import {
   CalendarIcon,
   CartGlyph,
   ChevronDownIcon,
-  ChevronRightIcon,
-  CircleIconButton,
   ClockIcon,
-  DirectionsIcon,
+  DoneIcon,
   EnvelopeGlyph,
-  EditIcon,
-  FilterIcon,
   FloatingMicButton,
   InboxIcon,
+  KeyboardIcon,
   LocationIcon,
   MessageGlyph,
   PeopleIcon,
   PhoneGlyph,
   SearchIcon,
-  SettingsIcon,
   SparkleIcon,
   TicketGlyph,
   TimelineIcon,
@@ -184,8 +180,8 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
       iconTint: "#8B5CF6",
       softTint: "rgba(139,92,246,0.12)",
-      actionText: "Directions",
-      actionBackground: "rgba(123,92,246,0.12)",
+      actionLabel: "Directions",
+      actionBackground: "rgba(139,92,246,0.12)",
       actionColor: "#6D28D9",
       Icon: ToothGlyph,
     };
@@ -197,7 +193,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #3B82F6, #2563EB)",
       iconTint: "#3B82F6",
       softTint: "rgba(59,130,246,0.12)",
-      actionText: "Join",
+      actionLabel: "Join",
       actionBackground: "rgba(59,130,246,0.12)",
       actionColor: "#2563EB",
       Icon: VideoGlyph,
@@ -210,7 +206,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #F43F5E, #EC4899)",
       iconTint: "#EC4899",
       softTint: "rgba(236,72,153,0.12)",
-      actionText: "Call",
+      actionLabel: "Call",
       actionBackground: "rgba(236,72,153,0.12)",
       actionColor: "#DB2777",
       Icon: PhoneGlyph,
@@ -223,7 +219,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #F97316, #FB923C)",
       iconTint: "#F97316",
       softTint: "rgba(249,115,22,0.12)",
-      actionText: "Message",
+      actionLabel: "Message",
       actionBackground: "rgba(249,115,22,0.12)",
       actionColor: "#EA580C",
       Icon: EnvelopeGlyph,
@@ -236,7 +232,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)",
       iconTint: "#8B5CF6",
       softTint: "rgba(139,92,246,0.12)",
-      actionText: "Directions",
+      actionLabel: "Directions",
       actionBackground: "rgba(139,92,246,0.12)",
       actionColor: "#6D28D9",
       Icon: CartGlyph,
@@ -249,7 +245,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
       iconTint: "#7C3AED",
       softTint: "rgba(124,58,237,0.12)",
-      actionText: "Tickets",
+      actionLabel: "Tickets",
       actionBackground: "rgba(124,58,237,0.12)",
       actionColor: "#6D28D9",
       Icon: TicketGlyph,
@@ -262,7 +258,7 @@ function getToatVisual(toat: TimelineToat) {
       cardGradient: "linear-gradient(135deg, #F59E0B, #FBBF24)",
       iconTint: "#F59E0B",
       softTint: "rgba(245,158,11,0.12)",
-      actionText: "Open",
+      actionLabel: "Open",
       actionBackground: "rgba(245,158,11,0.12)",
       actionColor: "#D97706",
       Icon: BulbGlyph,
@@ -274,7 +270,7 @@ function getToatVisual(toat: TimelineToat) {
     cardGradient: "linear-gradient(135deg, #8B5CF6, #EC4899)",
     iconTint: "#8B5CF6",
     softTint: "rgba(139,92,246,0.12)",
-    actionText: "Open",
+    actionLabel: "Open",
     actionBackground: "rgba(139,92,246,0.12)",
     actionColor: "#6D28D9",
     Icon: MessageGlyph,
@@ -300,19 +296,19 @@ function getPrimaryAction(toat: TimelineToat) {
   const phone = extractPhone(toat);
   const directions = mapHref(toat.location);
 
-  if ((toat.kind === "meeting" || visual.actionText === "Join") && toat.link) {
+  if ((toat.kind === "meeting" || visual.actionLabel === "Join") && toat.link) {
     return { label: "Join", href: toat.link, external: true };
   }
 
-  if (visual.actionText === "Call" && phone) {
+  if (visual.actionLabel === "Call" && phone) {
     return { label: "Call", href: `tel:${phone.replace(/\s+/g, "")}`, external: true };
   }
 
-  if (visual.actionText === "Message" && toat.link) {
+  if (visual.actionLabel === "Message" && toat.link) {
     return { label: "Message", href: toat.link, external: true };
   }
 
-  if (directions && (visual.actionText === "Directions" || toat.location)) {
+  if (directions && (visual.actionLabel === "Directions" || toat.location)) {
     return { label: "Directions", href: directions, external: true };
   }
 
@@ -320,7 +316,14 @@ function getPrimaryAction(toat: TimelineToat) {
     return { label: "Tickets", href: toat.link, external: true };
   }
 
-  return { label: visual.actionText, href: `/toats/${toat.id}`, external: false };
+  return null;
+}
+
+function getToatDescription(toat: TimelineToat, now: Date) {
+  if (toat.location) return toat.location;
+  if (toat.people.length) return toat.people.join(", ");
+  if (toat.notes) return toat.notes;
+  return getCountdownLabel(toat, now);
 }
 
 function getUpNext(toats: TimelineToat[], now: Date) {
@@ -381,8 +384,8 @@ export default function TimelinePage() {
   const [toats, setToats] = useState<TimelineToat[]>([]);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [showOnlyTimed, setShowOnlyTimed] = useState(false);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+  const [finishingToatId, setFinishingToatId] = useState<string | null>(null);
 
   const now = new Date();
   const openCapture = () => router.push("/capture?autostart=1");
@@ -437,18 +440,46 @@ export default function TimelinePage() {
     };
   }, []);
 
-  const groups = buildDayGroups(toats, now);
+  const activeToats = toats.filter((toat) => toat.status === "active");
+  const groups = buildDayGroups(activeToats, now);
   const resolvedSelectedDayKey = selectedDayKey && groups.some((group) => group.key === selectedDayKey)
     ? selectedDayKey
     : (groups.find((group) => group.title === "Today") ?? groups[0])?.key ?? null;
   const activeGroup = groups.find((group) => group.key === resolvedSelectedDayKey) ?? groups[0] ?? null;
-  const visibleToats = (activeGroup?.toats ?? []).filter((toat) => (showOnlyTimed ? Boolean(toat.datetime) : true));
+  const visibleToats = activeGroup?.toats ?? [];
   const sections = buildSections(visibleToats);
-  const upNext = getUpNext(toats, new Date());
+  const upNext = getUpNext(activeToats, new Date());
   const lastToat = visibleToats[visibleToats.length - 1] ?? null;
   const loading = authLoading || (Boolean(user) && !hasLoadedData);
   const isPhoneViewport = viewportWidth !== null && viewportWidth <= 430;
-  const clearCardMarginTop = visibleToats.length <= 2 ? (isPhoneViewport ? 34 : 18) : 8;
+
+  const markDone = async (toat: TimelineToat) => {
+    if (!user || finishingToatId) return;
+
+    setFinishingToatId(toat.id);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/toats/${toat.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "done" }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not mark this toat done.");
+      }
+
+      setToats((current) => current.filter((item) => item.id !== toat.id));
+    } catch (error) {
+      console.error("[timeline:done]", error);
+    } finally {
+      setFinishingToatId(null);
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -498,18 +529,6 @@ export default function TimelinePage() {
               ) : null}
             </div>
 
-            <div style={{ ...styles.headerActions, ...(isPhoneViewport ? styles.headerActionsCompact : {}) }}>
-              <CircleIconButton label="Choose day" onClick={() => setPickerOpen((value) => !value)}>
-                <CalendarIcon size={26} />
-              </CircleIconButton>
-              <CircleIconButton
-                label="Filter timed toats"
-                active={showOnlyTimed}
-                onClick={() => setShowOnlyTimed((value) => !value)}
-              >
-                <FilterIcon size={26} />
-              </CircleIconButton>
-            </div>
         </section>
 
         {loading ? (
@@ -519,7 +538,7 @@ export default function TimelinePage() {
           </section>
         ) : null}
 
-        {!loading && upNext ? <UpNextCard toat={upNext} compact={isPhoneViewport} /> : null}
+        {!loading && upNext ? <UpNextCard toat={upNext} onDone={() => void markDone(upNext)} doneDisabled={finishingToatId === upNext.id} compact={isPhoneViewport} /> : null}
 
         {!loading && visibleToats.length > 0 ? (
             <section>
@@ -528,40 +547,62 @@ export default function TimelinePage() {
                   <h2 style={{ ...styles.sectionTitle, ...(isPhoneViewport ? styles.sectionTitleCompact : {}) }}>{section.label}</h2>
                   <div style={{ ...styles.sectionRows, ...(isPhoneViewport ? styles.sectionRowsCompact : {}) }}>
                     {section.toats.map((toat) => (
-                      <TimelineRow key={toat.id} toat={toat} onOpen={() => router.push(`/toats/${toat.id}`)} compact={isPhoneViewport} />
+                      <TimelineRow
+                        key={toat.id}
+                        toat={toat}
+                        onOpen={() => router.push(`/toats/${toat.id}`)}
+                        onDone={() => void markDone(toat)}
+                        doneDisabled={finishingToatId === toat.id}
+                        compact={isPhoneViewport}
+                      />
                     ))}
                   </div>
                 </div>
               ))}
 
-              <section style={{ ...styles.clearCard, ...(isPhoneViewport ? styles.clearCardCompact : {}), marginTop: clearCardMarginTop }}>
-                <div style={styles.clearTextWrap}>
-                  <span style={{ ...styles.clearSparkle, ...(isPhoneViewport ? styles.clearSparkleCompact : {}) }}><SparkleIcon size={isPhoneViewport ? 14 : 18} /></span>
-                  <div>
-                    <p style={{ ...styles.clearHeadline, ...(isPhoneViewport ? styles.clearHeadlineCompact : {}) }}>
-                      {lastToat?.datetime ? `You’re all clear after ${formatTime(new Date(lastToat.datetime))}` : "You’re all clear."}
-                    </p>
-                    <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>Enjoy your {lastToat?.datetime && new Date(lastToat.datetime).getHours() < 17 ? "evening" : "day"}.</p>
-                  </div>
-                </div>
-                <div style={{ ...styles.clearScene, ...(isPhoneViewport ? styles.clearSceneCompact : {}) }}>
-                  <div style={{ ...styles.clearSceneSun, ...(isPhoneViewport ? styles.clearSceneSunCompact : {}) }} />
-                  <div style={{ ...styles.clearSceneHillOne, ...(isPhoneViewport ? styles.clearSceneHillOneCompact : {}) }} />
-                  <div style={{ ...styles.clearSceneHillTwo, ...(isPhoneViewport ? styles.clearSceneHillTwoCompact : {}) }} />
-                </div>
-              </section>
             </section>
           ) : null}
 
         {!loading && !toats.length ? <EmptyTimeline onCapture={openCapture} onTextCapture={openTextCapture} compact={isPhoneViewport} /> : null}
 
-        <div style={{ height: isPhoneViewport ? 128 : 176 }} />
+        <div style={{ height: isPhoneViewport && visibleToats.length > 0 ? 214 : isPhoneViewport ? 128 : 176 }} />
       </main>
 
-      <button type="button" onClick={openTextCapture} style={styles.textCaptureDockButton} aria-label="Start text capture" title="Start text capture">
-        <EditIcon size={18} />
-      </button>
-      <FloatingMicButton onClick={openCapture} />
+      {!loading && visibleToats.length > 0 ? (
+        <section style={{ ...styles.clearDock, ...(isPhoneViewport ? styles.clearDockCompact : {}) }}>
+          <div style={styles.clearTextWrap}>
+            <span style={{ ...styles.clearSparkle, ...(isPhoneViewport ? styles.clearSparkleCompact : {}) }}><SparkleIcon size={isPhoneViewport ? 14 : 18} /></span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ ...styles.clearHeadline, ...(isPhoneViewport ? styles.clearHeadlineCompact : {}) }}>
+                {lastToat?.datetime ? `You’re all clear after ${formatTime(new Date(lastToat.datetime))}` : "You’re all clear."}
+              </p>
+              <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>Enjoy your {lastToat?.datetime && new Date(lastToat.datetime).getHours() < 17 ? "evening" : "day"}.</p>
+            </div>
+          </div>
+          <div style={{ ...styles.clearScene, ...(isPhoneViewport ? styles.clearSceneCompact : {}) }}>
+            <div style={{ ...styles.clearSceneSun, ...(isPhoneViewport ? styles.clearSceneSunCompact : {}) }} />
+            <div style={{ ...styles.clearSceneHillOne, ...(isPhoneViewport ? styles.clearSceneHillOneCompact : {}) }} />
+            <div style={{ ...styles.clearSceneHillTwo, ...(isPhoneViewport ? styles.clearSceneHillTwoCompact : {}) }} />
+          </div>
+          <div style={{ ...styles.clearCaptureControls, ...(isPhoneViewport ? styles.clearCaptureControlsCompact : {}) }}>
+            <button type="button" onClick={openTextCapture} style={{ ...styles.clearKeyboardButton, ...(isPhoneViewport ? styles.clearKeyboardButtonCompact : {}) }} aria-label="Start text capture" title="Start text capture">
+              <KeyboardIcon size={isPhoneViewport ? 18 : 22} />
+            </button>
+            <button type="button" onClick={openCapture} style={{ ...styles.clearMicButton, ...(isPhoneViewport ? styles.clearMicButtonCompact : {}) }} aria-label="Open capture">
+              <span aria-hidden style={styles.clearMicArtwork} />
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {visibleToats.length > 0 ? null : (
+        <>
+          <button type="button" onClick={openTextCapture} style={styles.textCaptureDockButton} aria-label="Start text capture" title="Start text capture">
+            <KeyboardIcon size={22} />
+          </button>
+          <FloatingMicButton onClick={openCapture} />
+        </>
+      )}
 
       <BottomTabBar
         items={[
@@ -569,21 +610,42 @@ export default function TimelinePage() {
           { label: "Search", icon: <SearchIcon /> },
           { label: "People", icon: <PeopleIcon /> },
           { label: "Inbox", icon: <InboxIcon /> },
-          { label: "Settings", icon: <SettingsIcon />, href: "/settings" },
+          {
+            label: "Calendar",
+            icon: <CalendarIcon />,
+            onClick: () => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              setPickerOpen((value) => !value);
+            },
+          },
         ]}
       />
     </div>
   );
 }
 
-function UpNextCard({ toat, compact = false }: { toat: TimelineToat; compact?: boolean }) {
+function UpNextCard({
+  toat,
+  onDone,
+  doneDisabled = false,
+  compact = false,
+}: {
+  toat: TimelineToat;
+  onDone: () => void;
+  doneDisabled?: boolean;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const visual = getToatVisual(toat);
   const Icon = visual.Icon;
-  const action = getPrimaryAction(toat);
   const time = toat.datetime ? formatTime(new Date(toat.datetime)) : "Any time";
+  const action = getPrimaryAction(toat);
 
-  const openAction = () => {
+  const runAction = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
+    if (!action) return;
+
     if (action.external) {
       window.open(action.href, "_blank", "noopener,noreferrer");
       return;
@@ -592,8 +654,25 @@ function UpNextCard({ toat, compact = false }: { toat: TimelineToat; compact?: b
     router.push(action.href);
   };
 
+  const runDone = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onDone();
+  };
+
   return (
-    <section style={{ ...styles.upNextCard, ...(compact ? styles.upNextCardCompact : {}) }} className="animate-fade-up">
+    <section
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/toats/${toat.id}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(`/toats/${toat.id}`);
+        }
+      }}
+      style={{ ...styles.upNextCard, ...(compact ? styles.upNextCardCompact : {}) }}
+      className="animate-fade-up"
+    >
       <div style={{ ...styles.upNextMetaRow, ...(compact ? styles.upNextMetaRowCompact : {}) }}>
         <span style={{ ...styles.upNextBadge, ...(compact ? styles.upNextBadgeCompact : {}) }}><SparkleIcon size={compact ? 12 : 16} /> UP NEXT</span>
         <span style={{ ...styles.upNextTimePill, ...(compact ? styles.upNextTimePillCompact : {}) }}><ClockIcon size={compact ? 14 : 18} /> {time}</span>
@@ -611,24 +690,45 @@ function UpNextCard({ toat, compact = false }: { toat: TimelineToat; compact?: b
           ) : null}
           <p style={{ ...styles.upNextCountdown, ...(compact ? styles.upNextCountdownCompact : {}), color: visual.actionColor }}>{getCountdownLabel(toat, new Date())}</p>
         </div>
+
+        <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
+          {action ? (
+            <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
+              {action.label}
+            </button>
+          ) : null}
+          <button type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}>
+            <DoneIcon size={compact ? 15 : 18} /> Done
+          </button>
+        </div>
       </div>
 
-      <div style={styles.upNextActionRow}>
-        <button type="button" onClick={openAction} style={{ ...styles.primaryPillButton, ...(compact ? styles.primaryPillButtonCompact : {}), background: visual.cardGradient }}>
-          <DirectionsIcon size={compact ? 14 : 18} /> {action.label === "Open" ? "View details" : action.label}
-        </button>
-      </div>
     </section>
   );
 }
 
-function TimelineRow({ toat, onOpen, compact = false }: { toat: TimelineToat; onOpen: () => void; compact?: boolean }) {
+function TimelineRow({
+  toat,
+  onOpen,
+  onDone,
+  doneDisabled = false,
+  compact = false,
+}: {
+  toat: TimelineToat;
+  onOpen: () => void;
+  onDone: () => void;
+  doneDisabled?: boolean;
+  compact?: boolean;
+}) {
   const visual = getToatVisual(toat);
   const Icon = visual.Icon;
   const action = getPrimaryAction(toat);
+  const description = getToatDescription(toat, new Date());
 
   const runAction = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+
+    if (!action) return;
 
     if (action.external) {
       window.open(action.href, "_blank", "noopener,noreferrer");
@@ -646,6 +746,11 @@ function TimelineRow({ toat, onOpen, compact = false }: { toat: TimelineToat; on
   };
 
   const railTime = toat.datetime ? formatRailTime(new Date(toat.datetime)) : { time: "Any", period: "time" };
+
+  const runDone = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onDone();
+  };
 
   return (
     <div style={{ ...styles.timelineRow, ...(compact ? styles.timelineRowCompact : {}) }}>
@@ -665,26 +770,21 @@ function TimelineRow({ toat, onOpen, compact = false }: { toat: TimelineToat; on
         </div>
 
         <div style={{ ...styles.cardBody, ...(compact ? styles.cardBodyCompact : {}) }}>
-          <div style={{ ...styles.cardHeader, ...(compact ? styles.cardHeaderCompact : {}) }}>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ ...styles.cardTitle, ...(compact ? styles.cardTitleCompact : {}) }}>{toat.title}</p>
-              {toat.location ? (
-                <p style={{ ...styles.cardMeta, ...(compact ? styles.cardMetaCompact : {}) }}><LocationIcon size={compact ? 14 : 18} /> {toat.location}</p>
-              ) : toat.people.length ? (
-                <p style={{ ...styles.cardMeta, ...(compact ? styles.cardMetaCompact : {}) }}><PeopleIcon size={compact ? 14 : 18} /> {toat.people.join(", ")}</p>
-              ) : (
-                <p style={{ ...styles.cardMeta, ...(compact ? styles.cardMetaCompact : {}) }}>{getCountdownLabel(toat, new Date())}</p>
-              )}
-            </div>
-            <span style={{ color: "#9CA3AF", flexShrink: 0 }}><ChevronRightIcon /></span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ ...styles.cardTitle, ...(compact ? styles.cardTitleCompact : {}) }}>{toat.title}</p>
+            <p style={{ ...styles.cardMeta, ...(compact ? styles.cardMetaCompact : {}) }}>{description}</p>
           </div>
+        </div>
 
-          <div style={{ ...styles.cardFooter, ...(compact ? styles.cardFooterCompact : {}) }}>
-            <span style={{ ...styles.kindPill, ...(compact ? styles.kindPillCompact : {}), color: visual.actionColor, background: visual.softTint }}>{visual.label}</span>
+        <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
+          {action ? (
             <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
-              <DirectionsIcon size={compact ? 14 : 18} /> {action.label}
+              {action.label}
             </button>
-          </div>
+          ) : null}
+          <button type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}>
+            <DoneIcon size={compact ? 14 : 18} /> Done
+          </button>
         </div>
       </div>
     </div>
@@ -848,16 +948,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 700,
   },
-  headerActions: {
-    display: "flex",
-    gap: 10,
-    flexShrink: 0,
-    paddingTop: 4,
-  },
-  headerActionsCompact: {
-    gap: 8,
-    paddingTop: 2,
-  },
   loadingCard: {
     minHeight: 180,
     borderRadius: 24,
@@ -896,11 +986,13 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(248,212,255,0.72)",
     boxShadow: "0 32px 90px rgba(31,41,55,0.08)",
     backdropFilter: "blur(20px)",
+    cursor: "pointer",
+    outline: "none",
   },
   upNextCardCompact: {
     borderRadius: 18,
-    padding: "8px 10px 10px",
-    marginBottom: 10,
+    padding: "12px 14px 14px",
+    marginBottom: 14,
   },
   upNextMetaRow: {
     display: "flex",
@@ -951,16 +1043,23 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "clamp(14px, 4vw, 20px)",
-    marginBottom: 14,
+    marginBottom: 0,
   },
   upNextBodyCompact: {
-    gap: 6,
-    marginBottom: 6,
+    gap: 10,
+    marginBottom: 0,
   },
-  upNextActionRow: {
+  cardActions: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "flex-end",
+    gap: 8,
+    flexShrink: 0,
+  },
+  cardActionsCompact: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 5,
   },
   iconPanel: {
     width: "clamp(64px, 18vw, 88px)",
@@ -972,9 +1071,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   iconPanelCompact: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 52,
+    height: 52,
+    borderRadius: 15,
   },
   upNextTitle: {
     fontSize: "clamp(18px, 6vw, 24px)",
@@ -984,8 +1083,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   upNextTitleCompact: {
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 16,
+    marginBottom: 3,
   },
   upNextLocation: {
     display: "flex",
@@ -996,7 +1095,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   upNextLocationCompact: {
-    fontSize: 9,
+    fontSize: 11,
     marginBottom: 2,
     gap: 4,
   },
@@ -1005,32 +1104,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   upNextCountdownCompact: {
-    fontSize: 9,
-  },
-  primaryPillButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    minHeight: "clamp(44px, 12vw, 52px)",
-    width: "min(100%, 168px)",
-    maxWidth: "100%",
-    padding: "0 14px",
-    border: "none",
-    borderRadius: "clamp(16px, 5vw, 20px)",
-    color: "#FFFFFF",
-    fontSize: "clamp(13px, 4vw, 15px)",
-    fontWeight: 700,
-    cursor: "pointer",
-    boxShadow: "0 22px 44px rgba(91,61,245,0.24)",
-  },
-  primaryPillButtonCompact: {
-    minHeight: 28,
-    width: 86,
-    padding: "0 8px",
-    borderRadius: 10,
-    fontSize: 9,
-    gap: 4,
+    fontSize: 11,
   },
   sectionBlock: {
     marginBottom: 18,
@@ -1053,7 +1127,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
   },
   sectionRowsCompact: {
-    gap: 10,
+    gap: 7,
   },
   timelineRow: {
     display: "grid",
@@ -1070,7 +1144,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
   },
   timeRailColumnCompact: {
-    paddingTop: 8,
+    paddingTop: 7,
   },
   timeRailTime: {
     fontSize: "clamp(16px, 5.6vw, 22px)",
@@ -1080,7 +1154,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 4,
   },
   timeRailTimeCompact: {
-    fontSize: 13,
+    fontSize: 12.5,
   },
   timeRailPeriod: {
     fontSize: "clamp(10px, 3.3vw, 13px)",
@@ -1114,9 +1188,9 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 10px 20px rgba(91,61,245,0.18)",
   },
   railDotCompact: {
-    top: 22,
-    width: 12,
-    height: 12,
+    top: 20,
+    width: 11,
+    height: 11,
     borderWidth: 2.5,
   },
   toatCard: {
@@ -1133,10 +1207,10 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
   },
   toatCardCompact: {
-    gap: 10,
-    minHeight: 84,
-    padding: "12px 12px",
-    borderRadius: 20,
+    gap: 9,
+    minHeight: 64,
+    padding: "8px 9px",
+    borderRadius: 15,
   },
   cardBody: {
     flex: 1,
@@ -1146,7 +1220,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 10,
   },
   cardBodyCompact: {
-    gap: 8,
+    gap: 0,
   },
   cardHeader: {
     display: "flex",
@@ -1165,75 +1239,177 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 6,
   },
   cardTitleCompact: {
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 11.5,
+    marginBottom: 2,
   },
   cardMeta: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
     fontSize: "clamp(12px, 3.6vw, 14px)",
-    color: "#6B7280",
-    lineHeight: 1.3,
+    color: "#7B8190",
+    lineHeight: 1.35,
+    fontWeight: 400,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
   cardMetaCompact: {
-    fontSize: 10,
-    gap: 4,
+    fontSize: 8.5,
+    lineHeight: 1.22,
   },
   cardFooter: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
+    justifyContent: "flex-end",
+    gap: 8,
     flexWrap: "wrap",
   },
   cardFooterCompact: {
-    gap: 8,
-  },
-  kindPill: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    padding: "6px 10px",
-    fontSize: "clamp(12px, 3.6vw, 15px)",
-    fontWeight: 700,
-  },
-  kindPillCompact: {
-    padding: "5px 8px",
-    fontSize: 10,
+    gap: 6,
   },
   cardActionButton: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    minHeight: "clamp(38px, 10vw, 44px)",
-    minWidth: "clamp(88px, 28vw, 120px)",
+    minHeight: "clamp(36px, 10vw, 42px)",
+    minWidth: "clamp(92px, 28vw, 126px)",
     padding: "0 12px",
     border: "none",
     borderRadius: "clamp(14px, 4vw, 16px)",
     fontSize: "clamp(12px, 3.6vw, 14px)",
     fontWeight: 700,
     cursor: "pointer",
+    flexShrink: 0,
   },
   cardActionButtonCompact: {
-    minHeight: 32,
-    minWidth: 74,
-    padding: "0 10px",
-    borderRadius: 10,
-    fontSize: 10.5,
-    gap: 6,
+    minHeight: 25,
+    minWidth: 58,
+    padding: "0 7px",
+    borderRadius: 8,
+    fontSize: 8.5,
+    gap: 4,
+  },
+  doneButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    minHeight: "clamp(36px, 10vw, 42px)",
+    minWidth: "clamp(76px, 22vw, 96px)",
+    padding: "0 12px",
+    border: "none",
+    borderRadius: "clamp(14px, 4vw, 16px)",
+    background: "rgba(107,114,128,0.10)",
+    color: "#6B7280",
+    fontSize: "clamp(12px, 3.6vw, 14px)",
+    fontWeight: 700,
+    cursor: "pointer",
+    flexShrink: 0,
+  },
+  doneButtonCompact: {
+    minHeight: 25,
+    minWidth: 56,
+    padding: "0 7px",
+    borderRadius: 8,
+    fontSize: 8.5,
+    gap: 4,
   },
   timelineIconPanel: {
-    width: "clamp(64px, 18vw, 78px)",
-    height: "clamp(64px, 18vw, 78px)",
-    borderRadius: "clamp(20px, 5vw, 24px)",
+    width: "clamp(56px, 15vw, 66px)",
+    height: "clamp(56px, 15vw, 66px)",
+    borderRadius: "clamp(17px, 4.4vw, 21px)",
   },
   timelineIconPanelCompact: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+  },
+  clearDock: {
+    position: "fixed",
+    left: "50%",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)",
+    transform: "translateX(-50%)",
+    width: "min(calc(100vw - 16px), 860px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "clamp(14px, 4.2vw, 18px) clamp(14px, 4.6vw, 18px)",
+    borderRadius: "clamp(24px, 8vw, 32px)",
+    background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,247,239,0.86))",
+    border: "1px solid rgba(255,255,255,0.92)",
+    boxShadow: "0 28px 80px rgba(31,41,55,0.12)",
+    overflow: "hidden",
+    backdropFilter: "blur(18px)",
+    zIndex: 39,
+  },
+  clearDockCompact: {
+    width: "min(calc(100vw - 18px), 860px)",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 86px)",
+    gap: 8,
+    padding: "10px 122px 10px 12px",
+    borderRadius: 18,
+    minHeight: 64,
+  },
+  clearCaptureControls: {
+    position: "relative",
+    zIndex: 2,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  clearCaptureControlsCompact: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    gap: 6,
+  },
+  clearKeyboardButton: {
+    width: 46,
+    height: 46,
+    padding: 0,
+    borderRadius: "50%",
+    border: "1px solid rgba(255,255,255,0.86)",
+    background: "rgba(255,255,255,0.9)",
+    boxShadow: "0 16px 34px rgba(31,41,55,0.10)",
+    color: "#5B3DF5",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    backdropFilter: "blur(14px)",
+  },
+  clearKeyboardButtonCompact: {
+    width: 42,
+    height: 42,
+  },
+  clearMicButton: {
+    width: 70,
+    height: 70,
+    padding: 0,
+    borderRadius: "50%",
+    border: "none",
+    background: "transparent",
+    boxShadow: "0 20px 54px rgba(124,58,237,0.24)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+  clearMicButtonCompact: {
+    width: 62,
+    height: 62,
+  },
+  clearMicArtwork: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    backgroundImage: "url('/micicon.png')",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
   },
   clearCard: {
     display: "flex",
@@ -1542,7 +1718,7 @@ const styles: Record<string, React.CSSProperties> = {
   textCaptureDockButton: {
     position: "fixed",
     right: "max(112px, calc((100vw - min(100vw - 16px, 860px)) / 2 + 116px))",
-    bottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 97px)",
     width: 46,
     height: 46,
     padding: 0,

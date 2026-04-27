@@ -42,9 +42,9 @@ export function CircleIconButton({ label, onClick, active = false, children }: C
       aria-label={label}
       title={label}
       style={{
-        width: "clamp(52px, 14vw, 60px)",
-        height: "clamp(52px, 14vw, 60px)",
-        borderRadius: "clamp(18px, 5vw, 22px)",
+        width: "clamp(46px, 12vw, 54px)",
+        height: "clamp(46px, 12vw, 54px)",
+        borderRadius: "clamp(16px, 4.4vw, 20px)",
         border: active ? "1px solid rgba(99,102,241,0.22)" : "1px solid rgba(255,255,255,0.82)",
         background: active
           ? "linear-gradient(180deg, rgba(237,233,254,0.98), rgba(255,255,255,0.9))"
@@ -152,16 +152,18 @@ export function FloatingMicButton({ onClick }: { onClick: () => void }) {
         zIndex: 45,
       }}
     >
-      <div
+      <span
+        aria-hidden
         style={{
-          position: "absolute",
-          inset: 8,
+          width: "100%",
+          height: "100%",
           borderRadius: "50%",
-          border: "1px solid rgba(255,255,255,0.36)",
-          background: "linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02))",
+          backgroundImage: "url('/micicon.png')",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
         }}
       />
-      <MicIcon size={30} color="#FFFFFF" />
     </button>
   );
 }
@@ -611,4 +613,13 @@ export function TicketGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; c
 
 export function VideoGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
   return <span style={{ color, display: "inline-flex" }}><VideoIcon size={size} /></span>;
+}
+
+export function KeyboardIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3.5" y="6" width="17" height="12" rx="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M7 10h.01M10.5 10h.01M14 10h.01M17 10h.01M7 13.5h.01M10.5 13.5h7M7 16h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
 }
