@@ -12,7 +12,11 @@ function isTimeValue(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
-function serializeSettings(userDoc: Record<string, unknown>, settingsDoc: Record<string, unknown> | null) {
+function serializeSettings(
+  userDoc: Record<string, unknown>,
+  settingsDoc: Record<string, unknown> | null,
+  calendarSyncTokenDoc?: Record<string, unknown> | null,
+) {
   const defaults = createDefaultUserSettings(
     typeof userDoc.timezone === "string" && userDoc.timezone ? userDoc.timezone : "UTC",
   );
@@ -69,9 +73,48 @@ function serializeSettings(userDoc: Record<string, unknown>, settingsDoc: Record
           ? settingsDoc.workEnd
           : defaults.workEnd,
       notificationPreferences: normalizeNotificationPreferences(settingsDoc?.notificationPreferences),
-      syncConnections: normalizeSyncConnections(settingsDoc?.syncConnections),
+      syncConnections: serializeSyncConnections(settingsDoc?.syncConnections, calendarSyncTokenDoc),
     },
   };
+}
+
+function serializeSyncConnections(input: unknown, calendarSyncTokenDoc?: Record<string, unknown> | null) {
+  const normalized = normalizeSyncConnections(input);
+  const tokenDirection = normalizeSyncConnections({ googleCalendar: calendarSyncTokenDoc }).googleCalendar?.direction;
+  const direction = tokenDirection ?? normalized.googleCalendar?.direction ?? "sourceToToatre";
+
+  if (!calendarSyncTokenDoc) {
+    if (!normalized.googleCalendar) return {};
+    return {
+      googleCalendar: {
+        ...normalized.googleCalendar,
+        direction,
+        connected: false,
+        connectedAt: null,
+        forwardOnlyFrom: null,
+        lastSyncedAt: null,
+      },
+    };
+  }
+
+  return {
+    googleCalendar: {
+      provider: "googleCalendar",
+      direction,
+      connected: calendarSyncTokenDoc.connected === true,
+      connectedAt: serializeDate(calendarSyncTokenDoc.connectedAt),
+      forwardOnlyFrom: serializeDate(calendarSyncTokenDoc.forwardOnlyFrom),
+      lastSyncedAt: serializeDate(calendarSyncTokenDoc.lastSyncedAt),
+      updatedAt: serializeDate(calendarSyncTokenDoc.updatedAt),
+    },
+  };
+}
+
+function serializeDate(input: unknown): string | null {
+  if (input instanceof Date) return input.toISOString();
+  if (typeof input !== "string") return null;
+  const date = new Date(input);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 export async function GET(request: NextRequest) {
@@ -80,7 +123,7 @@ export async function GET(request: NextRequest) {
     return errorResponse;
   }
 
-  const { users, settings } = await getCollections();
+  const { users, settings, calendarSyncTokens } = await getCollections();
   const userDoc = await users.findOne({ _id: new ObjectId(user.mongoId) });
 
   if (!userDoc) {
@@ -88,7 +131,8 @@ export async function GET(request: NextRequest) {
   }
 
   const settingsDoc = await settings.findOne({ userId: user.mongoId });
-  return NextResponse.json(serializeSettings(userDoc, settingsDoc));
+  const calendarSyncTokenDoc = await calendarSyncTokens.findOne({ userId: user.mongoId, provider: "googleCalendar" });
+  return NextResponse.json(serializeSettings(userDoc, settingsDoc, calendarSyncTokenDoc));
 }
 
 export async function PATCH(request: NextRequest) {
@@ -109,7 +153,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const payload = body as Record<string, unknown>;
-  const { users, settings } = await getCollections();
+  const { users, settings, calendarSyncTokens } = await getCollections();
   const userDoc = await users.findOne({ _id: new ObjectId(user.mongoId) });
 
   if (!userDoc) {
@@ -117,7 +161,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const currentSettings = await settings.findOne({ userId: user.mongoId });
-  const current = serializeSettings(userDoc, currentSettings).settings;
+  const calendarSyncTokenDoc = await calendarSyncTokens.findOne({ userId: user.mongoId, provider: "googleCalendar" });
+  const current = serializeSettings(userDoc, currentSettings, calendarSyncTokenDoc).settings;
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
 
@@ -171,7 +216,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   if ("syncConnections" in payload) {
-    updates.syncConnections = normalizeSyncConnections(payload.syncConnections);
+    return NextResponse.json(
+      { error: "Sync connections must be changed through the sync endpoints." },
+      { status: 400 },
+    );
   }
 
   if (Object.keys(updates).length === 1) {
@@ -212,5 +260,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Account profile not found." }, { status: 404 });
   }
 
-  return NextResponse.json(serializeSettings(updatedUserDoc, updatedSettings));
+  const updatedCalendarSyncTokenDoc = await calendarSyncTokens.findOne({ userId: user.mongoId, provider: "googleCalendar" });
+  return NextResponse.json(serializeSettings(updatedUserDoc, updatedSettings, updatedCalendarSyncTokenDoc));
 }

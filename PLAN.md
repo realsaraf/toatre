@@ -31,6 +31,12 @@
 - Documented required Google Calendar and token-encryption env vars in `.env.example`
 - Validation: `npm run typecheck`, `npm run build`, `flutter analyze`, `flutter test`, VS Code Problems check for touched Dart files
 
+### Session 2026-04-28 (Google Calendar sync state repair) — completed
+- Fixed `/api/settings` so Google Calendar connection status is derived from the server-owned token collection instead of trusting generic settings writes
+- Blocked generic settings PATCH calls from mutating `syncConnections`; sync state now has to flow through the dedicated sync endpoints
+- Repaired the affected Mongo settings record, manually ran the Google Calendar sync job, and confirmed the Apr 28 Google-origin toat imported
+- Validation: `npm run typecheck`, `npm run build`, VS Code Problems check for touched Settings API file
+
 ### Session 2026-04-27 (settings sync surface) — completed
 - Added a Settings → Sync tab on mobile and web, starting with Google Calendar as the active provider plus placeholders for iOS Calendar and Office 365
 - Collapsed settings navigation to three tabs on both mobile and web: General, Pings, and Sync; Handle and Phone settings now live inside General
