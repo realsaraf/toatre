@@ -72,7 +72,7 @@ class _ListeningState extends StatelessWidget {
     final isProcessing = capture.isProcessing;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -91,7 +91,7 @@ class _ListeningState extends StatelessWidget {
               ),
               const Spacer(),
               CircleAvatar(
-                radius: 22,
+                radius: 20,
                 backgroundColor: const Color(0xFFF2F4F8),
                 child: Icon(
                   Icons.person_rounded,
@@ -100,8 +100,8 @@ class _ListeningState extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 30),
-          Text('Capture', style: TextStyles.display.copyWith(fontSize: 42)),
+          const SizedBox(height: 24),
+          Text('Capture', style: TextStyles.display.copyWith(fontSize: 36)),
           const SizedBox(height: 10),
           Text(
             'Tap the mic and tell me what\'s on your mind.',
@@ -110,7 +110,7 @@ class _ListeningState extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Align(
             alignment: Alignment.centerRight,
             child: Container(
@@ -128,13 +128,13 @@ class _ListeningState extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _ModeToggle(
             activeMode: CaptureInputMode.voice,
             onVoiceTap: () => capture.setMode(CaptureInputMode.voice),
             onTextTap: onOpenTextMode,
           ),
-          const SizedBox(height: 34),
+          const SizedBox(height: 24),
           Center(
             child: Text(
               isProcessing
@@ -145,13 +145,13 @@ class _ListeningState extends StatelessWidget {
               style: TextStyles.heading2.copyWith(color: AppColors.primary),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           _WaveMeter(waveform: capture.waveform),
           const SizedBox(height: 18),
           Center(
             child: Container(
-              width: 260,
-              height: 260,
+              width: 218,
+              height: 218,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0x1AA855F7)),
@@ -159,14 +159,14 @@ class _ListeningState extends StatelessWidget {
                   BoxShadow(
                     color: Color(0x11A855F7),
                     blurRadius: 40,
-                    spreadRadius: 18,
+                    spreadRadius: 12,
                   ),
                 ],
               ),
               child: Center(
                 child: Container(
-                  width: 188,
-                  height: 188,
+                  width: 158,
+                  height: 158,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -176,8 +176,8 @@ class _ListeningState extends StatelessWidget {
                   ),
                   child: Center(
                     child: Container(
-                      width: 142,
-                      height: 142,
+                      width: 118,
+                      height: 118,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
@@ -194,7 +194,7 @@ class _ListeningState extends StatelessWidget {
                           isRecording
                               ? Icons.mic_rounded
                               : Icons.mic_none_rounded,
-                          size: 62,
+                          size: 50,
                           color: AppColors.primary,
                         ),
                       ),
@@ -204,17 +204,17 @@ class _ListeningState extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           Center(
             child: Text(
               _formatElapsed(capture.elapsedSeconds),
-              style: TextStyles.heading1.copyWith(color: AppColors.primary),
+              style: TextStyles.heading2.copyWith(color: AppColors.primary),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -241,7 +241,7 @@ class _ListeningState extends StatelessWidget {
                       : isRecording
                       ? 'I\'m listening for multiple toats in one capture.'
                       : 'You can say multiple things. I\'ll organise them for you.',
-                  style: TextStyles.heading2.copyWith(
+                  style: TextStyles.bodyMedium.copyWith(
                     color: const Color(0xFF111827),
                     height: 1.45,
                   ),
@@ -279,8 +279,8 @@ class _ListeningState extends StatelessWidget {
                         ? capture.stopRecording
                         : capture.startRecording,
                     child: Container(
-                      width: 112,
-                      height: 112,
+                      width: 92,
+                      height: 92,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -306,7 +306,7 @@ class _ListeningState extends StatelessWidget {
                             ? Icons.stop_rounded
                             : Icons.mic_rounded,
                         color: Colors.white,
-                        size: 44,
+                        size: 36,
                       ),
                     ),
                   ),
@@ -321,10 +321,10 @@ class _ListeningState extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
@@ -382,7 +382,7 @@ class _TextCaptureState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -401,7 +401,7 @@ class _TextCaptureState extends StatelessWidget {
               ),
               const Spacer(),
               CircleAvatar(
-                radius: 22,
+                radius: 20,
                 backgroundColor: const Color(0xFFF2F4F8),
                 child: Icon(
                   Icons.person_rounded,
@@ -410,10 +410,10 @@ class _TextCaptureState extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           Text(
             'Type a capture',
-            style: TextStyles.display.copyWith(fontSize: 38),
+            style: TextStyles.display.copyWith(fontSize: 34),
           ),
           const SizedBox(height: 10),
           Text(
@@ -423,16 +423,16 @@ class _TextCaptureState extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _ModeToggle(
             activeMode: CaptureInputMode.text,
             onVoiceTap: onOpenVoiceMode,
             onTextTap: () {},
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -446,8 +446,8 @@ class _TextCaptureState extends StatelessWidget {
             ),
             child: TextField(
               controller: controller,
-              maxLines: 9,
-              minLines: 9,
+              maxLines: 7,
+              minLines: 7,
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
                 hintText:
@@ -496,10 +496,10 @@ class _TextCaptureState extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(22),
@@ -745,8 +745,8 @@ class _WaveMeter extends StatelessWidget {
             (heightFactor) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
               child: Container(
-                width: 4,
-                height: 80 * heightFactor,
+                width: 3,
+                height: 58 * heightFactor,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   gradient: const LinearGradient(
@@ -780,7 +780,7 @@ class _ModeToggle extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: const Color(0xFFF4F1FF),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -817,7 +817,7 @@ class _ModeButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           gradient: active ? AppColors.brandGradient : null,
           borderRadius: BorderRadius.circular(16),
@@ -847,8 +847,8 @@ class _CircleAction extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -860,9 +860,9 @@ class _CircleAction extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: const Color(0xFF6B7280), size: 30),
+            child: Icon(icon, color: const Color(0xFF6B7280), size: 24),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(label, style: TextStyles.smallMedium),
         ],
       ),

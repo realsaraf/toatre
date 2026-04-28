@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,6 +27,8 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
+  _TimelineRange _selectedRange = _TimelineRange.today;
+
   @override
   void initState() {
     super.initState();
@@ -40,8 +43,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final auth = context.watch<AuthProvider>();
     final toatsProvider = context.watch<ToatsProvider>();
     final toats = toatsProvider.toats;
-    final grouped = _groupToats(toats);
-    final upNext = _findUpNext(toats);
+    final rangeCounts = _rangeCounts(toats);
+    final visibleToats = _filterToats(toats, _selectedRange);
+    final grouped = _groupToats(visibleToats);
+    final upNext = _findUpNext(visibleToats);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -70,7 +75,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               child: RefreshIndicator(
                 onRefresh: context.read<ToatsProvider>().fetchToats,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 128),
                   children: [
                     Row(
                       children: [
@@ -79,19 +84,36 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         _ProfileButton(user: auth.user, onTap: _openSettings),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Today',
-                              style: TextStyles.display.copyWith(fontSize: 38),
+                            InkWell(
+                              onTap: () => _openRangePicker(rangeCounts),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _rangeTitle(_selectedRange),
+                                    style: TextStyles.display.copyWith(
+                                      fontSize: 34,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: AppColors.primary,
+                                    size: 30,
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _formatToday(),
+                              _rangeSubtitle(_selectedRange),
                               style: TextStyles.heading3.copyWith(
                                 color: AppColors.textSecondary,
                               ),
@@ -110,7 +132,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     if (toatsProvider.status == ToatsStatus.loading)
                       const Padding(
                         padding: EdgeInsets.only(top: 80),
@@ -127,18 +149,24 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         onCapture: _openVoiceCapture,
                         onTextCapture: _openTextCapture,
                       )
+                    else if (visibleToats.isEmpty)
+                      _TimelineMessage(
+                        title: 'Nothing here yet.',
+                        subtitle: 'Try another range or capture a new toat.',
+                      )
                     else ...[
                       if (upNext != null) ...[
                         _UpNextCard(
                           toat: upNext,
                           onTap: () => _openToat(upNext),
                           onAction: () => _runPrimaryAction(upNext),
+                          onDone: () => _markDone(upNext),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 18),
                       ],
                       for (final entry in grouped.entries) ...[
                         Padding(
-                          padding: const EdgeInsets.only(left: 54, bottom: 12),
+                          padding: const EdgeInsets.only(left: 50, bottom: 10),
                           child: Text(
                             entry.key,
                             style: TextStyles.bodyMedium.copyWith(
@@ -151,13 +179,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             toat: toat,
                             onTap: () => _openToat(toat),
                             onAction: () => _runPrimaryAction(toat),
+                            onDone: () => _markDone(toat),
                           ),
                         ),
                         const SizedBox(height: 14),
                       ],
                       _TimelineMessage(
-                        title: 'You\'re all clear after ${_latestTime(toats)}',
-                        subtitle: 'Enjoy your evening.',
+                        title:
+                            'You\'re all clear after ${_latestTime(visibleToats)}',
+                        subtitle: _selectedRange == _TimelineRange.today
+                            ? 'Enjoy your evening.'
+                            : 'Nothing else in this range.',
                       ),
                     ],
                   ],
@@ -167,7 +199,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
           ],
         ),
       ),
-      floatingActionButton: _MicFab(onTap: _openVoiceCapture),
+      floatingActionButton: _CaptureDock(
+        onTextTap: _openTextCapture,
+        onVoiceTap: _openVoiceCapture,
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
@@ -218,6 +253,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _openVoiceCapture() async {
+    final permission = await Permission.microphone.request();
+    if (!mounted) {
+      return;
+    }
+
+    if (!permission.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required.')),
+      );
+      return;
+    }
+
     final capture = context.read<CaptureProvider>();
     capture.reset();
     capture.setMode(CaptureInputMode.voice);
@@ -342,6 +389,27 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
+  Future<void> _openRangePicker(Map<_TimelineRange, int> counts) async {
+    final selected = await showDialog<_TimelineRange>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) {
+        return _TimelineRangeDialog(
+          selectedRange: _selectedRange,
+          counts: counts,
+        );
+      },
+    );
+
+    if (selected == null || selected == _selectedRange) {
+      return;
+    }
+
+    setState(() {
+      _selectedRange = selected;
+    });
+  }
+
   Future<void> _openToat(ToatSummary toat) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
@@ -356,6 +424,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   Future<void> _runPrimaryAction(ToatSummary toat) async {
     final action = _primaryAction(toat);
+    if (action == null) {
+      await _openToat(toat);
+      return;
+    }
+
     final uri = action.uri;
 
     if (uri == null) {
@@ -373,6 +446,33 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
+  Future<void> _markDone(ToatSummary toat) async {
+    if (toat.status == 'done') {
+      return;
+    }
+
+    try {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        toat.id,
+        <String, Object?>{'status': 'done'},
+      );
+      await AnalyticsService.logToatCompleted(kind: updated.kind);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Marked done.')));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   Map<String, List<ToatSummary>> _groupToats(List<ToatSummary> toats) {
     final groups = <String, List<ToatSummary>>{};
 
@@ -382,6 +482,70 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
 
     return groups;
+  }
+
+  Map<_TimelineRange, int> _rangeCounts(List<ToatSummary> toats) {
+    return <_TimelineRange, int>{
+      _TimelineRange.today: _filterToats(toats, _TimelineRange.today).length,
+      _TimelineRange.tomorrow: _filterToats(
+        toats,
+        _TimelineRange.tomorrow,
+      ).length,
+      _TimelineRange.someday: _filterToats(
+        toats,
+        _TimelineRange.someday,
+      ).length,
+    };
+  }
+
+  List<ToatSummary> _filterToats(
+    List<ToatSummary> toats,
+    _TimelineRange range,
+  ) {
+    return toats.where((toat) => _rangeForToat(toat) == range).toList();
+  }
+
+  _TimelineRange _rangeForToat(ToatSummary toat) {
+    final dateTime = toat.datetime;
+    if (dateTime == null) {
+      return _TimelineRange.someday;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final toatDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final tomorrow = today.add(const Duration(days: 1));
+
+    if (toatDay == today) {
+      return _TimelineRange.today;
+    }
+    if (toatDay == tomorrow) {
+      return _TimelineRange.tomorrow;
+    }
+    return _TimelineRange.someday;
+  }
+
+  String _rangeTitle(_TimelineRange range) {
+    switch (range) {
+      case _TimelineRange.today:
+        return 'Today';
+      case _TimelineRange.tomorrow:
+        return 'Tomorrow';
+      case _TimelineRange.someday:
+        return 'Someday';
+    }
+  }
+
+  String _rangeSubtitle(_TimelineRange range) {
+    final now = DateTime.now();
+    switch (range) {
+      case _TimelineRange.today:
+        return _formatDateLabel(now);
+      case _TimelineRange.tomorrow:
+        return _formatDateLabel(now.add(const Duration(days: 1)));
+      case _TimelineRange.someday:
+        return 'Whenever you get to it';
+    }
   }
 
   ToatSummary? _findUpNext(List<ToatSummary> toats) {
@@ -400,8 +564,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     return toats.isEmpty ? null : toats.first;
   }
 
-  String _formatToday() {
-    final now = DateTime.now();
+  String _formatDateLabel(DateTime dateTime) {
     const weekdays = [
       'Monday',
       'Tuesday',
@@ -426,7 +589,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       'December',
     ];
 
-    return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+    return '${weekdays[dateTime.weekday - 1]}, ${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
   String _timeBucket(DateTime? dateTime) {
@@ -484,6 +647,172 @@ class _BackgroundHalo extends StatelessWidget {
   }
 }
 
+enum _TimelineRange { today, tomorrow, someday }
+
+class _TimelineRangeDialog extends StatelessWidget {
+  const _TimelineRangeDialog({
+    required this.selectedRange,
+    required this.counts,
+  });
+
+  final _TimelineRange selectedRange;
+  final Map<_TimelineRange, int> counts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: MediaQuery.paddingOf(context).top + 112,
+          left: 34,
+          right: 92,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x220F172A),
+                    blurRadius: 34,
+                    offset: Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _TimelineRangeOption(
+                    range: _TimelineRange.today,
+                    title: 'Today',
+                    subtitle: _dateLabel(DateTime.now()),
+                    count: counts[_TimelineRange.today] ?? 0,
+                    selected: selectedRange == _TimelineRange.today,
+                  ),
+                  const SizedBox(height: 8),
+                  _TimelineRangeOption(
+                    range: _TimelineRange.tomorrow,
+                    title: 'Tomorrow',
+                    subtitle: _dateLabel(
+                      DateTime.now().add(const Duration(days: 1)),
+                    ),
+                    count: counts[_TimelineRange.tomorrow] ?? 0,
+                    selected: selectedRange == _TimelineRange.tomorrow,
+                  ),
+                  const SizedBox(height: 8),
+                  _TimelineRangeOption(
+                    range: _TimelineRange.someday,
+                    title: 'Someday',
+                    subtitle: 'Whenever you get to it',
+                    count: counts[_TimelineRange.someday] ?? 0,
+                    selected: selectedRange == _TimelineRange.someday,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _dateLabel(DateTime dateTime) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return '${weekdays[dateTime.weekday - 1]}, ${months[dateTime.month - 1]} ${dateTime.day}';
+  }
+}
+
+class _TimelineRangeOption extends StatelessWidget {
+  const _TimelineRangeOption({
+    required this.range,
+    required this.title,
+    required this.subtitle,
+    required this.count,
+    required this.selected,
+  });
+
+  final _TimelineRange range;
+  final String title;
+  final String subtitle;
+  final int count;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context).pop(range),
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEDE9FE) : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyles.heading3),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8E1FF),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '$count',
+                  style: TextStyles.heading3.copyWith(color: AppColors.primary),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AppBrand extends StatelessWidget {
   const _AppBrand();
 
@@ -496,13 +825,13 @@ class _AppBrand extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           child: Image.asset(
             'assets/images/icon.png',
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             fit: BoxFit.cover,
           ),
         ),
         const SizedBox(width: 8),
-        const ToatreMark(fontSize: 28),
+        const ToatreMark(fontSize: 24),
       ],
     );
   }
@@ -524,8 +853,8 @@ class _ProfileButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 54,
-        height: 54,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
@@ -699,8 +1028,8 @@ class _MicFab extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 82,
-        height: 82,
+        width: 72,
+        height: 72,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
@@ -716,11 +1045,70 @@ class _MicFab extends StatelessWidget {
           button: true,
           child: Image.asset(
             'assets/images/micicon.png',
-            width: 82,
-            height: 82,
+            width: 72,
+            height: 72,
             fit: BoxFit.cover,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CaptureDock extends StatelessWidget {
+  const _CaptureDock({required this.onTextTap, required this.onVoiceTap});
+
+  final VoidCallback onTextTap;
+  final VoidCallback onVoiceTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(44),
+        border: Border.all(color: const Color(0x33FFFFFF)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x220F172A),
+            blurRadius: 28,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            message: 'Type capture',
+            child: InkWell(
+              onTap: onTextTap,
+              borderRadius: BorderRadius.circular(30),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x140F172A),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.keyboard_alt_outlined,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _MicFab(onTap: onVoiceTap),
+        ],
       ),
     );
   }
@@ -755,11 +1143,13 @@ class _UpNextCard extends StatelessWidget {
     required this.toat,
     required this.onTap,
     required this.onAction,
+    required this.onDone,
   });
 
   final ToatSummary toat;
   final VoidCallback onTap;
   final VoidCallback onAction;
+  final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -768,7 +1158,7 @@ class _UpNextCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -778,7 +1168,7 @@ class _UpNextCard extends StatelessWidget {
               _kindColors(toat.kind).last.withValues(alpha: 0.06),
             ],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: _kindColors(toat.kind).last.withValues(alpha: 0.18),
           ),
@@ -787,15 +1177,15 @@ class _UpNextCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 62,
-              height: 62,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(colors: _kindColors(toat.kind)),
               ),
-              child: Icon(_kindIcon(toat.kind), color: Colors.white, size: 31),
+              child: Icon(_kindIcon(toat.kind), color: Colors.white, size: 25),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,14 +1230,17 @@ class _UpNextCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 9),
                   Text(
                     toat.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyles.heading2,
+                    style: TextStyles.bodyMedium.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 5),
                   Text(
                     _supportingText(toat),
                     maxLines: 1,
@@ -855,7 +1248,7 @@ class _UpNextCard extends StatelessWidget {
                     style: TextStyles.smallMedium,
                   ),
                   if (toat.datetime != null) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       _timeToGo(toat.datetime!),
                       style: TextStyles.smallMedium.copyWith(
@@ -866,8 +1259,18 @@ class _UpNextCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            _ActionButton(action: action, filled: true, onTap: onAction),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (action != null) ...[
+                  _ActionButton(action: action, filled: true, onTap: onAction),
+                  const SizedBox(height: 8),
+                ],
+                _DoneButton(done: toat.status == 'done', onTap: onDone),
+              ],
+            ),
           ],
         ),
       ),
@@ -886,26 +1289,32 @@ class _TimelineRow extends StatelessWidget {
     required this.toat,
     required this.onTap,
     required this.onAction,
+    required this.onDone,
   });
 
   final ToatSummary toat;
   final VoidCallback onTap;
   final VoidCallback onAction;
+  final VoidCallback onDone;
 
   @override
   Widget build(BuildContext context) {
+    final action = _primaryAction(toat);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 58,
+            width: 48,
             child: Column(
               children: [
                 Text(
                   toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
-                  style: TextStyles.heading3,
+                  style: TextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   toat.datetime == null ? '' : _minuteSuffix(toat.datetime!),
@@ -918,17 +1327,17 @@ class _TimelineRow extends StatelessWidget {
             width: 2,
             margin: const EdgeInsets.only(top: 6),
             color: const Color(0x22374151),
-            height: 84,
+            height: 74,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.bgElevated,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x12000000),
@@ -940,10 +1349,10 @@ class _TimelineRow extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 52,
-                      height: 52,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                         gradient: LinearGradient(
                           colors: _kindColors(toat.kind),
                         ),
@@ -951,10 +1360,10 @@ class _TimelineRow extends StatelessWidget {
                       child: Icon(
                         _kindIcon(toat.kind),
                         color: Colors.white,
-                        size: 27,
+                        size: 23,
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -964,7 +1373,7 @@ class _TimelineRow extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyles.bodyMedium.copyWith(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -978,15 +1387,17 @@ class _TimelineRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    _ActionButton(
-                      action: _primaryAction(toat),
-                      onTap: onAction,
-                    ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
+                    if (action != null) ...[
+                      _ActionButton(action: action, onTap: onAction),
+                      const SizedBox(width: 5),
+                    ],
+                    _DoneButton(done: toat.status == 'done', onTap: onDone),
+                    const SizedBox(width: 4),
                     const Icon(
                       Icons.chevron_right_rounded,
                       color: AppColors.textMuted,
+                      size: 20,
                     ),
                   ],
                 ),
@@ -1010,6 +1421,50 @@ class _TimelineRow extends StatelessWidget {
   String _minuteSuffix(DateTime dateTime) => dateTime.hour >= 12 ? 'PM' : 'AM';
 }
 
+class _DoneButton extends StatelessWidget {
+  const _DoneButton({required this.done, required this.onTap});
+
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: done ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF1F5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE4E7EC)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                done ? Icons.check_circle_rounded : Icons.check_circle_outline,
+                size: 15,
+                color: AppColors.textMuted,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Done',
+                style: TextStyles.smallMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.action,
@@ -1027,8 +1482,8 @@ class _ActionButton extends StatelessWidget {
     final child = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(action.icon, size: 18, color: filled ? Colors.white : colors.last),
-        const SizedBox(width: 7),
+        Icon(action.icon, size: 15, color: filled ? Colors.white : colors.last),
+        const SizedBox(width: 5),
         Flexible(
           child: Text(
             action.label,
@@ -1049,8 +1504,8 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          constraints: BoxConstraints(maxWidth: filled ? 168 : 124),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          constraints: BoxConstraints(maxWidth: filled ? 124 : 82),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
           decoration: BoxDecoration(
             gradient: filled ? LinearGradient(colors: colors) : null,
             color: filled ? null : colors.first.withValues(alpha: 0.11),
@@ -1206,7 +1661,7 @@ String? _extractPhone(ToatSummary toat) {
   return match?.group(1);
 }
 
-_TimelineAction _primaryAction(ToatSummary toat) {
+_TimelineAction? _primaryAction(ToatSummary toat) {
   final phone = _extractPhone(toat);
   if (phone != null) {
     return _TimelineAction(
@@ -1239,22 +1694,7 @@ _TimelineAction _primaryAction(ToatSummary toat) {
       type: _TimelineActionType.directions,
     );
   }
-
-  if (toat.people.isNotEmpty) {
-    return _TimelineAction(
-      label: 'Message',
-      icon: Icons.chat_bubble_rounded,
-      uri: null,
-      type: _TimelineActionType.message,
-    );
-  }
-
-  return const _TimelineAction(
-    label: 'Open',
-    icon: Icons.article_rounded,
-    uri: null,
-    type: _TimelineActionType.open,
-  );
+  return null;
 }
 
 String _normalizedPhone(String phone) {
@@ -1281,12 +1721,8 @@ List<Color> _actionColors(_TimelineActionType type) {
       return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
     case _TimelineActionType.call:
       return const [Color(0xFFFB7185), Color(0xFFEC4899)];
-    case _TimelineActionType.message:
-      return const [Color(0xFFF97316), Color(0xFFF97316)];
     case _TimelineActionType.directions:
       return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];
-    case _TimelineActionType.open:
-      return const [Color(0xFFF59E0B), Color(0xFFF59E0B)];
   }
 }
 
@@ -1304,4 +1740,4 @@ class _TimelineAction {
   final _TimelineActionType type;
 }
 
-enum _TimelineActionType { meeting, call, message, directions, open }
+enum _TimelineActionType { meeting, call, directions }

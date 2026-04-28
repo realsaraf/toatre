@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/toat_summary.dart';
@@ -50,8 +51,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                   const SizedBox(width: 12),
                   Expanded(child: Text('Toat', style: TextStyles.heading2)),
                   _IconCircleButton(
-                    icon: Icons.copy_rounded,
-                    onTap: _copyShareText,
+                    icon: Icons.ios_share_rounded,
+                    onTap: _shareToat,
                   ),
                 ],
               ),
@@ -122,6 +123,10 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                                 ? 'Saving…'
                                 : 'Duplicate',
                             onTap: _workingAction == null ? _duplicate : null,
+                          ),
+                          _ActionChip(
+                            label: 'Share',
+                            onTap: _workingAction == null ? _shareToat : null,
                           ),
                           _ActionChip(
                             label: _primaryActionLabel(_toat),
@@ -330,7 +335,12 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     }
   }
 
-  Future<void> _copyShareText() async {
+  Future<void> _shareToat() async {
+    final text = _shareText();
+    await Share.share(text, subject: _toat.title);
+  }
+
+  String _shareText() {
     final buffer = StringBuffer()..writeln(_toat.title);
     if (_toat.datetime != null) {
       buffer.writeln(_formatWhen(_toat));
@@ -342,8 +352,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       buffer.writeln(_toat.notes);
     }
 
-    await Clipboard.setData(ClipboardData(text: buffer.toString().trim()));
-    _showMessage('Toat copied.');
+    return buffer.toString().trim();
   }
 
   Future<void> _runAction(

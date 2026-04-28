@@ -8,13 +8,13 @@ class TextStyles {
   static const String fontFamilyInter = 'Inter';
 
   // ── Size scale ──────────────────────────────────────────────────────────
-  static const double sizeDisplay = 36.0;
-  static const double sizeH1 = 28.0;
-  static const double sizeH2 = 22.0;
-  static const double sizeH3 = 18.0;
-  static const double sizeBody = 15.0;
-  static const double sizeSmall = 13.0;
-  static const double sizeTiny = 11.0;
+  static const double sizeDisplay = 32.0;
+  static const double sizeH1 = 24.0;
+  static const double sizeH2 = 20.0;
+  static const double sizeH3 = 16.0;
+  static const double sizeBody = 14.0;
+  static const double sizeSmall = 12.0;
+  static const double sizeTiny = 10.0;
 
   // ── Styles ──────────────────────────────────────────────────────────────
   static TextStyle get display => const TextStyle(
