@@ -128,6 +128,11 @@ function serializeToat(doc: any) {
     notes: doc.notes ?? null,
     status: doc.status ?? "active",
     captureId: doc.captureId?.toString() ?? null,
+    externalProvider: doc.externalProvider ?? null,
+    externalCalendarId: doc.externalCalendarId ?? null,
+    externalEventId: doc.externalEventId ?? null,
+    syncOrigin: doc.syncOrigin ?? null,
+    lastSyncedAt: doc.lastSyncedAt ? (doc.lastSyncedAt as Date).toISOString() : null,
     createdAt: (doc.createdAt as Date).toISOString(),
     updatedAt: (doc.updatedAt as Date).toISOString(),
   };

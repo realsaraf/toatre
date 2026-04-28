@@ -203,6 +203,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _syncConnections[googleCalendarProviderKey],
                           googleDirection: _googleCalendarDirection,
                           busy: settingsProvider.savingKey == 'sync-google',
+                          syncing:
+                              settingsProvider.savingKey == 'sync-google-run',
                           showIosCalendar: Platform.isIOS,
                           onDirectionChanged: (direction) => setState(
                             () => _googleCalendarDirection = direction,
@@ -211,6 +213,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _connectGoogleCalendar(settingsProvider),
                           onDisconnectGoogle: () =>
                               _disconnectGoogleCalendar(settingsProvider),
+                          onSyncGoogle: () =>
+                              _syncGoogleCalendarNow(settingsProvider),
                         ),
                     ],
                   ],
@@ -341,7 +345,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _connectGoogleCalendar(SettingsProvider provider) async {
     try {
       await provider.connectGoogleCalendar(direction: _googleCalendarDirection);
-      _showNotice('Google Calendar sync connected.', _NoticeTone.success);
+      _showNotice(
+        'Finish Google Calendar approval in the browser.',
+        _NoticeTone.success,
+      );
     } catch (_) {
       _showNotice(
         provider.error ?? 'Could not connect Google Calendar sync.',
@@ -352,13 +359,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _disconnectGoogleCalendar(SettingsProvider provider) async {
     try {
-      await provider.disconnectGoogleCalendar(
-        direction: _googleCalendarDirection,
-      );
+      await provider.disconnectGoogleCalendar();
       _showNotice('Google Calendar sync paused.', _NoticeTone.success);
     } catch (_) {
       _showNotice(
         provider.error ?? 'Could not pause Google Calendar sync.',
+        _NoticeTone.error,
+      );
+    }
+  }
+
+  Future<void> _syncGoogleCalendarNow(SettingsProvider provider) async {
+    try {
+      await provider.syncGoogleCalendarNow();
+      _showNotice('Google Calendar sync finished.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(
+        provider.error ?? 'Could not sync Google Calendar.',
         _NoticeTone.error,
       );
     }
@@ -966,19 +983,23 @@ class _SyncTab extends StatelessWidget {
     required this.googleConnection,
     required this.googleDirection,
     required this.busy,
+    required this.syncing,
     required this.showIosCalendar,
     required this.onDirectionChanged,
     required this.onConnectGoogle,
     required this.onDisconnectGoogle,
+    required this.onSyncGoogle,
   });
 
   final SyncConnection? googleConnection;
   final SyncDirection googleDirection;
   final bool busy;
+  final bool syncing;
   final bool showIosCalendar;
   final ValueChanged<SyncDirection> onDirectionChanged;
   final VoidCallback onConnectGoogle;
   final VoidCallback onDisconnectGoogle;
+  final VoidCallback onSyncGoogle;
 
   @override
   Widget build(BuildContext context) {
@@ -1025,9 +1046,11 @@ class _SyncTab extends StatelessWidget {
             connection: googleConnection,
             direction: googleDirection,
             busy: busy,
+            syncing: syncing,
             onDirectionChanged: onDirectionChanged,
             onConnect: onConnectGoogle,
             onDisconnect: onDisconnectGoogle,
+            onSync: onSyncGoogle,
           ),
         ],
       ),
@@ -1091,17 +1114,21 @@ class _GoogleCalendarSyncCard extends StatelessWidget {
     required this.connection,
     required this.direction,
     required this.busy,
+    required this.syncing,
     required this.onDirectionChanged,
     required this.onConnect,
     required this.onDisconnect,
+    required this.onSync,
   });
 
   final SyncConnection? connection;
   final SyncDirection direction;
   final bool busy;
+  final bool syncing;
   final ValueChanged<SyncDirection> onDirectionChanged;
   final VoidCallback onConnect;
   final VoidCallback onDisconnect;
+  final VoidCallback onSync;
 
   @override
   Widget build(BuildContext context) {
@@ -1180,23 +1207,39 @@ class _GoogleCalendarSyncCard extends StatelessWidget {
             'Marking a toat done will not hide the original Google Calendar entry.',
             style: TextStyles.small.copyWith(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: busy
-                  ? null
-                  : connected
-                  ? onDisconnect
-                  : onConnect,
-              child: Text(
-                busy
-                    ? 'Opening Google…'
-                    : connected
-                    ? 'Pause Google Calendar sync'
-                    : 'Connect Google Calendar',
-              ),
+          if (connected && connection?.lastSyncedAt != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Last synced ${_formatSyncDate(connection?.lastSyncedAt)}',
+              style: TextStyles.small.copyWith(color: AppColors.textSecondary),
             ),
+          ],
+          const SizedBox(height: 18),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: busy || syncing
+                    ? null
+                    : connected
+                    ? onDisconnect
+                    : onConnect,
+                child: Text(
+                  busy
+                      ? 'Opening Google…'
+                      : connected
+                      ? 'Pause Google Calendar sync'
+                      : 'Connect Google Calendar',
+                ),
+              ),
+              if (connected) ...[
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: busy || syncing ? null : onSync,
+                  child: Text(syncing ? 'Syncing…' : 'Sync now'),
+                ),
+              ],
+            ],
           ),
         ],
       ),

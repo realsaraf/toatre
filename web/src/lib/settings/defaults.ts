@@ -16,6 +16,7 @@ export interface SyncConnection {
   connected: boolean;
   connectedAt: string | null;
   forwardOnlyFrom: string | null;
+  lastSyncedAt: string | null;
   updatedAt: string | null;
 }
 
@@ -102,6 +103,7 @@ export function normalizeSyncConnections(input: unknown): SyncConnections {
       connected: connection.connected === true,
       connectedAt: normalizeDateString(connection.connectedAt),
       forwardOnlyFrom: normalizeDateString(connection.forwardOnlyFrom),
+      lastSyncedAt: normalizeDateString(connection.lastSyncedAt),
       updatedAt: normalizeDateString(connection.updatedAt),
     },
   };

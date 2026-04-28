@@ -21,6 +21,8 @@ export async function getCollections() {
     acl: db.collection("acl"),
     settings: db.collection("settings"),
     reminders: db.collection("reminders"),
+    calendarSyncTokens: db.collection("calendar_sync_tokens"),
+    calendarSyncStates: db.collection("calendar_sync_states"),
     reminder_policies: db.collection("reminder_policies"),
     audit: db.collection("audit"),
   };

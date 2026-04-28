@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, linkWithPopup, reauthenticateWithPopup } from "firebase/auth";
 import {
   AppBrand,
   BottomTabBar,
@@ -27,6 +26,7 @@ interface SyncConnection {
   connected: boolean;
   connectedAt: string | null;
   forwardOnlyFrom: string | null;
+  lastSyncedAt: string | null;
   updatedAt: string | null;
 }
 
@@ -390,33 +390,6 @@ export default function SettingsPage() {
     }
   }, [applySettingsPayload, authorizedFetch, notificationPreferences]);
 
-  const saveSyncConnections = useCallback(async (nextConnections: Record<string, SyncConnection>) => {
-    setSavingKey("sync-google");
-    try {
-      const response = await authorizedFetch("/api/settings", {
-        method: "PATCH",
-        body: JSON.stringify({ syncConnections: nextConnections }),
-      });
-      const data = await readJsonResponse<SettingsResponse & { error?: string }>(response);
-      if (!response.ok) {
-        throw new Error(data?.error ?? "Couldn't save your sync settings.");
-      }
-
-      if (!data) {
-        throw new Error("Couldn't save your sync settings.");
-      }
-
-      applySettingsPayload(data);
-      return data;
-    } catch (error) {
-      console.error("[settings/sync]", error);
-      setError(error instanceof Error ? error.message : "Couldn't save your sync settings.");
-      throw error;
-    } finally {
-      setSavingKey(null);
-    }
-  }, [applySettingsPayload, authorizedFetch]);
-
   const connectGoogleCalendar = useCallback(async () => {
     if (!user) {
       return;
@@ -424,55 +397,73 @@ export default function SettingsPage() {
 
     setSavingKey("sync-google");
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope("https://www.googleapis.com/auth/calendar.events");
-      provider.setCustomParameters({ prompt: "consent" });
-
-      const hasGoogleProvider = user.providerData.some((providerData) => providerData.providerId === "google.com");
-      if (hasGoogleProvider) {
-        await reauthenticateWithPopup(user, provider);
-      } else {
-        await linkWithPopup(user, provider);
+      const response = await authorizedFetch("/api/sync/google/start", {
+        method: "POST",
+        body: JSON.stringify({ direction: googleCalendarDirection, returnTo: "/settings?sync=google" }),
+      });
+      const data = await readJsonResponse<{ authUrl?: string; error?: string }>(response);
+      if (!response.ok || !data?.authUrl) {
+        throw new Error(data?.error ?? "Couldn't start Google Calendar connection.");
       }
 
-      const now = new Date().toISOString();
-      const existing = syncConnections.googleCalendar;
-      await saveSyncConnections({
-        ...syncConnections,
-        googleCalendar: {
-          provider: "googleCalendar",
-          direction: googleCalendarDirection,
-          connected: true,
-          connectedAt: existing?.connectedAt ?? now,
-          forwardOnlyFrom: existing?.forwardOnlyFrom ?? now,
-          updatedAt: now,
-        },
-      });
-      setSuccess("Google Calendar sync connected.");
+      window.location.assign(data.authUrl);
     } catch (error) {
       console.error("[settings/sync/google/connect]", error);
       setError(error instanceof Error ? error.message : "Couldn't connect Google Calendar sync.");
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, googleCalendarDirection, user]);
+
+  const disconnectGoogleCalendar = useCallback(async () => {
+    setSavingKey("sync-google");
+    try {
+      const response = await authorizedFetch("/api/sync/google/disconnect", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Couldn't pause Google Calendar sync.");
+      }
+      await loadSettings();
+      setSuccess("Google Calendar sync paused.");
+    } catch (error) {
+      console.error("[settings/sync/google/disconnect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't pause Google Calendar sync.");
     } finally {
       setSavingKey(null);
     }
-  }, [googleCalendarDirection, saveSyncConnections, syncConnections, user]);
+  }, [authorizedFetch, loadSettings]);
 
-  const disconnectGoogleCalendar = useCallback(async () => {
-    const now = new Date().toISOString();
-    const existing = syncConnections.googleCalendar;
-    await saveSyncConnections({
-      ...syncConnections,
-      googleCalendar: {
-        provider: "googleCalendar",
-        direction: googleCalendarDirection,
-        connected: false,
-        connectedAt: null,
-        forwardOnlyFrom: null,
-        updatedAt: now,
-      },
-    });
-    setSuccess(existing?.connected ? "Google Calendar sync paused." : "Google Calendar sync is paused.");
-  }, [googleCalendarDirection, saveSyncConnections, syncConnections]);
+  const runGoogleCalendarSync = useCallback(async () => {
+    setSavingKey("sync-google-run");
+    try {
+      const response = await authorizedFetch("/api/sync/google/run", { method: "POST" });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Couldn't sync Google Calendar.");
+      }
+      await loadSettings();
+      setSuccess("Google Calendar sync finished.");
+    } catch (error) {
+      console.error("[settings/sync/google/run]", error);
+      setError(error instanceof Error ? error.message : "Couldn't sync Google Calendar.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sync") === "google" && user) {
+      void loadSettings().then(() => setSuccess("Google Calendar connection updated."));
+      window.history.replaceState(null, "", "/settings");
+    }
+  }, [loadSettings, user]);
 
   const handleSignOut = useCallback(async () => {
     setSavingKey("signout");
@@ -843,11 +834,17 @@ export default function SettingsPage() {
                 Marking a toat done will not hide the original Google Calendar entry.
               </p>
 
+              {syncConnections.googleCalendar?.connected && syncConnections.googleCalendar.lastSyncedAt ? (
+                <p style={styles.helperText}>
+                  Last synced {formatSyncDate(syncConnections.googleCalendar.lastSyncedAt)}
+                </p>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => syncConnections.googleCalendar?.connected ? void disconnectGoogleCalendar() : void connectGoogleCalendar()}
                 style={styles.primaryButton}
-                disabled={savingKey === "sync-google"}
+                disabled={savingKey === "sync-google" || savingKey === "sync-google-run"}
               >
                 {savingKey === "sync-google"
                   ? "Opening Google…"
@@ -855,6 +852,16 @@ export default function SettingsPage() {
                     ? "Pause Google Calendar sync"
                     : "Connect Google Calendar"}
               </button>
+              {syncConnections.googleCalendar?.connected ? (
+                <button
+                  type="button"
+                  onClick={() => void runGoogleCalendarSync()}
+                  style={styles.secondaryButton}
+                  disabled={savingKey === "sync-google" || savingKey === "sync-google-run"}
+                >
+                  {savingKey === "sync-google-run" ? "Syncing…" : "Sync now"}
+                </button>
+              ) : null}
             </div>
           </section>
         ) : null}

@@ -86,6 +86,7 @@ class SyncConnection {
     required this.connected,
     required this.connectedAt,
     required this.forwardOnlyFrom,
+    required this.lastSyncedAt,
     required this.updatedAt,
   });
 
@@ -94,6 +95,7 @@ class SyncConnection {
   final bool connected;
   final DateTime? connectedAt;
   final DateTime? forwardOnlyFrom;
+  final DateTime? lastSyncedAt;
   final DateTime? updatedAt;
 
   factory SyncConnection.fromJson(Map<String, dynamic> json) {
@@ -103,6 +105,7 @@ class SyncConnection {
       connected: json['connected'] == true,
       connectedAt: _parseSettingsDate(json['connectedAt']),
       forwardOnlyFrom: _parseSettingsDate(json['forwardOnlyFrom']),
+      lastSyncedAt: _parseSettingsDate(json['lastSyncedAt']),
       updatedAt: _parseSettingsDate(json['updatedAt']),
     );
   }
@@ -114,6 +117,8 @@ class SyncConnection {
     bool clearConnectedAt = false,
     DateTime? forwardOnlyFrom,
     bool clearForwardOnlyFrom = false,
+    DateTime? lastSyncedAt,
+    bool clearLastSyncedAt = false,
     DateTime? updatedAt,
   }) {
     return SyncConnection(
@@ -124,6 +129,9 @@ class SyncConnection {
       forwardOnlyFrom: clearForwardOnlyFrom
           ? null
           : forwardOnlyFrom ?? this.forwardOnlyFrom,
+      lastSyncedAt: clearLastSyncedAt
+          ? null
+          : lastSyncedAt ?? this.lastSyncedAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -135,6 +143,7 @@ class SyncConnection {
       'connected': connected,
       'connectedAt': connectedAt?.toIso8601String(),
       'forwardOnlyFrom': forwardOnlyFrom?.toIso8601String(),
+      'lastSyncedAt': lastSyncedAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
   }

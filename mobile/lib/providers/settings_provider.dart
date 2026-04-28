@@ -1,18 +1,11 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/user_settings.dart';
 import 'package:toatre/services/api_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
   final ApiService _api = ApiService.instance;
-  final GoogleSignIn _googleCalendarSignIn = GoogleSignIn(
-    scopes: <String>[
-      'email',
-      'profile',
-      'https://www.googleapis.com/auth/calendar.events',
-    ],
-  );
 
   bool _loading = false;
   String? _error;
@@ -142,47 +135,61 @@ class SettingsProvider extends ChangeNotifier {
     required SyncDirection direction,
   }) async {
     return _runSave('sync-google', () async {
-      final googleUser =
-          await _googleCalendarSignIn.signInSilently() ??
-          await _googleCalendarSignIn.signIn();
-
-      if (googleUser == null) {
-        throw const ApiServiceException(
-          statusCode: 401,
-          message: 'Google Calendar connection was cancelled.',
-        );
-      }
-
-      final granted = await _googleCalendarSignIn.requestScopes(<String>[
-        'https://www.googleapis.com/auth/calendar.events',
-      ]);
-
-      if (!granted) {
-        throw const ApiServiceException(
-          statusCode: 403,
-          message: 'Google Calendar permission was not granted.',
-        );
-      }
-
-      return _saveSyncConnection(
-        provider: googleCalendarProviderKey,
-        direction: direction,
-        connected: true,
+      final response = await _api.postJson(
+        '/api/sync/google/start',
+        body: <String, Object?>{
+          'direction': syncDirectionToString(direction),
+          'returnTo': '/settings?sync=google',
+        },
+        authenticated: true,
       );
+      final authUrl = response['authUrl'] as String?;
+      final uri = authUrl == null ? null : Uri.tryParse(authUrl);
+      if (uri == null) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Google Calendar connect URL was not returned.',
+        );
+      }
+
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Could not open Google Calendar connection.',
+        );
+      }
+
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
     });
   }
 
-  Future<SettingsPayload> disconnectGoogleCalendar({
-    required SyncDirection direction,
-  }) async {
-    return _runSave(
-      'sync-google',
-      () async => _saveSyncConnection(
-        provider: googleCalendarProviderKey,
-        direction: direction,
-        connected: false,
-      ),
-    );
+  Future<SettingsPayload> disconnectGoogleCalendar() async {
+    return _runSave('sync-google', () async {
+      await _api.postJson(
+        '/api/sync/google/disconnect',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> syncGoogleCalendarNow() async {
+    return _runSave('sync-google-run', () async {
+      await _api.postJson(
+        '/api/sync/google/run',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
   }
 
   void clearError() {
@@ -212,38 +219,5 @@ class SettingsProvider extends ChangeNotifier {
       _savingKey = null;
       notifyListeners();
     }
-  }
-
-  Future<SettingsPayload> _saveSyncConnection({
-    required String provider,
-    required SyncDirection direction,
-    required bool connected,
-  }) async {
-    final existingConnections =
-        _payload?.settings.syncConnections ?? <String, SyncConnection>{};
-    final now = DateTime.now().toUtc();
-    final existing = existingConnections[provider];
-    final nextConnection = SyncConnection(
-      provider: provider,
-      direction: direction,
-      connected: connected,
-      connectedAt: connected ? existing?.connectedAt ?? now : null,
-      forwardOnlyFrom: connected ? existing?.forwardOnlyFrom ?? now : null,
-      updatedAt: now,
-    );
-    final nextConnections = <String, SyncConnection>{
-      ...existingConnections,
-      provider: nextConnection,
-    };
-
-    return SettingsPayload.fromJson(
-      await _api.patchJson(
-        '/api/settings',
-        body: <String, Object?>{
-          'syncConnections': syncConnectionsToJson(nextConnections),
-        },
-        authenticated: true,
-      ),
-    );
   }
 }

@@ -11,7 +11,7 @@ export async function ensureIndexes(): Promise<void> {
   if (ensured) return;
   ensured = true;
 
-  const { users, toats, captures, people, acl, settings, reminders } =
+  const { users, toats, captures, people, acl, settings, reminders, calendarSyncTokens, calendarSyncStates } =
     await getCollections();
 
   // users
@@ -26,6 +26,8 @@ export async function ensureIndexes(): Promise<void> {
   await toats.createIndex({ userId: 1, tier: 1 });
   await toats.createIndex({ captureId: 1 }, { sparse: true });
   await toats.createIndex({ createdAt: 1 });
+  await toats.createIndex({ ownerId: 1, externalProvider: 1, externalEventId: 1 }, { sparse: true });
+  await toats.createIndex({ ownerId: 1, syncOrigin: 1, datetime: 1 }, { sparse: true });
 
   // captures
   await captures.createIndex({ userId: 1, createdAt: -1 });
@@ -42,6 +44,12 @@ export async function ensureIndexes(): Promise<void> {
 
   // settings
   await settings.createIndex({ userId: 1 }, { unique: true });
+
+  // calendar sync
+  await calendarSyncTokens.createIndex({ userId: 1, provider: 1 }, { unique: true });
+  await calendarSyncTokens.createIndex({ provider: 1, connected: 1 });
+  await calendarSyncStates.createIndex({ stateHash: 1 }, { unique: true });
+  await calendarSyncStates.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   // reminders
   await reminders.createIndex({ userId: 1, dueAt: 1 });

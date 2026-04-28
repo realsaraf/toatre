@@ -15,12 +15,21 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-04-27
+**Last updated:** 2026-04-28
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest mobile parity build #9 finished in Codemagic; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-04-28 (server-owned Google Calendar sync) — completed
+- Replaced the earlier client-owned Google Calendar permission flow with server-owned OAuth start/callback/disconnect/manual-sync API routes
+- Added encrypted-at-rest OAuth token storage with AES-256-GCM and SHA-256 hashed one-time OAuth state values for lookup/verification
+- Added Mongo collections and indexes for calendar sync tokens, OAuth state TTL cleanup, and toat external event mappings
+- Added the Google Calendar sync worker: forward-only import from Google Calendar into Toatre, Toatre-to-Google export, two-way mode support, last-sync timestamps, and skip behavior for done/archived Toatre toats
+- Wired mobile and web Settings → Sync to open backend OAuth, pause sync, and run manual sync now; scheduled DigitalOcean sync job added for every 10 minutes
+- Documented required Google Calendar and token-encryption env vars in `.env.example`
+- Validation: `npm run typecheck`, `npm run build`, `flutter analyze`, `flutter test`, VS Code Problems check for touched Dart files
 
 ### Session 2026-04-27 (settings sync surface) — completed
 - Added a Settings → Sync tab on mobile and web, starting with Google Calendar as the active provider plus placeholders for iOS Calendar and Office 365
