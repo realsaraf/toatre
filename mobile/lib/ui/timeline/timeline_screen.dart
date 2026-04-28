@@ -98,15 +98,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                 children: [
                                   Text(
                                     _rangeTitle(_selectedRange),
-                                    style: TextStyles.display.copyWith(
-                                      fontSize: 34,
+                                    style: TextStyles.heading1.copyWith(
+                                      fontSize: 29,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   const Icon(
                                     Icons.keyboard_arrow_down_rounded,
                                     color: AppColors.primary,
-                                    size: 30,
+                                    size: 22,
                                   ),
                                 ],
                               ),
@@ -114,21 +115,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             const SizedBox(height: 8),
                             Text(
                               _rangeSubtitle(_selectedRange),
-                              style: TextStyles.heading3.copyWith(
+                              style: TextStyles.smallMedium.copyWith(
                                 color: AppColors.textSecondary,
                               ),
                             ),
                           ],
-                        ),
-                        const Spacer(),
-                        _HeaderIcon(
-                          icon: Icons.calendar_today_outlined,
-                          onTap: () => _openCalendarPicker(grouped),
-                        ),
-                        const SizedBox(width: 12),
-                        _HeaderIcon(
-                          icon: Icons.tune_rounded,
-                          onTap: _openSearch,
                         ),
                       ],
                     ),
@@ -324,69 +315,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const InboxScreen()));
-  }
-
-  Future<void> _openCalendarPicker(
-    Map<String, List<ToatSummary>> grouped,
-  ) async {
-    if (grouped.isEmpty) {
-      return;
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-            shrinkWrap: true,
-            children: [
-              Center(
-                child: Container(
-                  width: 46,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: AppColors.textMuted.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text('Calendar', style: TextStyles.heading1),
-              const SizedBox(height: 14),
-              ...grouped.entries.map(
-                (entry) => Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(entry.key, style: TextStyles.bodyMedium),
-                      ),
-                      Text(
-                        '${entry.value.length}',
-                        style: TextStyles.smallMedium.copyWith(
-                          color: AppColors.primaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _openRangePicker(Map<_TimelineRange, int> counts) async {
@@ -1114,30 +1042,6 @@ class _CaptureDock extends StatelessWidget {
   }
 }
 
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Icon(icon, color: AppColors.primary),
-      ),
-    );
-  }
-}
-
 class _UpNextCard extends StatelessWidget {
   const _UpNextCard({
     required this.toat,
@@ -1158,7 +1062,7 @@ class _UpNextCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -1168,7 +1072,7 @@ class _UpNextCard extends StatelessWidget {
               _kindColors(toat.kind).last.withValues(alpha: 0.06),
             ],
           ),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: _kindColors(toat.kind).last.withValues(alpha: 0.18),
           ),
@@ -1177,15 +1081,15 @@ class _UpNextCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 gradient: LinearGradient(colors: _kindColors(toat.kind)),
               ),
-              child: Icon(_kindIcon(toat.kind), color: Colors.white, size: 25),
+              child: Icon(_kindIcon(toat.kind), color: Colors.white, size: 21),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,8 +1098,8 @@ class _UpNextCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.82),
@@ -1214,8 +1118,8 @@ class _UpNextCard extends StatelessWidget {
                       if (toat.datetime != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+                            horizontal: 8,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.88),
@@ -1223,36 +1127,40 @@ class _UpNextCard extends StatelessWidget {
                           ),
                           child: Text(
                             _formatCompactTime(toat.datetime!),
-                            style: TextStyles.smallMedium.copyWith(
+                            style: TextStyles.tiny.copyWith(
                               color: AppColors.text,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 9),
+                  const SizedBox(height: 7),
                   Text(
                     toat.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyles.bodyMedium.copyWith(
-                      fontSize: 15,
+                    style: TextStyles.smallMedium.copyWith(
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     _supportingText(toat),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyles.smallMedium,
+                    style: TextStyles.tiny.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   if (toat.datetime != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       _timeToGo(toat.datetime!),
-                      style: TextStyles.smallMedium.copyWith(
+                      style: TextStyles.tiny.copyWith(
                         color: _kindColors(toat.kind).last,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -1266,7 +1174,7 @@ class _UpNextCard extends StatelessWidget {
               children: [
                 if (action != null) ...[
                   _ActionButton(action: action, filled: true, onTap: onAction),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                 ],
                 _DoneButton(done: toat.status == 'done', onTap: onDone),
               ],
@@ -1307,12 +1215,12 @@ class _TimelineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 48,
+            width: 44,
             child: Column(
               children: [
                 Text(
                   toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
-                  style: TextStyles.bodyMedium.copyWith(
+                  style: TextStyles.smallMedium.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1327,17 +1235,17 @@ class _TimelineRow extends StatelessWidget {
             width: 2,
             margin: const EdgeInsets.only(top: 6),
             color: const Color(0x22374151),
-            height: 74,
+            height: 66,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: GestureDetector(
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: AppColors.bgElevated,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x12000000),
@@ -1349,10 +1257,10 @@ class _TimelineRow extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         gradient: LinearGradient(
                           colors: _kindColors(toat.kind),
                         ),
@@ -1360,10 +1268,10 @@ class _TimelineRow extends StatelessWidget {
                       child: Icon(
                         _kindIcon(toat.kind),
                         color: Colors.white,
-                        size: 23,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1372,22 +1280,24 @@ class _TimelineRow extends StatelessWidget {
                             toat.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyles.bodyMedium.copyWith(
-                              fontSize: 14,
+                            style: TextStyles.smallMedium.copyWith(
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
                             _supportingText(toat),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyles.smallMedium,
+                            style: TextStyles.tiny.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     if (action != null) ...[
                       _ActionButton(action: action, onTap: onAction),
                       const SizedBox(width: 5),
@@ -1435,7 +1345,7 @@ class _DoneButton extends StatelessWidget {
         onTap: done ? null : onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFFEFF1F5),
             borderRadius: BorderRadius.circular(16),
@@ -1446,13 +1356,13 @@ class _DoneButton extends StatelessWidget {
             children: [
               Icon(
                 done ? Icons.check_circle_rounded : Icons.check_circle_outline,
-                size: 15,
+                size: 13,
                 color: AppColors.textMuted,
               ),
               const SizedBox(width: 4),
               Text(
                 'Done',
-                style: TextStyles.smallMedium.copyWith(
+                style: TextStyles.tiny.copyWith(
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1482,14 +1392,14 @@ class _ActionButton extends StatelessWidget {
     final child = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(action.icon, size: 15, color: filled ? Colors.white : colors.last),
-        const SizedBox(width: 5),
+        Icon(action.icon, size: 13, color: filled ? Colors.white : colors.last),
+        const SizedBox(width: 4),
         Flexible(
           child: Text(
             action.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyles.smallMedium.copyWith(
+            style: TextStyles.tiny.copyWith(
               color: filled ? Colors.white : colors.last,
               fontWeight: FontWeight.w700,
             ),
@@ -1504,8 +1414,8 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          constraints: BoxConstraints(maxWidth: filled ? 124 : 82),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          constraints: BoxConstraints(maxWidth: filled ? 108 : 72),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             gradient: filled ? LinearGradient(colors: colors) : null,
             color: filled ? null : colors.first.withValues(alpha: 0.11),

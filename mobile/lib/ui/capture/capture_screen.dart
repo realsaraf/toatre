@@ -807,6 +807,7 @@ class _ModeButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minWidth: 88, minHeight: 42),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
           color: active ? const Color(0xFFF2E7F6) : Colors.transparent,
@@ -815,7 +816,8 @@ class _ModeButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyles.smallMedium.copyWith(
-            color: active ? Colors.white : AppColors.primary,
+            color: active ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
