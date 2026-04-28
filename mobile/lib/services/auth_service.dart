@@ -51,7 +51,7 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ApiService _api = ApiService.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;

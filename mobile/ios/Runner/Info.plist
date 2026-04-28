@@ -26,6 +26,19 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Toatre uses the microphone when you capture toats by voice.</string>
+	<key>GIDClientID</key>
+	<string>1021588615586-85r84b6fddqq7343fhfdbs6sgv4ffmft.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1021588615586-85r84b6fddqq7343fhfdbs6sgv4ffmft</string>
+			</array>
+		</dict>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
