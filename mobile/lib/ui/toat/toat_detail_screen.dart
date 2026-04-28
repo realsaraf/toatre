@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/toats_provider.dart';
@@ -89,7 +90,11 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                       ),
                     ),
                   ] else ...[
-                    _HeroSection(toat: _toat),
+                    _HeroSection(
+                      toat: _toat,
+                      primaryActionLabel: _primaryActionLabel(_toat),
+                      onPrimaryAction: _primaryAction,
+                    ),
                     const SizedBox(height: 16),
                     _SectionCard(
                       title: 'Quick actions',
@@ -121,7 +126,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                           _ActionChip(
                             label: _primaryActionLabel(_toat),
                             onTap: _workingAction == null
-                                ? _copyPrimaryValue
+                                ? _primaryAction
                                 : null,
                           ),
                           _ActionChip(
@@ -309,16 +314,20 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     });
   }
 
-  Future<void> _copyPrimaryValue() async {
-    final value = _primaryValue(_toat);
-    if (value == null) {
+  Future<void> _primaryAction() async {
+    final uri = _primaryActionUri(_toat);
+    if (uri == null) {
       await Clipboard.setData(ClipboardData(text: _toat.title));
       _showMessage('Copied the toat title.');
       return;
     }
 
-    await Clipboard.setData(ClipboardData(text: value));
-    _showMessage('${_primaryActionLabel(_toat)} copied.');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched) {
+      _showMessage(
+        'Could not open ${_primaryActionLabel(_toat).toLowerCase()}.',
+      );
+    }
   }
 
   Future<void> _copyShareText() async {
@@ -378,96 +387,252 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   }
 
   String _primaryActionLabel(ToatSummary toat) {
-    if (toat.link != null && toat.link!.isNotEmpty) {
-      return 'Copy link';
-    }
     if (_extractPhone(toat) != null) {
-      return 'Copy phone';
+      return 'Call';
+    }
+    if (toat.kind == 'meeting' && toat.link != null && toat.link!.isNotEmpty) {
+      return 'Join';
     }
     if (toat.location != null && toat.location!.isNotEmpty) {
-      return 'Copy location';
+      return 'Directions';
     }
 
     return 'Copy title';
   }
 
-  String? _primaryValue(ToatSummary toat) {
-    if (toat.link != null && toat.link!.isNotEmpty) {
-      return toat.link!;
-    }
-
+  Uri? _primaryActionUri(ToatSummary toat) {
     final phone = _extractPhone(toat);
     if (phone != null) {
-      return phone;
+      return Uri(scheme: 'tel', path: _normalizedPhone(phone));
+    }
+
+    if (toat.kind == 'meeting' && toat.link != null && toat.link!.isNotEmpty) {
+      return _externalUri(toat.link!);
     }
 
     if (toat.location != null && toat.location!.isNotEmpty) {
-      return toat.location!;
+      return Uri.https('www.google.com', '/maps/search/', <String, String>{
+        'api': '1',
+        'query': toat.location!,
+      });
     }
 
     return null;
   }
 
   String? _extractPhone(ToatSummary toat) {
-    final match = RegExp(
-      r'(\+?\d[\d\s().-]{7,}\d)',
-    ).firstMatch('${toat.title} ${toat.notes ?? ''}');
+    final haystack = <String?>[
+      toat.title,
+      toat.notes,
+      toat.location,
+      toat.link,
+      ...toat.people,
+    ].whereType<String>().join(' ');
+    final match = RegExp(r'(\+?\d[\d\s().-]{7,}\d)').firstMatch(haystack);
     return match?.group(1);
+  }
+
+  String _normalizedPhone(String phone) {
+    final trimmed = phone.trim();
+    final prefix = trimmed.startsWith('+') ? '+' : '';
+    final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+    return '$prefix$digits';
+  }
+
+  Uri? _externalUri(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final withScheme = trimmed.startsWith(RegExp(r'https?://'))
+        ? trimmed
+        : 'https://$trimmed';
+    return Uri.tryParse(withScheme);
   }
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection({required this.toat});
+  const _HeroSection({
+    required this.toat,
+    required this.primaryActionLabel,
+    required this.onPrimaryAction,
+  });
 
   final ToatSummary toat;
+  final String primaryActionLabel;
+  final VoidCallback onPrimaryAction;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
       decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(26),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _detailKindColors(toat.kind).first.withValues(alpha: 0.10),
+            _detailKindColors(toat.kind).last.withValues(alpha: 0.05),
+            Colors.white.withValues(alpha: 0.86),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: _detailKindColors(toat.kind).last.withValues(alpha: 0.12),
+        ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 28,
-            offset: Offset(0, 10),
+            color: Color(0x16000000),
+            blurRadius: 30,
+            offset: Offset(0, 12),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Pill(label: toat.kind.toUpperCase(), color: AppColors.primary),
-              _Pill(label: toat.tier.toUpperCase(), color: AppColors.accent),
-              _Pill(
-                label: toat.status.toUpperCase(),
-                color: AppColors.textMuted,
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: LinearGradient(
+                    colors: _detailKindColors(toat.kind),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _detailKindColors(
+                        toat.kind,
+                      ).last.withValues(alpha: 0.24),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _detailKindIcon(toat.kind),
+                  color: Colors.white,
+                  size: 42,
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Pill(
+                      label: toat.kind.toUpperCase(),
+                      color: _detailKindColors(toat.kind).last,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      toat.title,
+                      style: TextStyles.display.copyWith(fontSize: 34),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _detailSubtitle(toat),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyles.body.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Text(toat.title, style: TextStyles.heading1),
-          const SizedBox(height: 12),
-          if (toat.location != null && toat.location!.isNotEmpty)
-            Text(
-              toat.location!,
-              style: TextStyles.body.copyWith(color: AppColors.textSecondary),
-            ),
-          if (toat.datetime != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              DateFormat.yMMMMd().add_jm().format(toat.datetime!),
-              style: TextStyles.bodyMedium.copyWith(
-                color: AppColors.primaryLight,
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              if (toat.datetime != null)
+                Expanded(
+                  child: _MetaPill(
+                    icon: Icons.schedule_rounded,
+                    label: DateFormat.jm().format(toat.datetime!),
+                  ),
+                ),
+              if (toat.datetime != null) const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onPrimaryAction,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _detailActionColors(toat),
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _detailActionIcon(toat),
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            primaryActionLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyles.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.80),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.softPurple),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 19),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyles.smallMedium.copyWith(color: AppColors.text),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -607,4 +772,94 @@ class _IconCircleButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _detailSubtitle(ToatSummary toat) {
+  if (toat.location != null && toat.location!.isNotEmpty) {
+    return toat.location!;
+  }
+  if (toat.link != null && toat.link!.isNotEmpty && toat.kind == 'meeting') {
+    return _meetingPlatform(toat.link!);
+  }
+  if (toat.people.isNotEmpty) {
+    return toat.people.join(', ');
+  }
+  if (toat.datetime != null) {
+    return DateFormat.yMMMMd().add_jm().format(toat.datetime!);
+  }
+  return 'Personal';
+}
+
+String _meetingPlatform(String link) {
+  final lowerLink = link.toLowerCase();
+  if (lowerLink.contains('zoom')) return 'Zoom meeting';
+  if (lowerLink.contains('meet.google')) return 'Google Meet';
+  if (lowerLink.contains('teams')) return 'Teams meeting';
+  return 'Meeting link';
+}
+
+List<Color> _detailKindColors(String kind) {
+  switch (kind) {
+    case 'meeting':
+      return const [Color(0xFF60A5FA), Color(0xFF2563EB)];
+    case 'errand':
+      return const [Color(0xFF4ADE80), Color(0xFF16A34A)];
+    case 'idea':
+      return const [Color(0xFFFBBF24), Color(0xFFF59E0B)];
+    case 'deadline':
+      return const [Color(0xFFFB7185), Color(0xFFEC4899)];
+    default:
+      return const [Color(0xFF8B5CF6), Color(0xFF6D28D9)];
+  }
+}
+
+IconData _detailKindIcon(String kind) {
+  switch (kind) {
+    case 'meeting':
+      return Icons.videocam_rounded;
+    case 'errand':
+      return Icons.shopping_cart_outlined;
+    case 'idea':
+      return Icons.lightbulb_outline_rounded;
+    case 'deadline':
+      return Icons.call_rounded;
+    default:
+      return Icons.mail_outline_rounded;
+  }
+}
+
+IconData _detailActionIcon(ToatSummary toat) {
+  if (_detailPhone(toat) != null) return Icons.call_rounded;
+  if (toat.kind == 'meeting' && toat.link != null && toat.link!.isNotEmpty) {
+    return Icons.videocam_rounded;
+  }
+  if (toat.location != null && toat.location!.isNotEmpty) {
+    return Icons.navigation_rounded;
+  }
+  return Icons.content_copy_rounded;
+}
+
+List<Color> _detailActionColors(ToatSummary toat) {
+  if (_detailPhone(toat) != null) {
+    return const [Color(0xFFFB7185), Color(0xFFEC4899)];
+  }
+  if (toat.kind == 'meeting' && toat.link != null && toat.link!.isNotEmpty) {
+    return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
+  }
+  if (toat.location != null && toat.location!.isNotEmpty) {
+    return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];
+  }
+  return const [Color(0xFF8B5CF6), Color(0xFFEC4899)];
+}
+
+String? _detailPhone(ToatSummary toat) {
+  final haystack = <String?>[
+    toat.title,
+    toat.notes,
+    toat.location,
+    toat.link,
+    ...toat.people,
+  ].whereType<String>().join(' ');
+  final match = RegExp(r'(\+?\d[\d\s().-]{7,}\d)').firstMatch(haystack);
+  return match?.group(1);
 }

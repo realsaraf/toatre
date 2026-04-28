@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/auth_provider.dart';
@@ -78,7 +79,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         _ProfileButton(user: auth.user, onTap: _openSettings),
                       ],
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
                     Row(
                       children: [
                         Column(
@@ -86,7 +87,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                           children: [
                             Text(
                               'Today',
-                              style: TextStyles.display.copyWith(fontSize: 40),
+                              style: TextStyles.display.copyWith(fontSize: 38),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -104,12 +105,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         ),
                         const SizedBox(width: 12),
                         _HeaderIcon(
-                          icon: Icons.search_rounded,
+                          icon: Icons.tune_rounded,
                           onTap: _openSearch,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
                     if (toatsProvider.status == ToatsStatus.loading)
                       const Padding(
                         padding: EdgeInsets.only(top: 80),
@@ -131,8 +132,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         _UpNextCard(
                           toat: upNext,
                           onTap: () => _openToat(upNext),
+                          onAction: () => _runPrimaryAction(upNext),
                         ),
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 22),
                       ],
                       for (final entry in grouped.entries) ...[
                         Padding(
@@ -148,6 +150,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                           (toat) => _TimelineRow(
                             toat: toat,
                             onTap: () => _openToat(toat),
+                            onAction: () => _runPrimaryAction(toat),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -204,9 +207,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
               onTap: _openInbox,
             ),
             _BottomItem(
-              icon: Icons.calendar_today_outlined,
-              label: 'Calendar',
-              onTap: () => _openCalendarPicker(grouped),
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+              onTap: _openSettings,
             ),
           ],
         ),
@@ -349,6 +352,25 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return;
     }
     await context.read<ToatsProvider>().fetchToats();
+  }
+
+  Future<void> _runPrimaryAction(ToatSummary toat) async {
+    final action = _primaryAction(toat);
+    final uri = action.uri;
+
+    if (uri == null) {
+      await _openToat(toat);
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted || launched) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not open ${action.label.toLowerCase()}.')),
+    );
   }
 
   Map<String, List<ToatSummary>> _groupToats(List<ToatSummary> toats) {
@@ -729,71 +751,123 @@ class _HeaderIcon extends StatelessWidget {
 }
 
 class _UpNextCard extends StatelessWidget {
-  const _UpNextCard({required this.toat, required this.onTap});
+  const _UpNextCard({
+    required this.toat,
+    required this.onTap,
+    required this.onAction,
+  });
 
   final ToatSummary toat;
   final VoidCallback onTap;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
+    final action = _primaryAction(toat);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0x1A8B5CF6), Color(0x11EC4899)],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              _kindColors(toat.kind).first.withValues(alpha: 0.10),
+              _kindColors(toat.kind).last.withValues(alpha: 0.06),
+            ],
           ),
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: const Color(0x22EC4899)),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _kindColors(toat.kind).last.withValues(alpha: 0.18),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              width: 62,
+              height: 62,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5EEFF),
                 borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(colors: _kindColors(toat.kind)),
               ),
-              child: Text(
-                'UP NEXT',
-                style: TextStyles.label.copyWith(color: AppColors.primary),
+              child: Icon(_kindIcon(toat.kind), color: Colors.white, size: 31),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.softPurple),
+                        ),
+                        child: Text(
+                          'UP NEXT',
+                          style: TextStyles.tiny.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (toat.datetime != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            _formatCompactTime(toat.datetime!),
+                            style: TextStyles.smallMedium.copyWith(
+                              color: AppColors.text,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    toat.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyles.heading2,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _supportingText(toat),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyles.smallMedium,
+                  ),
+                  if (toat.datetime != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _timeToGo(toat.datetime!),
+                      style: TextStyles.smallMedium.copyWith(
+                        color: _kindColors(toat.kind).last,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            Text(toat.title, style: TextStyles.heading1),
-            const SizedBox(height: 10),
-            if (toat.location != null)
-              Text(
-                toat.location!,
-                style: TextStyles.body.copyWith(color: AppColors.textSecondary),
-              ),
-            if (toat.datetime != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _timeToGo(toat.datetime!),
-                style: TextStyles.bodyMedium.copyWith(color: AppColors.primary),
-              ),
-            ],
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                  _actionLabel(toat),
-                  style: TextStyles.bodyMedium.copyWith(color: Colors.white),
-                ),
-              ),
-            ),
+            const SizedBox(width: 12),
+            _ActionButton(action: action, filled: true, onTap: onAction),
           ],
         ),
       ),
@@ -808,10 +882,15 @@ class _UpNextCard extends StatelessWidget {
 }
 
 class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({required this.toat, required this.onTap});
+  const _TimelineRow({
+    required this.toat,
+    required this.onTap,
+    required this.onAction,
+  });
 
   final ToatSummary toat;
   final VoidCallback onTap;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -821,7 +900,7 @@ class _TimelineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 62,
+            width: 58,
             child: Column(
               children: [
                 Text(
@@ -839,25 +918,32 @@ class _TimelineRow extends StatelessWidget {
             width: 2,
             margin: const EdgeInsets.only(top: 6),
             color: const Color(0x22374151),
-            height: 104,
+            height: 84,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: GestureDetector(
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.bgElevated,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x12000000),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
                         gradient: LinearGradient(
                           colors: _kindColors(toat.kind),
                         ),
@@ -865,44 +951,42 @@ class _TimelineRow extends StatelessWidget {
                       child: Icon(
                         _kindIcon(toat.kind),
                         color: Colors.white,
-                        size: 30,
+                        size: 27,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(toat.title, style: TextStyles.heading3),
-                          const SizedBox(height: 8),
                           Text(
-                            toat.location ??
-                                (toat.people.isNotEmpty
-                                    ? toat.people.first
-                                    : 'Personal'),
-                            style: TextStyles.body.copyWith(
-                              color: AppColors.textSecondary,
+                            toat.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyles.bodyMedium.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _supportingText(toat),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyles.smallMedium,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5EEFF),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Text(
-                        _actionLabel(toat),
-                        style: TextStyles.smallMedium.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
+                    const SizedBox(width: 10),
+                    _ActionButton(
+                      action: _primaryAction(toat),
+                      onTap: onAction,
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
                     ),
                   ],
                 ),
@@ -924,6 +1008,60 @@ class _TimelineRow extends StatelessWidget {
   }
 
   String _minuteSuffix(DateTime dateTime) => dateTime.hour >= 12 ? 'PM' : 'AM';
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.action,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  final _TimelineAction action;
+  final VoidCallback onTap;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _actionColors(action.type);
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(action.icon, size: 18, color: filled ? Colors.white : colors.last),
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            action.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.smallMedium.copyWith(
+              color: filled ? Colors.white : colors.last,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: filled ? 168 : 124),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: filled ? LinearGradient(colors: colors) : null,
+            color: filled ? null : colors.first.withValues(alpha: 0.11),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.last.withValues(alpha: 0.14)),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 class _TimelineMessage extends StatelessWidget {
@@ -1020,21 +1158,150 @@ IconData _kindIcon(String kind) {
   }
 }
 
-String _actionLabel(ToatSummary toat) {
-  switch (toat.kind) {
-    case 'meeting':
-      return 'Join';
-    case 'errand':
-      return 'Directions';
-    case 'deadline':
-      return 'Call';
-    case 'task':
-      return toat.people.isNotEmpty ? 'Message' : 'Open';
-    case 'idea':
-      return 'Open';
-    case 'event':
-      return 'Open';
-    default:
-      return 'Open';
+String _supportingText(ToatSummary toat) {
+  final phone = _extractPhone(toat);
+  if (phone != null) {
+    return phone;
+  }
+  if (toat.link != null && toat.link!.isNotEmpty && toat.kind == 'meeting') {
+    return _meetingPlatform(toat.link!);
+  }
+  if (toat.location != null && toat.location!.isNotEmpty) {
+    return toat.location!;
+  }
+  if (toat.people.isNotEmpty) {
+    return toat.people.first;
+  }
+  return 'Personal';
+}
+
+String _formatCompactTime(DateTime dateTime) {
+  final hour = dateTime.hour == 0
+      ? 12
+      : dateTime.hour > 12
+      ? dateTime.hour - 12
+      : dateTime.hour;
+  final minute = dateTime.minute.toString().padLeft(2, '0');
+  final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';
+  return '$hour:$minute $suffix';
+}
+
+String _meetingPlatform(String link) {
+  final lowerLink = link.toLowerCase();
+  if (lowerLink.contains('zoom')) return 'Zoom meeting';
+  if (lowerLink.contains('meet.google')) return 'Google Meet';
+  if (lowerLink.contains('teams')) return 'Teams meeting';
+  return 'Meeting link';
+}
+
+String? _extractPhone(ToatSummary toat) {
+  final haystack = <String?>[
+    toat.title,
+    toat.notes,
+    toat.location,
+    toat.link,
+    ...toat.people,
+  ].whereType<String>().join(' ');
+  final match = RegExp(r'(\+?\d[\d\s().-]{7,}\d)').firstMatch(haystack);
+  return match?.group(1);
+}
+
+_TimelineAction _primaryAction(ToatSummary toat) {
+  final phone = _extractPhone(toat);
+  if (phone != null) {
+    return _TimelineAction(
+      label: 'Call',
+      icon: Icons.call_rounded,
+      uri: Uri(scheme: 'tel', path: _normalizedPhone(phone)),
+      type: _TimelineActionType.call,
+    );
+  }
+
+  if (toat.kind == 'meeting' && toat.link != null && toat.link!.isNotEmpty) {
+    return _TimelineAction(
+      label: 'Join',
+      icon: Icons.videocam_rounded,
+      uri: _externalUri(toat.link!),
+      type: _TimelineActionType.meeting,
+    );
+  }
+
+  if ((toat.kind == 'errand' || toat.location != null) &&
+      toat.location != null &&
+      toat.location!.isNotEmpty) {
+    return _TimelineAction(
+      label: 'Directions',
+      icon: Icons.navigation_rounded,
+      uri: Uri.https('www.google.com', '/maps/search/', <String, String>{
+        'api': '1',
+        'query': toat.location!,
+      }),
+      type: _TimelineActionType.directions,
+    );
+  }
+
+  if (toat.people.isNotEmpty) {
+    return _TimelineAction(
+      label: 'Message',
+      icon: Icons.chat_bubble_rounded,
+      uri: null,
+      type: _TimelineActionType.message,
+    );
+  }
+
+  return const _TimelineAction(
+    label: 'Open',
+    icon: Icons.article_rounded,
+    uri: null,
+    type: _TimelineActionType.open,
+  );
+}
+
+String _normalizedPhone(String phone) {
+  final trimmed = phone.trim();
+  final prefix = trimmed.startsWith('+') ? '+' : '';
+  final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+  return '$prefix$digits';
+}
+
+Uri? _externalUri(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+  final withScheme = trimmed.startsWith(RegExp(r'https?://'))
+      ? trimmed
+      : 'https://$trimmed';
+  return Uri.tryParse(withScheme);
+}
+
+List<Color> _actionColors(_TimelineActionType type) {
+  switch (type) {
+    case _TimelineActionType.meeting:
+      return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
+    case _TimelineActionType.call:
+      return const [Color(0xFFFB7185), Color(0xFFEC4899)];
+    case _TimelineActionType.message:
+      return const [Color(0xFFF97316), Color(0xFFF97316)];
+    case _TimelineActionType.directions:
+      return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];
+    case _TimelineActionType.open:
+      return const [Color(0xFFF59E0B), Color(0xFFF59E0B)];
   }
 }
+
+class _TimelineAction {
+  const _TimelineAction({
+    required this.label,
+    required this.icon,
+    required this.uri,
+    required this.type,
+  });
+
+  final String label;
+  final IconData icon;
+  final Uri? uri;
+  final _TimelineActionType type;
+}
+
+enum _TimelineActionType { meeting, call, message, directions, open }

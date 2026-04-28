@@ -7,6 +7,8 @@
 > **Sources of truth:**
 > - [PRODUCT.md](PRODUCT.md) — what we're building and why
 > - [ARCHITECTURE.md](ARCHITECTURE.md) — how we're building it
+> - [Designs.md](docs\designs\designs.md) - the details of various app screens and they layout etc
+> - [mockups](docs\designs) - folder contains various screen desing mockups
 > - This file — when we're building what, with checklists + status
 
 ---
