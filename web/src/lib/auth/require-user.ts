@@ -45,9 +45,9 @@ export async function requireUser(
     };
   }
 
-  const { users } = await getCollections();
   let mongoUser;
   try {
+    const { users } = await getCollections();
     mongoUser = await users.findOne({ firebaseUid: decodedToken.uid });
 
     if (!mongoUser) {
@@ -73,6 +73,7 @@ export async function requireUser(
         {
           error: "User store unavailable",
           message: error instanceof Error ? error.message : String(error),
+          v: "v3-mongo-wrap",
         },
         { status: 500 }
       ),
