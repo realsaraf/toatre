@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:toatre/models/connection.dart';
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/share_provider.dart';
+import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
@@ -96,9 +97,7 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                     if (shareProvider.loading)
                       const Center(child: CircularProgressIndicator())
                     else if (people.isEmpty)
-                      _EmptyConnectionsCard(
-                        onTap: () => Navigator.of(context).pop(),
-                      )
+                      _EmptyConnectionsCard(onTap: _openConnectionsSettings)
                     else
                       _PeopleChooser(
                         people: people,
@@ -145,7 +144,7 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                     SizedBox(
                       height: 58,
                       child: ElevatedButton.icon(
-                        onPressed: _sendShare,
+                        onPressed: _busy ? null : _sendShare,
                         icon: const Icon(Icons.send_rounded),
                         label: Text(_busy ? 'Sharing…' : 'Send'),
                         style: ElevatedButton.styleFrom(
@@ -194,6 +193,14 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
     }
 
     await _createShare(linkOnly: false);
+  }
+
+  Future<void> _openConnectionsSettings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    if (!mounted) return;
+    await context.read<ShareProvider>().loadConnections();
   }
 
   Future<void> _createShare({required bool linkOnly}) async {
@@ -391,18 +398,16 @@ class _PeopleChooser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visible = people.take(3).toList();
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 14,
+      runSpacing: 18,
       children: [
-        for (final person in visible)
+        for (final person in people)
           _PersonBubble(
             person: person,
             selected: selectedPeople.contains(person.id),
             onTap: () => onToggle(person.id),
           ),
-        const _MoreBubble(),
       ],
     );
   }
@@ -490,36 +495,6 @@ class _PersonBubble extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MoreBubble extends StatelessWidget {
-  const _MoreBubble();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      child: Column(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F0FF),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.groups_2_outlined,
-              color: AppColors.primary,
-              size: 32,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text('More', style: TextStyles.bodyMedium),
-        ],
       ),
     );
   }

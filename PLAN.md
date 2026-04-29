@@ -44,6 +44,11 @@
 - Local smoke test: Settings → Connections loads, toat detail Share opens, and Create share link returns “Share link ready” on localhost
 - Validation: `npm run typecheck`, `npm run build`, `flutter analyze`, `flutter test`, VS Code Problems check for touched web/mobile paths
 
+### Session 2026-04-28 (mobile capture repair + share completion) — completed
+- Fixed Android mobile capture analysis by adding the missing Android `INTERNET` permission and preserving uploaded mobile audio filenames/container extensions for Whisper instead of forcing every upload to `audio.webm`
+- Completed the mobile share sheet empty-Connections path so it opens Settings, reloads Connections after returning, disables duplicate sends while busy, and shows every saved Connection instead of only the first three
+- Validation: `npm run typecheck`, `npm run build`, `flutter analyze`, `flutter test`, `flutter build apk --debug`, VS Code Problems check for touched app paths
+
 ### Session 2026-04-27 (settings sync surface) — completed
 - Added a Settings → Sync tab on mobile and web, starting with Google Calendar as the active provider plus placeholders for iOS Calendar and Office 365
 - Collapsed settings navigation to three tabs on both mobile and web: General, Pings, and Sync; Handle and Phone settings now live inside General

@@ -48,8 +48,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing audio file" }, { status: 400 });
     }
 
-    const arrayBuffer = await (audioFile as Blob).arrayBuffer();
+    const uploadedFile = audioFile as File;
+    const arrayBuffer = await uploadedFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const mimeType = uploadedFile.type || "application/octet-stream";
+    const fileName = safeAudioFileName(uploadedFile.name, mimeType);
 
     const openai = getObservedOpenAI({
       traceName: "capture.transcribe",
@@ -58,12 +61,13 @@ export async function POST(request: NextRequest) {
       tags: ["capture", "transcribe"],
       metadata: {
         timezone,
-        mimeType: audioFile.type || "audio/webm",
+        mimeType,
+        fileName,
         bytes: buffer.byteLength,
       },
     });
-    // Whisper requires a File-like with a .name attribute
-    const file = new File([buffer], "audio.webm", { type: audioFile.type || "audio/webm" });
+    // Whisper uses the file name extension to infer containers such as m4a.
+    const file = new File([buffer], fileName, { type: mimeType });
 
     try {
       const whisperResult = await openai.audio.transcriptions.create({
@@ -169,4 +173,25 @@ export async function POST(request: NextRequest) {
     transcript,
     toats: savedToats,
   });
+}
+
+function safeAudioFileName(name: string | undefined, mimeType: string): string {
+  const trimmed = name?.trim().replace(/[\\/]/g, "") ?? "";
+  if (trimmed && /\.[a-z0-9]{2,5}$/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (mimeType.includes("mp4") || mimeType.includes("m4a") || mimeType.includes("aac")) {
+    return "capture.m4a";
+  }
+  if (mimeType.includes("mpeg") || mimeType.includes("mp3")) {
+    return "capture.mp3";
+  }
+  if (mimeType.includes("wav")) {
+    return "capture.wav";
+  }
+  if (mimeType.includes("ogg")) {
+    return "capture.ogg";
+  }
+  return "capture.webm";
 }
