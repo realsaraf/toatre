@@ -863,84 +863,173 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 26,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Icon glow blob
           Container(
-            width: 40,
-            height: 40,
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
-              color: const Color(0x1A8B5CF6),
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF818CF8), Color(0xFFF59E0B)],
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x404F46E5),
+                  blurRadius: 40,
+                  spreadRadius: 4,
+                  offset: Offset(0, 10),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.auto_awesome_rounded,
-              color: AppColors.primaryLight,
+              color: Colors.white,
+              size: 44,
             ),
           ),
-          const SizedBox(height: 16),
-          Text('You\'re all clear.', style: TextStyles.heading1),
-          const SizedBox(height: 10),
+          const SizedBox(height: 28),
           Text(
-            'Tap the mic and say what needs to happen next. Toatre will turn it into toats and drop them into your timeline.',
-            style: TextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
+            'Your timeline is clear',
+            style: TextStyles.heading1.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Tap the mic and say what needs to happen.\nToatre will turn your words into toats.',
+              style: TextStyles.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.55,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          const SizedBox(height: 32),
+          // CTA row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
                 onTap: onCapture,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
+                    horizontal: 22,
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
                     gradient: AppColors.brandGradient,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x404F46E5),
+                        blurRadius: 18,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    'Start capture',
-                    style: TextStyles.bodyMedium.copyWith(color: Colors.white),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.mic_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Capture',
+                        style: TextStyles.bodyMedium.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
               GestureDetector(
                 onTap: onTextCapture,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
+                    horizontal: 22,
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0x121C2540),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.border),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.softBorder),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x12000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: Text('Type capture', style: TextStyles.bodyMedium),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.edit_rounded,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('Type', style: TextStyles.bodyMedium),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 40),
+          // Hint chips
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HintChip(text: '"Call dentist tomorrow at 2pm"'),
+              _HintChip(text: '"Team meeting Friday 10am Zoom"'),
+              _HintChip(text: '"Buy groceries this evening"'),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _HintChip extends StatelessWidget {
+  const _HintChip({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x0C4F46E5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x1A4F46E5)),
+      ),
+      child: Text(
+        text,
+        style: TextStyles.small.copyWith(
+          color: AppColors.primary,
+          fontStyle: FontStyle.italic,
+        ),
       ),
     );
   }
@@ -1085,9 +1174,15 @@ class _UpNextCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(colors: _templateColors(toat.template)),
+                gradient: LinearGradient(
+                  colors: _templateColors(toat.template),
+                ),
               ),
-              child: Icon(_templateIcon(toat.template), color: Colors.white, size: 21),
+              child: Icon(
+                _templateIcon(toat.template),
+                color: Colors.white,
+                size: 21,
+              ),
             ),
             const SizedBox(width: 9),
             Expanded(
@@ -1550,7 +1645,9 @@ String _supportingText(ToatSummary toat) {
   if (phone != null) {
     return phone;
   }
-  if (toat.link != null && toat.link!.isNotEmpty && toat.template == 'meeting') {
+  if (toat.link != null &&
+      toat.link!.isNotEmpty &&
+      toat.template == 'meeting') {
     return _meetingPlatform(toat.link!);
   }
   if (toat.location != null && toat.location!.isNotEmpty) {
@@ -1621,8 +1718,9 @@ _TimelineAction? _primaryAction(ToatSummary toat) {
     }
   }
 
-  if ((toat.template == 'errand' || toat.template == 'appointment' ||
-       toat.location != null) &&
+  if ((toat.template == 'errand' ||
+          toat.template == 'appointment' ||
+          toat.location != null) &&
       toat.location != null &&
       toat.location!.isNotEmpty) {
     return _TimelineAction(
