@@ -378,6 +378,7 @@ export default function ToatDetailPage() {
   const [locationSearchOpen, setLocationSearchOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<Array<{ placeId: string; description: string }>>([]);
+  const [ticketInputOpen, setTicketInputOpen] = useState(false);
 
   const now = new Date();
 
@@ -674,7 +675,7 @@ export default function ToatDetailPage() {
   const reminders = buildReminderLines(toat);
   const agenda = getAgendaLines(toat);
   const checklistItems = getChecklistItems(toat);
-  const ticketDigits = qrDigits(toat.id);
+  const ticketUrl = toat.template === "event" ? (toat.templateData as { template: "event"; ticketUrl: string | null }).ticketUrl : null;
   const startDate = toat.datetime ? new Date(toat.datetime) : null;
   const endDate = toat.endDatetime ? new Date(toat.endDatetime) : null;
   // Phone: typed from templateData, not regex-scraped from notes
@@ -945,26 +946,33 @@ export default function ToatDetailPage() {
                   </div>
                 )}
                 <div style={styles.buttonRow}>
-                  <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
-                    <TicketGlyph size={20} /> View tickets
-                  </button>
+                  {ticketUrl ? (
+                    <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
+                      <TicketGlyph size={20} /> View tickets
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setTicketInputOpen(true)} style={styles.secondaryButton}>
+                      <TicketGlyph size={20} /> Add ticket link
+                    </button>
+                  )}
                 </div>
               </>
             ) : null}
 
-            <SectionCard title="Your tickets" action={<button type="button" style={styles.inlineTextButton} onClick={openPrimaryAction}>View details</button>}>
-              <div style={styles.ticketCard}>
-                <div style={{ flex: 1 }}>
-                  <p style={styles.ticketTitle}>Seat details</p>
-                  <p style={styles.ticketSubtitle}>Ticket ref {ticketDigits.slice(0, 4)} · {ticketDigits.slice(4, 8)}</p>
-                  <span style={styles.ticketCounter}>1 of 1</span>
+            {ticketUrl ? (
+              <SectionCard title="Your tickets" action={
+                <button type="button" style={styles.inlineTextButton} onClick={() => void runMutation("rm-ticket", () => patchToat({ templateData: { ...toat.templateData, ticketUrl: null } }))}>Remove</button>
+              }>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🎟</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>Tickets ready</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticketUrl}</p>
+                  </div>
+                  <button type="button" onClick={openPrimaryAction} style={{ flexShrink: 0, background: "linear-gradient(135deg, #7C3AED, #5B3DF5)", border: "none", borderRadius: 12, padding: "8px 14px", color: "#FFFFFF", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Open</button>
                 </div>
-                <div style={styles.qrBox}>
-                  <div style={styles.qrPattern} />
-                  <p style={styles.qrDigits}>{ticketDigits}</p>
-                </div>
-              </div>
-            </SectionCard>
+              </SectionCard>
+            ) : null}
 
             {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
@@ -1248,6 +1256,48 @@ export default function ToatDetailPage() {
           onClose={() => { setLocationSearchOpen(false); setLocationQuery(""); setLocationSuggestions([]); }}
         />
       ) : null}
+      {ticketInputOpen ? (
+        <TicketInputModal
+          onSave={(url) => void runMutation("ticket-url", async () => {
+            await patchToat({ templateData: { ...toat.templateData, ticketUrl: url } });
+            setTicketInputOpen(false);
+          })}
+          onClose={() => setTicketInputOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function TicketInputModal({ onSave, onClose }: { onSave: (url: string) => void; onClose: () => void }) {
+  const [value, setValue] = useState("");
+  const trimmed = value.trim();
+  const isValid = trimmed.startsWith("http://") || trimmed.startsWith("https://");
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.32)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div style={{ background: "#FFFFFF", borderRadius: 24, padding: 24, width: "100%", maxWidth: 420, boxShadow: "0 24px 64px rgba(0,0,0,0.18)" }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 800, color: "#111827" }}>Add ticket link</h3>
+        <p style={{ margin: "0 0 16px", fontSize: 14, color: "#6B7280" }}>Paste a link to your tickets — Ticketmaster, AXS, email confirmation URL, etc.</p>
+        <input
+          type="url"
+          autoFocus
+          placeholder="https://tickets.example.com/…"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1.5px solid rgba(123,92,246,0.25)", fontSize: 14, color: "#111827", outline: "none", marginBottom: 16 }}
+        />
+        <div style={{ display: "flex", gap: 10 }}>
+          <button type="button" onClick={onClose} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: "1.5px solid rgba(0,0,0,0.1)", background: "transparent", fontSize: 14, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>Cancel</button>
+          <button
+            type="button"
+            disabled={!isValid}
+            onClick={() => { if (isValid) onSave(trimmed); }}
+            style={{ flex: 2, padding: "12px 0", borderRadius: 14, border: "none", background: isValid ? "linear-gradient(135deg, #7C3AED, #5B3DF5)" : "rgba(0,0,0,0.08)", fontSize: 14, fontWeight: 700, color: isValid ? "#FFFFFF" : "#9CA3AF", cursor: isValid ? "pointer" : "default" }}
+          >
+            Save tickets
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
