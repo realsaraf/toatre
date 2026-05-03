@@ -1348,15 +1348,19 @@ function LocationBlock({
           <button type="button" onClick={onRemoveLocation} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
         </div>
       </div>
-      {/* Map visual */}
-      <div style={{ position: "relative", height: 160, borderRadius: 20, overflow: "hidden", background: "linear-gradient(180deg, #F8FAFC, #F3F4F6)", border: "1px solid rgba(229,231,235,0.8)" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)", backgroundSize: "44px 44px", transform: "skew(-14deg)" }} />
-        <span style={{ position: "absolute", left: "52%", top: "38%", width: 22, height: 22, borderRadius: "50% 50% 50% 0", background: `linear-gradient(135deg, #7C3AED, #5B3DF5)`, transform: "rotate(-45deg)", boxShadow: "0 20px 30px rgba(91,61,245,0.22)", display: "block" }} />
-        <span style={{ position: "absolute", left: "50%", top: "62%", transform: "translateX(-50%)", fontSize: 13, fontWeight: 700, color: "#6D28D9", whiteSpace: "nowrap", maxWidth: "80%", overflow: "hidden", textOverflow: "ellipsis" }}>{location}</span>
+      {/* Map visual — real Google Maps Static API tile */}
+      <div style={{ position: "relative", height: 180, borderRadius: 20, overflow: "hidden", background: "#F3F4F6", border: "1px solid rgba(229,231,235,0.8)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/places/staticmap?q=${encodeURIComponent(location)}`}
+          alt={location}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          loading="lazy"
+        />
         <button
           type="button"
           onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-          style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: 10, padding: "5px 10px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", gap: 5 }}
+          style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "none", borderRadius: 10, padding: "5px 10px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.14)", display: "flex", alignItems: "center", gap: 5 }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           Open in Maps
