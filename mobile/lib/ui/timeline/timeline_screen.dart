@@ -30,6 +30,7 @@ class TimelineScreen extends StatefulWidget {
 
 class _TimelineScreenState extends State<TimelineScreen> {
   _TimelineRange _selectedRange = _TimelineRange.today;
+  String? _removingToatId;
 
   @override
   void initState() {
@@ -154,6 +155,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                           onTap: () => _openToat(upNext),
                           onAction: () => _runPrimaryAction(upNext),
                           onDone: () => _markDone(upNext),
+                          removing: _removingToatId == upNext.id,
                         ),
                         const SizedBox(height: 18),
                       ],
@@ -173,6 +175,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             onTap: () => _openToat(toat),
                             onAction: () => _runPrimaryAction(toat),
                             onDone: () => _markDone(toat),
+                            removing: _removingToatId == toat.id,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -390,7 +393,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
       if (!mounted) {
         return;
       }
-      _showConfetti(context);
+      // Start exit animation
+      setState(() => _removingToatId = toat.id);
+      // Delay confetti by 800ms
+      Future<void>.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) { _showConfetti(context); }
+      });
+      // Refresh list after animation completes (400ms)
+      Future<void>.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) { return; }
+        setState(() => _removingToatId = null);
+        context.read<ToatsProvider>().fetchToats();
+      });
     } catch (error) {
       if (!mounted) {
         return;
@@ -1137,18 +1151,28 @@ class _UpNextCard extends StatelessWidget {
     required this.onTap,
     required this.onAction,
     required this.onDone,
+    this.removing = false,
   });
 
   final ToatSummary toat;
   final VoidCallback onTap;
   final VoidCallback onAction;
   final VoidCallback onDone;
+  final bool removing;
 
   @override
   Widget build(BuildContext context) {
     final action = _primaryAction(toat);
 
-    return GestureDetector(
+    return AnimatedOpacity(
+      opacity: removing ? 0.0 : 1.0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: removing ? const Offset(0, -0.06) : Offset.zero,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -1277,6 +1301,8 @@ class _UpNextCard extends StatelessWidget {
           ],
         ),
       ),
+        ),
+      ),
     );
   }
 
@@ -1293,18 +1319,28 @@ class _TimelineRow extends StatelessWidget {
     required this.onTap,
     required this.onAction,
     required this.onDone,
+    this.removing = false,
   });
 
   final ToatSummary toat;
   final VoidCallback onTap;
   final VoidCallback onAction;
   final VoidCallback onDone;
+  final bool removing;
 
   @override
   Widget build(BuildContext context) {
     final action = _primaryAction(toat);
 
-    return Padding(
+    return AnimatedOpacity(
+      opacity: removing ? 0.0 : 1.0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+      child: AnimatedSlide(
+        offset: removing ? const Offset(0, -0.06) : Offset.zero,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        child: Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1410,6 +1446,8 @@ class _TimelineRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }
@@ -1613,63 +1651,139 @@ IconData _smartIcon(String template, String title) {
   if (has(['tennis', 'badminton'])) return Icons.sports_tennis_rounded;
   if (has(['golf'])) return Icons.golf_course_rounded;
   if (has(['volleyball'])) return Icons.sports_volleyball_rounded;
-  if (has(['gym', 'workout', 'fitness', 'exercise', 'training', 'yoga', 'pilates'])) {
+  if (has([
+    'gym',
+    'workout',
+    'fitness',
+    'exercise',
+    'training',
+    'yoga',
+    'pilates',
+  ])) {
     return Icons.fitness_center_rounded;
   }
   if (has(['swim', 'swimming', 'pool', 'diving'])) return Icons.pool_rounded;
   if (has(['cycling', 'bike', 'bicycle'])) return Icons.directions_bike_rounded;
-  if (has(['run', 'jog', 'jogging', 'marathon'])) return Icons.directions_run_rounded;
+  if (has(['run', 'jog', 'jogging', 'marathon']))
+    return Icons.directions_run_rounded;
   if (has(['hike', 'hiking', 'trail'])) return Icons.hiking_rounded;
-  if (has(['sport', 'game', 'match', 'tournament'])) return Icons.sports_rounded;
+  if (has(['sport', 'game', 'match', 'tournament']))
+    return Icons.sports_rounded;
 
   // Kids / school
   if (has(['sunday school', 'church school'])) return Icons.church_rounded;
-  if (has(['school', 'class', 'study', 'homework', 'lesson', 'tutor', 'exam', 'test'])) {
+  if (has([
+    'school',
+    'class',
+    'study',
+    'homework',
+    'lesson',
+    'tutor',
+    'exam',
+    'test',
+  ])) {
     return Icons.school_rounded;
   }
-  if (has(['university', 'college', 'campus'])) return Icons.account_balance_rounded;
-  if (has(['read', 'book', 'library', 'reading'])) return Icons.menu_book_rounded;
+  if (has(['university', 'college', 'campus']))
+    return Icons.account_balance_rounded;
+  if (has(['read', 'book', 'library', 'reading']))
+    return Icons.menu_book_rounded;
 
   // Food & drink
-  if (has(['coffee', 'cafe', 'starbucks', 'latte'])) return Icons.local_cafe_rounded;
-  if (has(['grocery', 'groceries', 'supermarket', 'market'])) return Icons.shopping_cart_rounded;
-  if (has(['restaurant', 'dinner', 'lunch', 'breakfast', 'brunch', 'eat out', 'food'])) {
+  if (has(['coffee', 'cafe', 'starbucks', 'latte']))
+    return Icons.local_cafe_rounded;
+  if (has(['grocery', 'groceries', 'supermarket', 'market']))
+    return Icons.shopping_cart_rounded;
+  if (has([
+    'restaurant',
+    'dinner',
+    'lunch',
+    'breakfast',
+    'brunch',
+    'eat out',
+    'food',
+  ])) {
     return Icons.restaurant_rounded;
   }
 
   // Medical
-  if (has(['pharmacy', 'drugstore', 'prescription', 'medication', 'medicine'])) {
+  if (has([
+    'pharmacy',
+    'drugstore',
+    'prescription',
+    'medication',
+    'medicine',
+  ])) {
     return Icons.local_pharmacy_rounded;
   }
   if (has(['dentist', 'dental', 'teeth'])) return Icons.local_hospital_rounded;
-  if (has(['doctor', 'physician', 'clinic', 'hospital', 'medical', 'health', 'checkup'])) {
+  if (has([
+    'doctor',
+    'physician',
+    'clinic',
+    'hospital',
+    'medical',
+    'health',
+    'checkup',
+  ])) {
     return Icons.local_hospital_rounded;
   }
-  if (has(['haircut', 'barber', 'salon', 'hair'])) return Icons.content_cut_rounded;
+  if (has(['haircut', 'barber', 'salon', 'hair']))
+    return Icons.content_cut_rounded;
 
   // Transport / travel
-  if (has(['airport', 'fly', 'flight', 'plane', 'travel', 'trip'])) return Icons.flight_rounded;
+  if (has(['airport', 'fly', 'flight', 'plane', 'travel', 'trip']))
+    return Icons.flight_rounded;
   if (has(['train', 'subway', 'metro', 'rail', 'transit', 'bus'])) {
     return Icons.directions_transit_rounded;
   }
-  if (has(['drive', 'driving', 'drop son', 'drop daughter', 'pick son', 'pick daughter',
-            'pick up', 'pickup', 'drop off'])) {
+  if (has([
+    'drive',
+    'driving',
+    'drop son',
+    'drop daughter',
+    'pick son',
+    'pick daughter',
+    'pick up',
+    'pickup',
+    'drop off',
+  ])) {
     return Icons.directions_car_rounded;
   }
 
   // Faith
-  if (has(['church', 'mosque', 'temple', 'worship', 'prayer', 'pray', 'mass', 'sermon'])) {
+  if (has([
+    'church',
+    'mosque',
+    'temple',
+    'worship',
+    'prayer',
+    'pray',
+    'mass',
+    'sermon',
+  ])) {
     return Icons.church_rounded;
   }
 
   // Work & comms
-  if (has(['zoom', 'teams', 'meet', 'google meet', 'virtual', 'video call', 'video meeting'])) {
+  if (has([
+    'zoom',
+    'teams',
+    'meet',
+    'google meet',
+    'virtual',
+    'video call',
+    'video meeting',
+  ])) {
     return Icons.videocam_rounded;
   }
-  if (has(['email', 'send email', 'reply to', 'respond to'])) return Icons.email_rounded;
-  if (has(['call', 'phone', 'ring', 'talk to', 'catch up with'])) return Icons.call_rounded;
+  if (has(['email', 'send email', 'reply to', 'respond to']))
+    return Icons.email_rounded;
+  if (has(['call', 'phone', 'ring', 'talk to', 'catch up with']))
+    return Icons.call_rounded;
   if (has(['interview', 'hiring', 'recruiting'])) return Icons.work_rounded;
-  if (has(['deadline', 'due date', 'submit', 'submission'])) return Icons.timer_outlined;
+  if (has(['deadline', 'due date', 'submit', 'submission']))
+    return Icons.timer_outlined;
   if (has(['presentation', 'present', 'deck', 'slides', 'keynote'])) {
     return Icons.present_to_all_rounded;
   }
@@ -1687,7 +1801,14 @@ IconData _smartIcon(String template, String title) {
   if (has(['cook', 'cooking', 'bake', 'baking', 'meal prep', 'prepare meal'])) {
     return Icons.restaurant_rounded;
   }
-  if (has(['repair', 'fix', 'plumber', 'electrician', 'maintenance', 'handyman'])) {
+  if (has([
+    'repair',
+    'fix',
+    'plumber',
+    'electrician',
+    'maintenance',
+    'handyman',
+  ])) {
     return Icons.build_rounded;
   }
   if (has(['buy', 'purchase', 'order', 'shop', 'store', 'mall'])) {
@@ -1695,22 +1816,35 @@ IconData _smartIcon(String template, String title) {
   }
 
   // People
-  if (has(['baby', 'child', 'kid', 'toddler', 'infant'])) return Icons.child_care_rounded;
-  if (has(['pet', 'dog', 'cat', 'vet', 'puppy', 'kitten'])) return Icons.pets_rounded;
+  if (has(['baby', 'child', 'kid', 'toddler', 'infant']))
+    return Icons.child_care_rounded;
+  if (has(['pet', 'dog', 'cat', 'vet', 'puppy', 'kitten']))
+    return Icons.pets_rounded;
 
   // Template defaults
   switch (template) {
-    case 'meeting': return Icons.groups_rounded;
-    case 'call': return Icons.call_rounded;
-    case 'appointment': return Icons.event_rounded;
-    case 'event': return Icons.confirmation_number_outlined;
-    case 'deadline': return Icons.timer_outlined;
-    case 'task': return Icons.task_alt_rounded;
-    case 'checklist': return Icons.checklist_rounded;
-    case 'errand': return Icons.pin_drop_rounded;
-    case 'follow_up': return Icons.replay_rounded;
-    case 'idea': return Icons.lightbulb_outline_rounded;
-    default: return Icons.radio_button_unchecked_rounded;
+    case 'meeting':
+      return Icons.groups_rounded;
+    case 'call':
+      return Icons.call_rounded;
+    case 'appointment':
+      return Icons.event_rounded;
+    case 'event':
+      return Icons.confirmation_number_outlined;
+    case 'deadline':
+      return Icons.timer_outlined;
+    case 'task':
+      return Icons.task_alt_rounded;
+    case 'checklist':
+      return Icons.checklist_rounded;
+    case 'errand':
+      return Icons.pin_drop_rounded;
+    case 'follow_up':
+      return Icons.replay_rounded;
+    case 'idea':
+      return Icons.lightbulb_outline_rounded;
+    default:
+      return Icons.radio_button_unchecked_rounded;
   }
 }
 
@@ -1722,7 +1856,7 @@ int _lastConfettiMs = 0;
 
 void _showConfetti(BuildContext context) {
   final nowMs = DateTime.now().millisecondsSinceEpoch;
-  if (nowMs - _lastConfettiMs < 2000) return;
+  if (nowMs - _lastConfettiMs < 500) return;
   _lastConfettiMs = nowMs;
 
   final size = MediaQuery.sizeOf(context);
@@ -1733,10 +1867,7 @@ void _showConfetti(BuildContext context) {
   entry = OverlayEntry(
     builder: (_) => Positioned.fill(
       child: IgnorePointer(
-        child: _ConfettiBurst(
-          origin: origin,
-          onDone: entry.remove,
-        ),
+        child: _ConfettiBurst(origin: origin, onDone: entry.remove),
       ),
     ),
   );
@@ -1758,9 +1889,14 @@ class _ConfettiBurstState extends State<_ConfettiBurst>
   late final List<_Particle> _particles;
 
   static const _kColors = [
-    Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFF3B82F6),
-    Color(0xFFEC4899), Color(0xFF8B5CF6), Color(0xFFEF4444),
-    Color(0xFF06B6D4), Color(0xFFFBBF24),
+    Color(0xFFF59E0B),
+    Color(0xFF10B981),
+    Color(0xFF3B82F6),
+    Color(0xFFEC4899),
+    Color(0xFF8B5CF6),
+    Color(0xFFEF4444),
+    Color(0xFF06B6D4),
+    Color(0xFFFBBF24),
   ];
 
   @override
@@ -1843,8 +1979,7 @@ class _ConfettiPainter extends CustomPainter {
       canvas.translate(x, y);
       canvas.rotate(p.rotation + progress * 7);
       canvas.drawRect(
-        Rect.fromCenter(
-            center: Offset.zero, width: p.width, height: p.height),
+        Rect.fromCenter(center: Offset.zero, width: p.width, height: p.height),
         paint,
       );
       canvas.restore();

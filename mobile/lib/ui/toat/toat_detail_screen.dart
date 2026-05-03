@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,6 +36,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   // Checklist state (only used when template == 'checklist')
   List<Map<String, dynamic>> _checklistItems = [];
   bool _savingChecklist = false;
+  bool _showNotesField = false;
 
   @override
   void initState() {
@@ -127,13 +130,19 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                             onTap: _workingAction == null ? _markDone : null,
                           ),
                           _ActionChip(
-                            label: _workingAction == 'snooze'
+                            label: _workingAction == 'add1d'
                                 ? 'Saving…'
-                                : 'Snooze 1h',
+                                : '+1 Day',
                             onTap:
                                 _workingAction == null && _toat.datetime != null
-                                ? _snooze
+                                ? _addOneDay
                                 : null,
+                          ),
+                          _ActionChip(
+                            label: _workingAction == 'reschedule'
+                                ? 'Saving…'
+                                : 'Reschedule',
+                            onTap: _workingAction == null ? _reschedule : null,
                           ),
                           _ActionChip(
                             label: _workingAction == 'duplicate'
@@ -151,6 +160,13 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                                 ? _primaryAction
                                 : null,
                           ),
+                          if (!_showNotesField &&
+                              (_toat.notes == null || _toat.notes!.isEmpty))
+                            _ActionChip(
+                              label: 'Add notes',
+                              onTap: () =>
+                                  setState(() => _showNotesField = true),
+                            ),
                           _ActionChip(
                             label: _workingAction == 'delete'
                                 ? 'Deleting…'
@@ -180,7 +196,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         ],
                       ),
                     ),
-                    if (_toat.notes != null && _toat.notes!.isNotEmpty) ...[
+                    if ((_toat.notes != null && _toat.notes!.isNotEmpty) ||
+                        _showNotesField) ...[
                       const SizedBox(height: 16),
                       _SectionCard(
                         title: 'About this toat',
@@ -218,20 +235,26 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         },
                         onToggle: (index) {
                           final item = Map<String, dynamic>.from(
-                              _checklistItems[index]);
+                            _checklistItems[index],
+                          );
                           item['done'] = !(item['done'] as bool? ?? false);
                           final updated = [..._checklistItems];
                           updated[index] = item;
                           // Move done items to bottom
-                          final pending = updated.where((x) => !(x['done'] as bool? ?? false)).toList();
-                          final done = updated.where((x) => x['done'] as bool? ?? false).toList();
+                          final pending = updated
+                              .where((x) => !(x['done'] as bool? ?? false))
+                              .toList();
+                          final done = updated
+                              .where((x) => x['done'] as bool? ?? false)
+                              .toList();
                           final sorted = [...pending, ...done];
                           setState(() => _checklistItems = sorted);
                           _saveChecklist(sorted);
                         },
                         onTextChanged: (index, text) {
                           final item = Map<String, dynamic>.from(
-                              _checklistItems[index]);
+                            _checklistItems[index],
+                          );
                           item['text'] = text;
                           final updated = [..._checklistItems];
                           updated[index] = item;
@@ -245,7 +268,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         },
                         onAdd: () {
                           final newItem = <String, dynamic>{
-                            'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                            'id': DateTime.now().millisecondsSinceEpoch
+                                .toString(),
                             'text': '',
                             'done': false,
                           };
@@ -377,17 +401,17 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     });
   }
 
-  Future<void> _snooze() async {
+  Future<void> _addOneDay() async {
     final current = _toat.datetime;
     if (current == null) {
       return;
     }
 
-    await _runAction('snooze', () async {
+    await _runAction('add1d', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
         <String, Object?>{
-          'datetime': current.add(const Duration(hours: 1)).toIso8601String(),
+          'datetime': current.add(const Duration(hours: 24)).toIso8601String(),
         },
       );
       if (!mounted) {
@@ -396,7 +420,49 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       setState(() {
         _toat = updated;
       });
-      _showMessage('Snoozed for 1 hour.');
+      _showMessage('+1 day.');
+    });
+  }
+
+  Future<void> _reschedule() async {
+    final initial = _toat.datetime ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+    if (date == null || !mounted) {
+      return;
+    }
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !mounted) {
+      return;
+    }
+    final combined = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    await _runAction('reschedule', () async {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        <String, Object?>{
+          'datetime': combined.toIso8601String(),
+        },
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _toat = updated;
+      });
+      _showMessage('Rescheduled.');
     });
   }
 
@@ -451,9 +517,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   Future<void> _primaryAction() async {
     final uri = _primaryActionUri(_toat);
     if (uri == null) {
-      // No location: show a simple dialog / snack encouraging user to set it.
-      // For now just open Apple/Google Maps search with the toat title as hint.
-      _showMessage('Add a location to this toat in the edit view.');
+      // No location set — open location search instead
+      _openLocationSearch();
       return;
     }
 
@@ -463,6 +528,28 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         'Could not open ${_primaryActionLabel(_toat).toLowerCase()}.',
       );
     }
+  }
+
+  void _openLocationSearch() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LocationSearchSheet(
+        onSelect: (description) async {
+          Navigator.of(context).pop();
+          await _runAction('location', () async {
+            final updated = await context.read<ToatsProvider>().updateToat(
+              _toat.id,
+              <String, Object?>{'location': description},
+            );
+            if (!mounted) return;
+            setState(() => _toat = updated);
+            _showMessage('Location saved.');
+          });
+        },
+      ),
+    );
   }
 
   Future<void> _shareToat() async {
@@ -1064,7 +1151,9 @@ class _ChecklistSectionState extends State<_ChecklistSection> {
 
   TextEditingController _ctrl(int index, String text) {
     return _controllers.putIfAbsent(
-        index, () => TextEditingController(text: text));
+      index,
+      () => TextEditingController(text: text),
+    );
   }
 
   FocusNode _focus(int index) {
@@ -1142,7 +1231,9 @@ class _ChecklistSectionState extends State<_ChecklistSection> {
                 key: ValueKey(item['id'] ?? index),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 3),
+                    horizontal: 12,
+                    vertical: 3,
+                  ),
                   child: Row(
                     children: [
                       // Drag handle
@@ -1170,9 +1261,7 @@ class _ChecklistSectionState extends State<_ChecklistSection> {
                           controller: ctrl,
                           focusNode: focus,
                           style: TextStyles.body.copyWith(
-                            color: done
-                                ? AppColors.textMuted
-                                : AppColors.text,
+                            color: done ? AppColors.textMuted : AppColors.text,
                             decoration: done
                                 ? TextDecoration.lineThrough
                                 : TextDecoration.none,
@@ -1212,13 +1301,153 @@ class _ChecklistSectionState extends State<_ChecklistSection> {
               label: const Text('Add item'),
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location search bottom sheet — uses Google Places Autocomplete REST API
+// ---------------------------------------------------------------------------
+
+class _LocationSearchSheet extends StatefulWidget {
+  const _LocationSearchSheet({required this.onSelect});
+
+  final void Function(String description) onSelect;
+
+  @override
+  State<_LocationSearchSheet> createState() => _LocationSearchSheetState();
+}
+
+class _LocationSearchSheetState extends State<_LocationSearchSheet> {
+  final _ctrl = TextEditingController();
+  Timer? _debounce;
+  List<Map<String, String>> _suggestions = [];
+  bool _searching = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 400), () => _fetchSuggestions(q));
+  }
+
+  Future<void> _fetchSuggestions(String q) async {
+    setState(() => _searching = true);
+    try {
+      const apiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+      if (apiKey.isEmpty) {
+        setState(() { _searching = false; _suggestions = []; });
+        return;
+      }
+      final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json'
+        '?input=${Uri.encodeComponent(q)}&key=$apiKey&types=geocode|establishment',
+      );
+      final response = await http.get(uri);
+      if (!mounted) return;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final predictions = (body['predictions'] as List<dynamic>? ?? [])
+          .map((p) => <String, String>{
+                'placeId': (p as Map<String, dynamic>)['place_id'] as String? ?? '',
+                'description': p['description'] as String? ?? '',
+              })
+          .where((p) => p['description']!.isNotEmpty)
+          .toList();
+      setState(() { _suggestions = predictions; _searching = false; });
+    } catch (_) {
+      if (mounted) setState(() { _searching = false; _suggestions = []; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgElevated,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _ctrl,
+                  autofocus: true,
+                  onChanged: _onQueryChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search for a place or address…',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: _searching
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppColors.bgSecondary,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: _suggestions.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemBuilder: (context, index) {
+                    final s = _suggestions[index];
+                    return ListTile(
+                      leading: const Icon(Icons.location_on_rounded, color: AppColors.primary),
+                      title: Text(s['description'] ?? '', style: TextStyles.body),
+                      onTap: () => widget.onSelect(s['description'] ?? ''),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

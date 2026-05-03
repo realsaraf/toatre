@@ -422,6 +422,7 @@ export default function TimelinePage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [finishingToatId, setFinishingToatId] = useState<string | null>(null);
+  const [removingToatId, setRemovingToatId] = useState<string | null>(null);
 
   const now = new Date();
   const openCapture = () => router.push("/capture?autostart=1");
@@ -515,8 +516,15 @@ export default function TimelinePage() {
         throw new Error(data?.error ?? "Could not mark this toat done.");
       }
 
-      fireConfetti(anchorEl);
-      setToats((current) => current.filter((item) => item.id !== toat.id));
+      // Start exit animation immediately
+      setRemovingToatId(toat.id);
+      // Fire confetti after 800ms delay
+      setTimeout(() => fireConfetti(anchorEl), 800);
+      // Remove from list after animation (400ms)
+      setTimeout(() => {
+        setToats((current) => current.filter((item) => item.id !== toat.id));
+        setRemovingToatId(null);
+      }, 400);
     } catch (error) {
       console.error("[timeline:done]", error);
     } finally {
@@ -585,7 +593,7 @@ export default function TimelinePage() {
           </section>
         ) : null}
 
-        {!loading && upNext ? <UpNextCard toat={upNext} onDone={(el) => void markDone(upNext, el)} doneDisabled={finishingToatId === upNext.id} compact={isPhoneViewport} /> : null}
+        {!loading && upNext ? <UpNextCard toat={upNext} onDone={(el) => void markDone(upNext, el)} doneDisabled={finishingToatId === upNext.id} compact={isPhoneViewport} removing={removingToatId === upNext.id} /> : null}
 
         {!loading && visibleToats.length > 0 ? (
             <section>
@@ -601,6 +609,7 @@ export default function TimelinePage() {
                         onDone={(el) => void markDone(toat, el)}
                         doneDisabled={finishingToatId === toat.id}
                         compact={isPhoneViewport}
+                        removing={removingToatId === toat.id}
                       />
                     ))}
                   </div>
@@ -676,11 +685,13 @@ function UpNextCard({
   onDone,
   doneDisabled = false,
   compact = false,
+  removing = false,
 }: {
   toat: TimelineToat;
   onDone: (anchorEl?: HTMLElement | null) => void;
   doneDisabled?: boolean;
   compact?: boolean;
+  removing?: boolean;
 }) {
   const router = useRouter();
   const visual = getToatVisual(toat);
@@ -719,7 +730,12 @@ function UpNextCard({
           router.push(`/toats/${toat.id}`);
         }
       }}
-      style={{ ...styles.upNextCard, ...(compact ? styles.upNextCardCompact : {}) }}
+      style={{
+        ...styles.upNextCard,
+        ...(compact ? styles.upNextCardCompact : {}),
+        transition: "opacity 0.4s ease, transform 0.4s ease",
+        ...(removing ? { opacity: 0, transform: "scale(0.93) translateY(-8px)", pointerEvents: "none" } : {}),
+      }}
       className="animate-fade-up"
     >
       <div style={{ ...styles.upNextMetaRow, ...(compact ? styles.upNextMetaRowCompact : {}) }}>
@@ -762,12 +778,14 @@ function TimelineRow({
   onDone,
   doneDisabled = false,
   compact = false,
+  removing = false,
 }: {
   toat: TimelineToat;
   onOpen: () => void;
   onDone: (anchorEl?: HTMLElement | null) => void;
   doneDisabled?: boolean;
   compact?: boolean;
+  removing?: boolean;
 }) {
   const visual = getToatVisual(toat);
   const Icon = visual.Icon;
@@ -804,7 +822,12 @@ function TimelineRow({
   };
 
   return (
-    <div style={{ ...styles.timelineRow, ...(compact ? styles.timelineRowCompact : {}) }}>
+    <div style={{
+      ...styles.timelineRow,
+      ...(compact ? styles.timelineRowCompact : {}),
+      transition: "opacity 0.4s ease, transform 0.4s ease",
+      ...(removing ? { opacity: 0, transform: "scale(0.93) translateY(-8px)", pointerEvents: "none" } : {}),
+    }}>
       <div style={{ ...styles.timeRailColumn, ...(compact ? styles.timeRailColumnCompact : {}) }}>
         <p style={{ ...styles.timeRailTime, ...(compact ? styles.timeRailTimeCompact : {}) }}>{railTime.time}</p>
         <p style={{ ...styles.timeRailPeriod, ...(compact ? styles.timeRailPeriodCompact : {}) }}>{railTime.period}</p>

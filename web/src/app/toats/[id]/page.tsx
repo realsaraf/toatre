@@ -372,6 +372,12 @@ export default function ToatDetailPage() {
   // Inline notes editing
   const [notesLocal, setNotesLocal] = useState<string>("");
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showNotes, setShowNotes] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleValue, setRescheduleValue] = useState("");
+  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ placeId: string; description: string }>>([]);
 
   const now = new Date();
 
@@ -419,6 +425,7 @@ export default function ToatDetailPage() {
           setError(data.toat ? null : "Toat not found");
           if (data.toat) {
             setNotesLocal(data.toat.notes ?? "");
+            setShowNotes(Boolean(data.toat.notes?.trim()));
             if (data.toat.template === "checklist") {
               const cd = data.toat.templateData as { template: "checklist"; items: Array<{ id: string; text: string; done: boolean }> };
               setChecklistLocal(cd.items ?? []);
@@ -705,7 +712,7 @@ export default function ToatDetailPage() {
               {menuOpen ? (
                 <div style={styles.menuCard}>
                   <MenuAction label="Mark done" icon={<DoneIcon size={20} />} tone="#111827" onClick={() => void runMutation("mark-done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
-                  <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => void runMutation("reschedule", async () => { if (!toat.datetime) throw new Error("This toat has no time to reschedule."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
+                  <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => { setRescheduleValue(toat.datetime ? new Date(toat.datetime).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
                   <MenuAction label="Duplicate" icon={<DuplicateIcon size={20} />} tone="#111827" onClick={() => void runMutation("duplicate", duplicateToat)} />
                   <MenuAction label="Delete" icon={<TrashIcon size={20} />} tone="#DC2626" onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
                 </div>
@@ -751,8 +758,8 @@ export default function ToatDetailPage() {
         {/* Quick actions — moved to top so they're always visible */}
         <section style={styles.actionStrip}>
           <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
-          <ActionStripButton icon={<SnoozeIcon size={20} />} label="Snooze" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("snooze", async () => { if (!toat.datetime) throw new Error("This toat has no time to snooze."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 60 * 60000).toISOString() }); })} />
-          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => void runMutation("reschedule", async () => { if (!toat.datetime) throw new Error("This toat has no time to reschedule."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
+          <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { if (!toat.datetime) throw new Error("This toat has no time to move."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
+          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { setRescheduleValue(toat.datetime ? new Date(toat.datetime).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
           <ActionStripButton icon={<TrashIcon size={20} />} label="Delete" tint="#DC2626" disabled={Boolean(actionState)} onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
         </section>
@@ -793,7 +800,7 @@ export default function ToatDetailPage() {
                     <SteeringWheelIcon size={18} /> Directions
                   </button>
                 ) : (
-                  <button type="button" onClick={() => setFlash("Edit this toat to add a location.")} style={styles.secondaryButton}>
+                  <button type="button" onClick={() => setLocationSearchOpen(true)} style={styles.secondaryButton}>
                     <LocationIcon size={18} /> Add location
                   </button>
                 )}
@@ -813,6 +820,7 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
+            {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
               <textarea
                 style={styles.notesTextarea}
@@ -832,6 +840,9 @@ export default function ToatDetailPage() {
                 <span style={{ color: visual.accent }}><SparkleIcon size={16} /></span>
               </div>
             </SectionCard>
+            ) : (
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+            )}
 
             {reminders.length ? (
               <SectionCard title="Reminders">
@@ -906,7 +917,7 @@ export default function ToatDetailPage() {
                     <SteeringWheelIcon size={18} /> Directions
                   </button>
                 ) : (
-                  <button type="button" style={styles.secondaryButton} onClick={() => setFlash("Edit this toat to add a location.")}>
+                  <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
                     <LocationIcon size={18} /> Add location
                   </button>
                 )}
@@ -945,6 +956,7 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
+            {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
               <textarea
                 style={styles.notesTextarea}
@@ -959,6 +971,9 @@ export default function ToatDetailPage() {
                 rows={3}
               />
             </SectionCard>
+            ) : (
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+            )}
           </>
         ) : null}
 
@@ -1054,6 +1069,7 @@ export default function ToatDetailPage() {
               )}
             </SectionCard>
 
+            {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
               <textarea
                 style={styles.notesTextarea}
@@ -1068,6 +1084,9 @@ export default function ToatDetailPage() {
                 rows={3}
               />
             </SectionCard>
+            ) : (
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+            )}
 
             <SectionCard title="Ping me">
               <div style={styles.toggleRow}>
@@ -1090,7 +1109,7 @@ export default function ToatDetailPage() {
               </div>
             ) : (
               <div style={styles.buttonRow}>
-                <button type="button" style={styles.secondaryButton} onClick={() => setFlash("Edit this toat to add a location.")}>
+                <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
                   <LocationIcon size={18} /> Add location
                 </button>
               </div>
@@ -1104,6 +1123,7 @@ export default function ToatDetailPage() {
               {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={formatDate(startDate)} subtitle={formatTime(startDate)} /> : null}
               {toat.location ? <InfoRow icon={<LocationIcon size={22} />} label="Where" title={toat.location} /> : null}
             </SectionCard>
+            {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
               <textarea
                 style={styles.notesTextarea}
@@ -1118,6 +1138,9 @@ export default function ToatDetailPage() {
                 rows={3}
               />
             </SectionCard>
+            ) : (
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+            )}
           </>
         ) : null}
 
@@ -1160,6 +1183,129 @@ export default function ToatDetailPage() {
           onOpenConnections={() => router.push("/settings")}
         />
       ) : null}
+
+      {rescheduleOpen ? (
+        <RescheduleModal
+          value={rescheduleValue}
+          onChange={setRescheduleValue}
+          busy={actionState === "reschedule"}
+          onConfirm={() => void runMutation("reschedule", async () => {
+            if (!rescheduleValue) throw new Error("Pick a date and time.");
+            await patchToat({ datetime: new Date(rescheduleValue).toISOString() });
+            setRescheduleOpen(false);
+          })}
+          onClose={() => setRescheduleOpen(false)}
+        />
+      ) : null}
+
+      {locationSearchOpen ? (
+        <LocationSearchModal
+          query={locationQuery}
+          suggestions={locationSuggestions}
+          onQueryChange={async (q) => {
+            setLocationQuery(q);
+            if (!q.trim()) { setLocationSuggestions([]); return; }
+            try {
+              const res = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(q)}`);
+              const data = (await res.json()) as { predictions?: Array<{ place_id: string; description: string }> };
+              setLocationSuggestions((data.predictions ?? []).map((p) => ({ placeId: p.place_id, description: p.description })));
+            } catch { setLocationSuggestions([]); }
+          }}
+          onSelect={(description) => void runMutation("location", async () => {
+            await patchToat({ location: description });
+            setLocationSearchOpen(false);
+            setLocationQuery("");
+            setLocationSuggestions([]);
+          })}
+          onClose={() => { setLocationSearchOpen(false); setLocationQuery(""); setLocationSuggestions([]); }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function RescheduleModal({
+  value,
+  onChange,
+  busy,
+  onConfirm,
+  onClose,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  busy: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 12 }}>
+      <div style={{ width: "100%", maxWidth: 480, borderRadius: 28, background: "#FFFFFF", boxShadow: "0 28px 80px rgba(31,41,55,0.18)", padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#0F172A" }}>Reschedule</span>
+          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, cursor: "pointer", color: "#6B7280" }}>✕</button>
+        </div>
+        <input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ width: "100%", border: "1.5px solid rgba(123,92,246,0.3)", borderRadius: 12, padding: "10px 14px", fontSize: 15, color: "#111827", outline: "none", boxSizing: "border-box" }}
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <button type="button" onClick={onClose} style={{ minHeight: 42, border: "1.5px solid rgba(123,92,246,0.2)", borderRadius: 14, background: "transparent", color: "#6D28D9", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+          <button type="button" onClick={onConfirm} disabled={busy || !value} style={{ minHeight: 42, border: "none", borderRadius: 14, background: busy ? "#C4B5FD" : "linear-gradient(135deg, #7C3AED, #5B3DF5)", color: "#FFFFFF", fontSize: 14, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer" }}>{busy ? "Saving…" : "Confirm"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LocationSearchModal({
+  query,
+  suggestions,
+  onQueryChange,
+  onSelect,
+  onClose,
+}: {
+  query: string;
+  suggestions: Array<{ placeId: string; description: string }>;
+  onQueryChange: (q: string) => Promise<void>;
+  onSelect: (description: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 12 }}>
+      <div style={{ width: "100%", maxWidth: 520, borderRadius: 28, background: "#FFFFFF", boxShadow: "0 28px 80px rgba(31,41,55,0.18)", padding: 20, display: "flex", flexDirection: "column", gap: 14, maxHeight: "70vh" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#0F172A" }}>Add location</span>
+          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, cursor: "pointer", color: "#6B7280" }}>✕</button>
+        </div>
+        <input
+          type="text"
+          autoFocus
+          value={query}
+          onChange={(e) => { void onQueryChange(e.target.value); }}
+          placeholder="Search for a place or address…"
+          style={{ width: "100%", border: "1.5px solid rgba(123,92,246,0.3)", borderRadius: 12, padding: "10px 14px", fontSize: 15, color: "#111827", outline: "none", boxSizing: "border-box" }}
+        />
+        {suggestions.length > 0 ? (
+          <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+            {suggestions.map((s) => (
+              <button
+                key={s.placeId}
+                type="button"
+                onClick={() => onSelect(s.description)}
+                style={{ textAlign: "left", background: "transparent", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 14, color: "#111827", cursor: "pointer", lineHeight: 1.4 }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(123,92,246,0.07)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              >
+                📍 {s.description}
+              </button>
+            ))}
+          </div>
+        ) : query.trim() ? (
+          <p style={{ fontSize: 14, color: "#6B7280", textAlign: "center" }}>No results. Try a different search.</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -2252,6 +2398,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(255,255,255,0.92)",
     boxShadow: "0 26px 80px rgba(31,41,55,0.08)",
     padding: "10px 7px",
+    marginBottom: 14,
   },
   actionStripButton: {
     border: "none",
