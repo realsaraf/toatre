@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     link: z.string().url().nullable().optional(),
     people: z.array(z.string()).optional().default([]),
     notes: z.string().nullable().optional(),
-    templateData: TemplateDataSchema.optional(),
+    templateData: z.record(z.string(), z.unknown()).optional().nullable(),
   });
 
   const parsed = BodySchema.safeParse(body);
@@ -91,6 +91,13 @@ export async function POST(request: NextRequest) {
   const ownerId = new ObjectId(user.mongoId);
   const now = new Date();
   const template = parsed.data.template;
+
+  // Normalise templateData — inject discriminator and validate; fall back to empty shape.
+  const rawTd = parsed.data.templateData != null
+    ? { template, ...parsed.data.templateData }
+    : { template };
+  const tdResult = TemplateDataSchema.safeParse(rawTd);
+  const templateData = tdResult.success ? tdResult.data : emptyTemplateData(template);
 
   const doc = {
     ownerId,
@@ -105,7 +112,7 @@ export async function POST(request: NextRequest) {
     link: parsed.data.link ?? null,
     people: parsed.data.people,
     notes: parsed.data.notes ?? null,
-    templateData: parsed.data.templateData ?? emptyTemplateData(template),
+    templateData,
     status: "active",
     createdAt: now,
     updatedAt: now,

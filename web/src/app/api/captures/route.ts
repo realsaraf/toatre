@@ -135,26 +135,37 @@ export async function POST(request: NextRequest) {
 
   // Import helpers here to avoid circular imports at module-level
   const { templateToKind, emptyTemplateData } = await import("@/types");
+  const { TemplateDataSchema } = await import("@/lib/ai/extract");
 
   // Insert toats
-  const toatDocs = extraction.toats.map((t) => ({
-    ownerId,
-    captureId,
-    template: t.template,
-    kind: templateToKind(t.template),
-    tier: t.tier,
-    title: t.title,
-    datetime: t.datetime ? new Date(t.datetime) : null,
-    endDatetime: t.endDatetime ? new Date(t.endDatetime) : null,
-    location: t.location ?? null,
-    link: t.link ?? null,
-    people: t.people ?? [],
-    notes: t.notes ?? null,
-    templateData: t.templateData ?? emptyTemplateData(t.template),
-    status: "active",
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const toatDocs = extraction.toats.map((t) => {
+    // Validate templateData from LLM; fall back to empty shape if malformed.
+    // Inject the template discriminator in case the LLM omitted it.
+    const rawTd = t.templateData != null
+      ? { template: t.template, ...t.templateData }
+      : { template: t.template };
+    const tdResult = TemplateDataSchema.safeParse(rawTd);
+    const templateData = tdResult.success ? tdResult.data : emptyTemplateData(t.template);
+
+    return {
+      ownerId,
+      captureId,
+      template: t.template,
+      kind: templateToKind(t.template),
+      tier: t.tier,
+      title: t.title,
+      datetime: t.datetime ? new Date(t.datetime) : null,
+      endDatetime: t.endDatetime ? new Date(t.endDatetime) : null,
+      location: t.location ?? null,
+      link: t.link ?? null,
+      people: t.people ?? [],
+      notes: t.notes ?? null,
+      templateData,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 
   let insertedIds: ObjectId[] = [];
   if (toatDocs.length > 0) {

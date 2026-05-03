@@ -115,7 +115,10 @@ export const ExtractedToatSchema = z.object({
   link: z.string().nullable(),
   people: z.array(z.string()),
   notes: z.string().nullable(),
-  templateData: TemplateDataSchema,
+  // Accept any object from the LLM — the API route validates/normalises it with
+  // TemplateDataSchema.safeParse + emptyTemplateData fallback so a bad templateData
+  // never kills the whole capture.
+  templateData: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export const ExtractionResultSchema = z.object({
