@@ -98,6 +98,7 @@ Each item is a separate thing the user mentioned. Never more than 20 items.
 6. For tickets/event URLs: put in `templateData.ticketUrl` AND base `link`.
 7. Do NOT hallucinate — only extract what was explicitly or clearly implied.
 8. Return ONLY valid JSON, no prose.
+9. **Date vs time**: Set `datetime` only when a specific clock time was mentioned (e.g. "at 3pm", "at 10am"). If only a date was mentioned ("today", "tomorrow", "Sunday") with **no time**, set `datetime` to **null** — never default to midnight or 12:00 AM. The UI treats null-datetime toats as "any time today".
 
 ## Output format
 

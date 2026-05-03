@@ -161,7 +161,10 @@ export async function POST(request: NextRequest) {
       people: t.people ?? [],
       notes: t.notes ?? null,
       templateData,
-      status: "active",
+      // Saved as "pending" until the user commits their selection in the review UI.
+      // The /api/captures/[id]/commit endpoint promotes selected toats to "active"
+      // and deletes unselected ones.
+      status: "pending",
       createdAt: now,
       updatedAt: now,
     };

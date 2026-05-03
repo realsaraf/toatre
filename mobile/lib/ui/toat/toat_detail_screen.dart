@@ -468,7 +468,9 @@ class _HeroSection extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: _detailTemplateColors(toat.template).last.withValues(alpha: 0.12),
+          color: _detailTemplateColors(
+            toat.template,
+          ).last.withValues(alpha: 0.12),
         ),
         boxShadow: const [
           BoxShadow(
@@ -768,7 +770,9 @@ String _detailSubtitle(ToatSummary toat) {
   if (toat.location != null && toat.location!.isNotEmpty) {
     return toat.location!;
   }
-  if (toat.link != null && toat.link!.isNotEmpty && toat.template == 'meeting') {
+  if (toat.link != null &&
+      toat.link!.isNotEmpty &&
+      toat.template == 'meeting') {
     return _meetingPlatform(toat.link!);
   }
   if (toat.people.isNotEmpty) {

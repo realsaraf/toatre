@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
   const endOfWeek = new Date(startOfToday.getTime() + 7 * 86400000);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const filter: Record<string, any> = { ownerId, status: { $ne: "cancelled" } };
+  // Exclude completed, cancelled, and pending (draft before capture commit) toats
+  const filter: Record<string, any> = { ownerId, status: { $nin: ["cancelled", "done", "pending"] } };
 
   if (range === "today") {
     filter.datetime = { $gte: startOfToday, $lt: endOfToday };

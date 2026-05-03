@@ -16,6 +16,7 @@ const MIN_ANALYSER_FFT_SIZE = 32;
 type ToatTier = "urgent" | "important" | "regular";
 
 interface ExtractedToat {
+  id: string;           // MongoDB _id returned from /api/captures
   template: ToatTemplate;
   tier: ToatTier;
   title: string;
@@ -27,18 +28,78 @@ interface ExtractedToat {
   notes: string | null;
 }
 
-const TEMPLATE_META: Record<ToatTemplate, { emoji: string; color: string; bg: string }> = {
-  task:       { emoji: "✓",  color: "#6366F1", bg: "#EDE9FE" },
-  checklist:  { emoji: "☑",  color: "#16A34A", bg: "#DCFCE7" },
-  event:      { emoji: "🎫", color: "#7C3AED", bg: "#F3E8FF" },
-  meeting:    { emoji: "💬", color: "#2563EB", bg: "#DBEAFE" },
-  call:       { emoji: "📞", color: "#DB2777", bg: "#FCE7F3" },
-  appointment:{ emoji: "🦷", color: "#7C3AED", bg: "#F3E8FF" },
-  errand:     { emoji: "📍", color: "#D97706", bg: "#FEF3C7" },
-  follow_up:  { emoji: "🔄", color: "#0891B2", bg: "#CFFAFE" },
-  deadline:   { emoji: "⚡", color: "#DC2626", bg: "#FEE2E2" },
-  idea:       { emoji: "💡", color: "#059669", bg: "#D1FAE5" },
+const TEMPLATE_META: Record<ToatTemplate, { color: string; bg: string }> = {
+  task:       { color: "#6366F1", bg: "#EDE9FE" },
+  checklist:  { color: "#16A34A", bg: "#DCFCE7" },
+  event:      { color: "#7C3AED", bg: "#F3E8FF" },
+  meeting:    { color: "#2563EB", bg: "#DBEAFE" },
+  call:       { color: "#DB2777", bg: "#FCE7F3" },
+  appointment:{ color: "#7C3AED", bg: "#F3E8FF" },
+  errand:     { color: "#D97706", bg: "#FEF3C7" },
+  follow_up:  { color: "#0891B2", bg: "#CFFAFE" },
+  deadline:   { color: "#DC2626", bg: "#FEE2E2" },
+  idea:       { color: "#059669", bg: "#D1FAE5" },
 };
+
+// Context-aware icon resolver: uses title keywords then falls back to template default
+function getTemplateIcon(template: ToatTemplate, title = ""): string {
+  const t = title.toLowerCase();
+  // Sports
+  if (/soccer|football|nycfc|mls/.test(t)) return "⚽";
+  if (/basketball|nba/.test(t)) return "🏀";
+  if (/baseball|mlb/.test(t)) return "⚾";
+  if (/tennis/.test(t)) return "🎾";
+  if (/golf/.test(t)) return "⛳";
+  if (/hockey|nhl/.test(t)) return "🏒";
+  if (/cricket/.test(t)) return "🏏";
+  if (/rugby/.test(t)) return "🏉";
+  if (/game|match|stadium|sport/.test(t)) return "🏟️";
+  // School / education
+  if (/school|class|lesson|tutori|study|homework|exam|test|lecture|college|university/.test(t)) return "🏫";
+  if (/sunday school/.test(t)) return "⛪";
+  // Grocery / shopping
+  if (/groceri|supermark|walmart|target|costco/.test(t)) return "🛒";
+  if (/pharmacy|drug store/.test(t)) return "💊";
+  if (/coffee|starbucks/.test(t)) return "☕";
+  if (/restaurant|dinner|lunch|breakfast|food|eat/.test(t)) return "🍽️";
+  // Medical
+  if (/doctor|physician|hospital|clinic/.test(t)) return "🏥";
+  if (/dentist|dental/.test(t)) return "🦷";
+  if (/gym|workout|fitness/.test(t)) return "💪";
+  if (/haircut|salon|barber/.test(t)) return "💈";
+  // Transport
+  if (/airport|flight|plane/.test(t)) return "✈️";
+  if (/train|subway|metro/.test(t)) return "🚇";
+  if (/drive|driving|car/.test(t)) return "🚗";
+  if (/drop.?(off|son|daughter|kid|child)/.test(t)) return "👨‍👦";
+  if (/pick.?up/.test(t)) return "🤝";
+  // Work
+  if (/meeting|standup|sync/.test(t)) return "💼";
+  if (/zoom|google meet|teams|video call/.test(t)) return "📹";
+  if (/email|send|reply/.test(t)) return "✉️";
+  if (/call|phone/.test(t)) return "📞";
+  if (/interview/.test(t)) return "👔";
+  if (/deadline|submit|due|deliver/.test(t)) return "⏰";
+  if (/report|document|presentation|deck/.test(t)) return "📄";
+  // Home
+  if (/clean|laundry|wash/.test(t)) return "🧹";
+  if (/cook|bake/.test(t)) return "🍳";
+  if (/repair|fix|plumber|electrician/.test(t)) return "🔧";
+  // Template defaults
+  switch (template) {
+    case "meeting": return "💼";
+    case "call": return "📞";
+    case "appointment": return "📅";
+    case "event": return "🎫";
+    case "deadline": return "⏰";
+    case "task": return "✅";
+    case "checklist": return "🛒";
+    case "errand": return "📍";
+    case "follow_up": return "🔄";
+    case "idea": return "💡";
+    default: return "📌";
+  }
+}
 
 function getAnalyserFftSize(barCount: number): number {
   return 2 ** Math.ceil(Math.log2(Math.max(barCount * 4, MIN_ANALYSER_FFT_SIZE)));
@@ -81,8 +142,10 @@ function CapturePageContent() {
   const [barHeights, setBarHeights] = useState<number[]>(Array(WAVEFORM_BARS).fill(8));
   const [toats, setToats] = useState<ExtractedToat[]>([]);
   const [selected, setSelected] = useState<boolean[]>([]);
+  const [captureId, setCaptureId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [manualText, setManualText] = useState("");
+  const [isCommitting, setIsCommitting] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -206,7 +269,19 @@ function CapturePageContent() {
           if (!res.ok) throw new Error(`${res.status}`);
           const data = await res.json();
           setTranscript(data.transcript ?? "");
-          const extracted: ExtractedToat[] = (data.toats ?? []).map((t: ExtractedToat) => ({ ...t }));
+          setCaptureId(data.captureId ?? null);
+          const extracted: ExtractedToat[] = (data.toats ?? []).map((t: Record<string, unknown>) => ({
+            id: String(t._id ?? t.id ?? ""),
+            template: t.template as ToatTemplate,
+            tier: (t.tier ?? "regular") as ToatTier,
+            title: String(t.title ?? ""),
+            datetime: t.datetime as string | null ?? null,
+            endDatetime: t.endDatetime as string | null ?? null,
+            location: t.location as string | null ?? null,
+            link: t.link as string | null ?? null,
+            people: Array.isArray(t.people) ? t.people as string[] : [],
+            notes: t.notes as string | null ?? null,
+          }));
           setToats(extracted);
           setSelected(extracted.map(() => true));
           setStatus("review");
@@ -302,7 +377,19 @@ function CapturePageContent() {
 
       const data = await response.json();
       setTranscript(data.transcript ?? trimmed);
-      const extracted: ExtractedToat[] = (data.toats ?? []).map((toat: ExtractedToat) => ({ ...toat }));
+      setCaptureId(data.captureId ?? null);
+      const extracted: ExtractedToat[] = (data.toats ?? []).map((t: Record<string, unknown>) => ({
+        id: String(t._id ?? t.id ?? ""),
+        template: t.template as ToatTemplate,
+        tier: (t.tier ?? "regular") as ToatTier,
+        title: String(t.title ?? ""),
+        datetime: t.datetime as string | null ?? null,
+        endDatetime: t.endDatetime as string | null ?? null,
+        location: t.location as string | null ?? null,
+        link: t.link as string | null ?? null,
+        people: Array.isArray(t.people) ? t.people as string[] : [],
+        notes: t.notes as string | null ?? null,
+      }));
       setToats(extracted);
       setSelected(extracted.map(() => true));
       setStatus("review");
@@ -322,6 +409,51 @@ function CapturePageContent() {
   const selectedCount = selected.filter(Boolean).length;
   const isTextMode = captureMode === "text";
 
+  const commitCapture = useCallback(async (editedToats: ExtractedToat[], sel: boolean[]) => {
+    if (!captureId) { router.push("/timeline"); return; }
+    const token = await getIdToken();
+    if (!token) { router.push("/timeline"); return; }
+    setIsCommitting(true);
+    try {
+      const selectedIds = editedToats.filter((_, i) => sel[i]).map((t) => t.id);
+      const edits: Record<string, Partial<ExtractedToat>> = {};
+      for (const t of editedToats.filter((_, i) => sel[i])) {
+        edits[t.id] = {
+          title: t.title, tier: t.tier, datetime: t.datetime,
+          endDatetime: t.endDatetime, location: t.location,
+          link: t.link, people: t.people, notes: t.notes,
+        };
+      }
+      await fetch(`/api/captures/${captureId}/commit`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedIds, edits }),
+      });
+    } catch (err) {
+      console.error("[capture/commit]", err);
+    } finally {
+      setIsCommitting(false);
+    }
+    router.push("/timeline");
+  }, [captureId, getIdToken, router]);
+
+  const cancelCapture = useCallback(async () => {
+    // Delete all pending toats for this capture and go home
+    if (captureId) {
+      const token = await getIdToken();
+      if (token) {
+        // Commit with empty selectedIds to delete all pending toats
+        fetch(`/api/captures/${captureId}/commit`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedIds: [] }),
+        }).catch(() => {});
+      }
+    }
+    stopAll();
+    router.push("/");
+  }, [captureId, getIdToken, router, stopAll]);
+
   if (routeIsLocked) {
     return null;
   }
@@ -337,8 +469,25 @@ function CapturePageContent() {
             selected={selected}
             onToggle={(i) => setSelected((s) => s.map((v, j) => (j === i ? !v : v)))}
             onToggleAll={() => { const all = selected.every(Boolean); setSelected(selected.map(() => !all)); }}
-            onAddToTimeline={goToTimeline}
+            onUpdateToat={(i, updated) => setToats((prev) => prev.map((t, j) => j === i ? { ...t, ...updated } : t))}
+            onReorder={(from, to) => {
+              setToats((prev) => {
+                const next = [...prev];
+                const [item] = next.splice(from, 1);
+                next.splice(to, 0, item!);
+                return next;
+              });
+              setSelected((prev) => {
+                const next = [...prev];
+                const [item] = next.splice(from, 1);
+                next.splice(to, 0, item!);
+                return next;
+              });
+            }}
+            onAddToTimeline={() => void commitCapture(toats, selected)}
+            onCancel={() => void cancelCapture()}
             selectedCount={selectedCount}
+            isCommitting={isCommitting}
           />
         </main>
       </div>
@@ -508,12 +657,22 @@ function CapturePageFallback() {
 
 /* ─── Review screen ──────────────────────────────────────────────────────── */
 
-function ReviewScreen({ transcript, toats, selected, onToggle, onToggleAll, onAddToTimeline, selectedCount }: {
+function ReviewScreen({
+  transcript, toats, selected, onToggle, onToggleAll, onUpdateToat,
+  onReorder, onAddToTimeline, onCancel, selectedCount, isCommitting,
+}: {
   transcript: string; toats: ExtractedToat[]; selected: boolean[];
   onToggle: (i: number) => void; onToggleAll: () => void;
-  onAddToTimeline: () => void; selectedCount: number;
+  onUpdateToat: (i: number, updated: Partial<ExtractedToat>) => void;
+  onReorder: (from: number, to: number) => void;
+  onAddToTimeline: () => void; onCancel: () => void;
+  selectedCount: number; isCommitting: boolean;
 }) {
   const allSelected = selected.every(Boolean);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [showLearnMore, setShowLearnMore] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {/* Header */}
@@ -561,38 +720,73 @@ function ReviewScreen({ transcript, toats, selected, onToggle, onToggleAll, onAd
       {/* Toat cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
         {toats.map((toat, i) => (
-          <ReviewToatCard key={i} toat={toat} checked={selected[i]!} onToggle={() => onToggle(i)} />
+          <div
+            key={toat.id || i}
+            draggable
+            onDragStart={() => { dragIndexRef.current = i; }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={() => {
+              const from = dragIndexRef.current;
+              if (from !== null && from !== i) onReorder(from, i);
+              dragIndexRef.current = null;
+            }}
+          >
+            <ReviewToatCard
+              toat={toat}
+              checked={selected[i]!}
+              onToggle={() => onToggle(i)}
+              onEdit={() => setEditIndex(i)}
+            />
+          </div>
         ))}
       </div>
 
-      {/* Promo */}
+      {/* Learn more promo */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 14, fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 24 }}>
         <span style={{ fontSize: 16 }}>✦</span>
         <p style={{ lineHeight: 1.5, flex: 1, margin: 0 }}>Toatre can set reminders, check traffic, and add location details for you.</p>
-        <button style={{ background: "none", border: "none", color: "var(--color-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const }}>Learn more →</button>
+        <button onClick={() => setShowLearnMore(true)} style={{ background: "none", border: "none", color: "var(--color-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const }}>Learn more →</button>
       </div>
 
       {/* Bottom bar */}
       <div style={{ position: "sticky", bottom: 0, background: "var(--color-bg)", paddingBottom: 24, paddingTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <button style={{ background: "none", border: "none", fontSize: 14, fontWeight: 600, color: "var(--color-primary)", cursor: "pointer", whiteSpace: "nowrap" as const, padding: "12px 8px" }}>
-          + Add another toat
+        <button
+          onClick={onCancel}
+          style={{ background: "none", border: "1px solid var(--color-border)", borderRadius: 12, padding: "12px 20px", fontSize: 14, fontWeight: 600, color: "var(--color-text-muted)", cursor: "pointer" }}
+        >
+          Cancel
         </button>
         <button
           onClick={onAddToTimeline}
-          disabled={selectedCount === 0}
-          style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 2, padding: "12px 28px", background: "linear-gradient(135deg, #8B5CF6, #6366F1)", borderRadius: 16, border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(99,102,241,0.35)", opacity: selectedCount === 0 ? 0.5 : 1, transition: "opacity 0.2s" }}
+          disabled={selectedCount === 0 || isCommitting}
+          style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 2, padding: "12px 28px", background: "linear-gradient(135deg, #8B5CF6, #6366F1)", borderRadius: 16, border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(99,102,241,0.35)", opacity: selectedCount === 0 || isCommitting ? 0.5 : 1, transition: "opacity 0.2s" }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span>✓</span> Add to timeline
+            {isCommitting ? <span>Saving…</span> : <><span>✓</span> Add to timeline</>}
           </div>
-          <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>{selectedCount} toat{selectedCount !== 1 ? "s" : ""} will be added</span>
+          {!isCommitting && <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>{selectedCount} toat{selectedCount !== 1 ? "s" : ""} will be added</span>}
         </button>
       </div>
+
+      {/* Edit modal */}
+      {editIndex !== null && (
+        <EditToatModal
+          toat={toats[editIndex]!}
+          onSave={(updated) => {
+            onUpdateToat(editIndex, updated);
+            setEditIndex(null);
+          }}
+          onClose={() => setEditIndex(null)}
+        />
+      )}
+
+      {/* Learn more modal */}
+      {showLearnMore && <LearnMoreModal onClose={() => setShowLearnMore(false)} />}
     </div>
   );
 }
 
-function ReviewToatCard({ toat, checked, onToggle }: { toat: ExtractedToat; checked: boolean; onToggle: () => void }) {
+function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedToat; checked: boolean; onToggle: () => void; onEdit: () => void }) {
   const meta = TEMPLATE_META[toat.template];
   const dt = toat.datetime ? new Date(toat.datetime) : null;
   const timeStr = dt ? dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + ", " + dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : null;
@@ -602,16 +796,112 @@ function ReviewToatCard({ toat, checked, onToggle }: { toat: ExtractedToat; chec
         {checked && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
       </button>
       <div style={{ width: 44, height: 44, borderRadius: 12, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: 20 }}>{meta.emoji}</span>
+        <span style={{ fontSize: 20 }}>{getTemplateIcon(toat.template, toat.title)}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", marginBottom: 4, margin: 0 }}>{toat.title}</p>
         {timeStr && <p style={{ fontSize: 12, color: meta.color, margin: "4px 0 0" }}>📅 {timeStr}</p>}
         {toat.location && <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "2px 0 0" }}>📍 {toat.location}</p>}
-        {toat.link && <p style={{ fontSize: 12, color: "#2563EB", margin: "2px 0 0" }}>🔗 {toat.link.replace(/^https?:\/\//, "").split("/")[0]}</p>}
       </div>
-      <button style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 10, padding: "5px 14px", fontSize: 13, color: "#374151", cursor: "pointer", flexShrink: 0 }}>Edit</button>
-      <span style={{ fontSize: 16, color: "#D1D5DB", cursor: "grab" }}>⠿</span>
+      <button onClick={onEdit} style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 10, padding: "5px 14px", fontSize: 13, color: "#374151", cursor: "pointer", flexShrink: 0 }}>Edit</button>
+      <span style={{ fontSize: 16, color: "#D1D5DB", cursor: "grab" }} aria-hidden>⠿</span>
+    </div>
+  );
+}
+
+function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave: (updated: Partial<ExtractedToat>) => void; onClose: () => void }) {
+  const meta = TEMPLATE_META[toat.template];
+  const [title, setTitle] = useState(toat.title);
+  const [location, setLocation] = useState(toat.location ?? "");
+  const [notes, setNotes] = useState(toat.notes ?? "");
+  const [datetime, setDatetime] = useState(() => {
+    if (!toat.datetime) return "";
+    const d = new Date(toat.datetime);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0 0 0 0" }} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 560, background: "var(--color-card)", borderRadius: "24px 24px 0 0", padding: "24px 24px 40px", boxShadow: "0 -8px 48px rgba(0,0,0,0.18)", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 18 }}>{getTemplateIcon(toat.template)}</span>
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)", textTransform: "capitalize" }}>{toat.template.replace("_", " ")}</span>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-muted)", lineHeight: 1, padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>TITLE</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid var(--color-border)", fontSize: 15, background: "var(--color-bg)", color: "var(--color-text)", outline: "none" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>DATE &amp; TIME <span style={{ fontWeight: 400 }}>(optional)</span></label>
+            <input type="datetime-local" value={datetime} onChange={(e) => setDatetime(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid var(--color-border)", fontSize: 14, background: "var(--color-bg)", color: "var(--color-text)", outline: "none" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>LOCATION <span style={{ fontWeight: 400 }}>(optional)</span></label>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Citi Field, New York" style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid var(--color-border)", fontSize: 14, background: "var(--color-bg)", color: "var(--color-text)", outline: "none" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", display: "block", marginBottom: 6 }}>NOTES <span style={{ fontWeight: 400 }}>(optional)</span></label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid var(--color-border)", fontSize: 14, background: "var(--color-bg)", color: "var(--color-text)", outline: "none", resize: "vertical" }} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "1.5px solid var(--color-border)", background: "none", fontSize: 15, fontWeight: 600, color: "var(--color-text-muted)", cursor: "pointer" }}>Cancel</button>
+          <button
+            onClick={() => {
+              const dt = datetime ? new Date(datetime).toISOString() : null;
+              onSave({ title: title.trim() || toat.title, location: location.trim() || null, notes: notes.trim() || null, datetime: dt });
+            }}
+            style={{ flex: 2, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg, #8B5CF6, #6366F1)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
+          >
+            Save changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LearnMoreModal({ onClose }: { onClose: () => void }) {
+  const features = [
+    { icon: "⏰", title: "Smart Reminders", desc: "Toatre calculates travel time and Pings you early enough to leave." },
+    { icon: "🗺️", title: "Live Traffic", desc: "Before you head out, Toatre checks real-time traffic to your location." },
+    { icon: "📍", title: "Auto Location", desc: "Drop a name like 'dentist' — Toatre looks up the address for you." },
+    { icon: "👥", title: "People Memory", desc: "Toatre remembers people you mention so future captures are faster." },
+    { icon: "🔁", title: "Smart Follow-ups", desc: "After a call or meeting, Toatre can surface follow-up toats automatically." },
+    { icon: "📅", title: "Calendar Sync", desc: "Toatre keeps your timeline in sync with Google Calendar or Apple Calendar." },
+  ];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 480, background: "var(--color-card)", borderRadius: 24, padding: "28px 24px", boxShadow: "0 16px 64px rgba(0,0,0,0.22)", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+          <div>
+            <p style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text)", margin: 0 }}>What Toatre can do for you</p>
+            <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: "4px 0 0" }}>Your personal timeline assistant, always working.</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-muted)", padding: 4 }}>✕</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {features.map((f) => (
+            <div key={f.title} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(99,102,241,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{f.icon}</div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text)", margin: 0 }}>{f.title}</p>
+                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "3px 0 0", lineHeight: 1.5 }}>{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose} style={{ marginTop: 24, width: "100%", padding: 14, borderRadius: 14, background: "linear-gradient(135deg, #8B5CF6, #6366F1)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Got it</button>
+      </div>
     </div>
   );
 }

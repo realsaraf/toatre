@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -22,6 +22,7 @@ import {
   PhoneGlyph,
   SearchIcon,
   SparkleIcon,
+  SteeringWheelIcon,
   TicketGlyph,
   TimelineIcon,
   ToothGlyph,
@@ -174,6 +175,56 @@ interface ToatVisual {
   actionBackground: string;
   actionColor: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
+}
+
+// Confetti burst — fires DOM particles from the element that triggered it.
+// Throttled: max once per 2 seconds globally via module-level ref.
+let lastConfettiTime = 0;
+const CONFETTI_COLORS = ["#6366F1","#A78BFA","#34D399","#FCD34D","#F472B6","#60A5FA","#FB923C"];
+
+function fireConfetti(anchorEl?: HTMLElement | null) {
+  const now = Date.now();
+  if (now - lastConfettiTime < 2000) return;
+  lastConfettiTime = now;
+
+  const count = 28;
+  const rect = anchorEl?.getBoundingClientRect();
+  const originX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  const originY = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement("div");
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+    const speed = 80 + Math.random() * 120;
+    const dx = Math.cos(angle) * speed;
+    const dy = Math.sin(angle) * speed - 60;
+    const size = 5 + Math.random() * 5;
+    const rotation = Math.random() * 720 - 360;
+    el.style.cssText = `
+      position:fixed;pointer-events:none;z-index:9999;border-radius:${Math.random() > 0.5 ? "50%" : "2px"};
+      width:${size}px;height:${size}px;background:${color};
+      left:${originX}px;top:${originY}px;
+      transform-origin:center;
+      animation:toatre-confetti 0.8s cubic-bezier(0.2,0.8,0.4,1) forwards;
+      --dx:${dx}px;--dy:${dy}px;--rot:${rotation}deg;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // Inject keyframes once
+  if (!document.getElementById("toatre-confetti-style")) {
+    const styleEl = document.createElement("style");
+    styleEl.id = "toatre-confetti-style";
+    styleEl.textContent = `
+      @keyframes toatre-confetti {
+        0%   { transform: translate(0,0) rotate(0deg); opacity:1; }
+        100% { transform: translate(var(--dx),calc(var(--dy) + 60px)) rotate(var(--rot)); opacity:0; }
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
 }
 
 const TEMPLATE_VISUAL: Record<ToatTemplate, ToatVisual> = {
@@ -444,7 +495,7 @@ export default function TimelinePage() {
   const loading = authLoading || (Boolean(user) && !hasLoadedData);
   const isPhoneViewport = viewportWidth === null || viewportWidth <= 768;
 
-  const markDone = async (toat: TimelineToat) => {
+  const markDone = async (toat: TimelineToat, anchorEl?: HTMLElement | null) => {
     if (!user || finishingToatId) return;
 
     setFinishingToatId(toat.id);
@@ -464,6 +515,7 @@ export default function TimelinePage() {
         throw new Error(data?.error ?? "Could not mark this toat done.");
       }
 
+      fireConfetti(anchorEl);
       setToats((current) => current.filter((item) => item.id !== toat.id));
     } catch (error) {
       console.error("[timeline:done]", error);
@@ -533,7 +585,7 @@ export default function TimelinePage() {
           </section>
         ) : null}
 
-        {!loading && upNext ? <UpNextCard toat={upNext} onDone={() => void markDone(upNext)} doneDisabled={finishingToatId === upNext.id} compact={isPhoneViewport} /> : null}
+        {!loading && upNext ? <UpNextCard toat={upNext} onDone={(el) => void markDone(upNext, el)} doneDisabled={finishingToatId === upNext.id} compact={isPhoneViewport} /> : null}
 
         {!loading && visibleToats.length > 0 ? (
             <section>
@@ -546,7 +598,7 @@ export default function TimelinePage() {
                         key={toat.id}
                         toat={toat}
                         onOpen={() => router.push(`/toats/${toat.id}`)}
-                        onDone={() => void markDone(toat)}
+                        onDone={(el) => void markDone(toat, el)}
                         doneDisabled={finishingToatId === toat.id}
                         compact={isPhoneViewport}
                       />
@@ -626,7 +678,7 @@ function UpNextCard({
   compact = false,
 }: {
   toat: TimelineToat;
-  onDone: () => void;
+  onDone: (anchorEl?: HTMLElement | null) => void;
   doneDisabled?: boolean;
   compact?: boolean;
 }) {
@@ -649,9 +701,11 @@ function UpNextCard({
     router.push(action.href);
   };
 
+  const doneButtonRef = useRef<HTMLButtonElement>(null);
+
   const runDone = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onDone();
+    onDone(doneButtonRef.current);
   };
 
   return (
@@ -689,11 +743,11 @@ function UpNextCard({
         <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
           {action ? (
             <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
-              {action.label}
+              {action.label === "Directions" ? <><SteeringWheelIcon size={compact ? 13 : 15} /> Directions</> : action.label}
             </button>
           ) : null}
-          <button type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}>
-            <DoneIcon size={compact ? 15 : 18} /> Done
+          <button ref={doneButtonRef} type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }} aria-label="Mark done">
+            <DoneIcon size={compact ? 15 : 18} />
           </button>
         </div>
       </div>
@@ -711,7 +765,7 @@ function TimelineRow({
 }: {
   toat: TimelineToat;
   onOpen: () => void;
-  onDone: () => void;
+  onDone: (anchorEl?: HTMLElement | null) => void;
   doneDisabled?: boolean;
   compact?: boolean;
 }) {
@@ -742,9 +796,11 @@ function TimelineRow({
 
   const railTime = toat.datetime ? formatRailTime(new Date(toat.datetime)) : { time: "Any", period: "time" };
 
+  const doneRowRef = useRef<HTMLButtonElement>(null);
+
   const runDone = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onDone();
+    onDone(doneRowRef.current);
   };
 
   return (
@@ -774,11 +830,11 @@ function TimelineRow({
         <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
           {action ? (
             <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
-              {action.label}
+              {action.label === "Directions" ? <><SteeringWheelIcon size={compact ? 13 : 15} /> Directions</> : action.label}
             </button>
           ) : null}
-          <button type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}>
-            <DoneIcon size={compact ? 14 : 18} /> Done
+          <button ref={doneRowRef} type="button" onClick={runDone} disabled={doneDisabled} style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }} aria-label="Mark done">
+            <DoneIcon size={compact ? 15 : 18} />
           </button>
         </div>
       </div>

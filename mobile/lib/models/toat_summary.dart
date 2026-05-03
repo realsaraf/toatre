@@ -19,9 +19,11 @@ class ToatSummary {
   });
 
   final String id;
+
   /// One of: meeting, call, appointment, event, deadline, task, checklist,
   /// errand, follow_up, idea
   final String template;
+
   /// Legacy kind field kept for backward compat; use [template] for dispatch.
   final String kind;
   final String tier;
@@ -34,6 +36,7 @@ class ToatSummary {
   final String? notes;
   final String status;
   final String? captureId;
+
   /// Template-specific typed data (phone, joinUrl, checklist items, etc.).
   final Map<String, dynamic> templateData;
   final DateTime? createdAt;
@@ -59,7 +62,9 @@ class ToatSummary {
       notes: json['notes'] as String?,
       status: json['status'] as String? ?? 'active',
       captureId: json['captureId'] as String?,
-      templateData: tdJson is Map<String, dynamic> ? tdJson : const <String, dynamic>{},
+      templateData: tdJson is Map<String, dynamic>
+          ? tdJson
+          : const <String, dynamic>{},
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
@@ -138,4 +143,3 @@ class ToatSummary {
     return DateTime.tryParse(value)?.toLocal();
   }
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -17,14 +17,17 @@ import {
   DuplicateIcon,
   EditIcon,
   EnvelopeGlyph,
+  GrabHandleIcon,
   LocationIcon,
   MessageGlyph,
   MoreIcon,
   PhoneGlyph,
+  PlusIcon,
   RescheduleIcon,
   ShareIcon,
   SnoozeIcon,
   SparkleIcon,
+  SteeringWheelIcon,
   TicketGlyph,
   ToothGlyph,
   TrashIcon,
@@ -361,6 +364,15 @@ export default function ToatDetailPage() {
   const [shareConnections, setShareConnections] = useState<SavedConnection[]>([]);
   const [selectedConnectionIds, setSelectedConnectionIds] = useState<string[]>([]);
 
+  // Inline checklist editing
+  type ChecklistItem = { id: string; text: string; done: boolean };
+  const [checklistLocal, setChecklistLocal] = useState<ChecklistItem[]>([]);
+  const checklistDragIndex = useRef<number | null>(null);
+
+  // Inline notes editing
+  const [notesLocal, setNotesLocal] = useState<string>("");
+  const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const now = new Date();
 
   useEffect(() => {
@@ -405,6 +417,13 @@ export default function ToatDetailPage() {
         if (!cancelled) {
           setToat(data.toat ?? null);
           setError(data.toat ? null : "Toat not found");
+          if (data.toat) {
+            setNotesLocal(data.toat.notes ?? "");
+            if (data.toat.template === "checklist") {
+              const cd = data.toat.templateData as { template: "checklist"; items: Array<{ id: string; text: string; done: boolean }> };
+              setChecklistLocal(cd.items ?? []);
+            }
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -455,6 +474,34 @@ export default function ToatDetailPage() {
     setToat(data.toat);
     setFlash(labelForPatch(body));
   };
+
+  const saveChecklistItems = useCallback(async (items: Array<{ id: string; text: string; done: boolean }>) => {
+    if (!user || !toat) return;
+    try {
+      const token = await user.getIdToken();
+      await fetch(`/api/toats/${toat.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ templateData: { template: "checklist", items } }),
+      });
+    } catch {
+      // silently ignore autosave failures
+    }
+  }, [user, toat]);
+
+  const saveNotesText = useCallback(async (text: string) => {
+    if (!user || !toat) return;
+    try {
+      const token = await user.getIdToken();
+      await fetch(`/api/toats/${toat.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: text || null }),
+      });
+    } catch {
+      // silently ignore autosave failures
+    }
+  }, [user, toat]);
 
   const deleteToat = async () => {
     if (!user || !toat) return;
@@ -701,6 +748,15 @@ export default function ToatDetailPage() {
 
         {flash ? <div style={styles.flash}>{flash}</div> : null}
 
+        {/* Quick actions — moved to top so they're always visible */}
+        <section style={styles.actionStrip}>
+          <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
+          <ActionStripButton icon={<SnoozeIcon size={20} />} label="Snooze" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("snooze", async () => { if (!toat.datetime) throw new Error("This toat has no time to snooze."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 60 * 60000).toISOString() }); })} />
+          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => void runMutation("reschedule", async () => { if (!toat.datetime) throw new Error("This toat has no time to reschedule."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
+          <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
+          <ActionStripButton icon={<TrashIcon size={20} />} label="Delete" tint="#DC2626" disabled={Boolean(actionState)} onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
+        </section>
+
         {toat.template === "meeting" ? (
           <button type="button" onClick={openPrimaryAction} style={{ ...styles.fullWidthPrimary, ...(isPhoneViewport ? styles.fullWidthPrimaryCompact : {}), background: visual.gradient }}>
             <VideoGlyph size={isPhoneViewport ? 20 : 24} /> {primaryAction.label}
@@ -732,9 +788,15 @@ export default function ToatDetailPage() {
                 <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
               ) : null}
               <div style={styles.buttonRow}>
-                <button type="button" onClick={openPrimaryAction} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                  <DirectionsIcon size={20} /> {primaryAction.label}
-                </button>
+                {maps ? (
+                  <button type="button" onClick={openPrimaryAction} style={{ ...styles.primaryButton, background: visual.gradient }}>
+                    <SteeringWheelIcon size={18} /> Directions
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setFlash("Edit this toat to add a location.")} style={styles.secondaryButton}>
+                    <LocationIcon size={18} /> Add location
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -751,16 +813,25 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
-            {toat.notes ? (
-              <SectionCard title="About this toat">
-                <p style={styles.bodyText}>{toat.notes}</p>
-                <div style={styles.captureLine}>
-                  <span style={styles.captureAvatar}>{user?.displayName?.[0]?.toUpperCase() ?? "T"}</span>
-                  <span>Captured {formatShortDate(new Date(toat.createdAt))}</span>
-                  <span style={{ color: visual.accent }}><SparkleIcon size={16} /></span>
-                </div>
-              </SectionCard>
-            ) : null}
+            <SectionCard title="Notes">
+              <textarea
+                style={styles.notesTextarea}
+                value={notesLocal}
+                onChange={(e) => {
+                  setNotesLocal(e.target.value);
+                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+                }}
+                onBlur={() => void saveNotesText(notesLocal)}
+                placeholder="Add a note…"
+                rows={3}
+              />
+              <div style={styles.captureLine}>
+                <span style={styles.captureAvatar}>{user?.displayName?.[0]?.toUpperCase() ?? "T"}</span>
+                <span>Captured {formatShortDate(new Date(toat.createdAt))}</span>
+                <span style={{ color: visual.accent }}><SparkleIcon size={16} /></span>
+              </div>
+            </SectionCard>
 
             {reminders.length ? (
               <SectionCard title="Reminders">
@@ -829,31 +900,21 @@ export default function ToatDetailPage() {
         {toat.template === "event" ? (
           <>
             {startDate ? (
-              <section style={styles.dualMetricCard}>
-                <div style={styles.metricCell}>
-                  <span style={{ color: visual.accent }}><ClockIcon size={24} /></span>
-                  <p style={styles.metricLabel}>Doors open</p>
-                  <p style={styles.metricTime}>{formatTime(new Date(startDate.getTime() - 60 * 60000))}</p>
-                  <p style={styles.metricDate}>{formatShortDate(startDate)}</p>
-                </div>
-                <div style={styles.metricDivider} />
-                <div style={styles.metricCell}>
-                  <span style={{ color: visual.accent }}><DocumentIcon size={24} /></span>
-                  <p style={styles.metricLabel}>Show starts</p>
-                  <p style={styles.metricTime}>{formatTime(startDate)}</p>
-                  <p style={styles.metricDate}>{formatShortDate(startDate)}</p>
-                </div>
-              </section>
+              <div style={styles.buttonRow}>
+                {maps ? (
+                  <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
+                    <SteeringWheelIcon size={18} /> Directions
+                  </button>
+                ) : (
+                  <button type="button" style={styles.secondaryButton} onClick={() => setFlash("Edit this toat to add a location.")}>
+                    <LocationIcon size={18} /> Add location
+                  </button>
+                )}
+                <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
+                  <TicketGlyph size={20} /> View tickets
+                </button>
+              </div>
             ) : null}
-
-            <div style={styles.buttonRow}>
-              <button type="button" onClick={() => { if (maps) window.open(maps, "_blank", "noopener,noreferrer"); }} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                <DirectionsIcon size={20} /> Directions
-              </button>
-              <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
-                <TicketGlyph size={20} /> View tickets
-              </button>
-            </div>
 
             <SectionCard title={toat.location ?? "Venue"}>
               <p style={styles.infoRowSubtitle}>{toat.location ?? "Venue details coming soon"}</p>
@@ -863,7 +924,7 @@ export default function ToatDetailPage() {
                 <span style={styles.mapLabel}>{toat.location ?? "Venue"}</span>
               </div>
               <div style={styles.mapFooter}>
-                <span><DirectionsIcon size={18} /> {startDate ? "25 min drive" : "Directions ready"}</span>
+                <span><SteeringWheelIcon size={18} /> {startDate ? "25 min drive" : "Directions ready"}</span>
                 <button type="button" style={styles.inlineTextButton} onClick={() => { if (maps) window.open(maps, "_blank", "noopener,noreferrer"); }}>
                   Open in Maps
                 </button>
@@ -884,42 +945,129 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
-            {toat.notes ? (
-              <SectionCard title="Note" action={<button type="button" style={styles.inlineTextButton}><EditIcon size={18} /> Edit</button>}>
-                <p style={styles.bodyText}>{toat.notes}</p>
-              </SectionCard>
-            ) : null}
+            <SectionCard title="Notes">
+              <textarea
+                style={styles.notesTextarea}
+                value={notesLocal}
+                onChange={(e) => {
+                  setNotesLocal(e.target.value);
+                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+                }}
+                onBlur={() => void saveNotesText(notesLocal)}
+                placeholder="Add a note…"
+                rows={3}
+              />
+            </SectionCard>
           </>
         ) : null}
 
         {toat.template === "checklist" ? (
           <>
-            <section style={styles.summaryStrip}>
-              <SummaryTile accent={visual.accent} title={`${checklistItems.length}`} subtitle="items" value={`${checklistItems.length}`} />
-              <SummaryTile accent={visual.accent} title="Checklist" subtitle="to buy" value={`${Math.max(0, checklistItems.length)}`} />
-              <SummaryTile accent={visual.accent} title={toat.location ?? "For me"} subtitle="where" value={toat.people[0] ?? "Personal"} />
-            </section>
-
-            <SectionCard title="Checklist" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
-              {checklistItems.length ? (
+            <SectionCard
+              title="Checklist"
+              action={
+                <button
+                  type="button"
+                  style={styles.inlineGhost}
+                  onClick={() => {
+                    const newItem = { id: Date.now().toString(), text: "", done: false };
+                    const next = [...checklistLocal, newItem];
+                    setChecklistLocal(next);
+                    void saveChecklistItems(next);
+                  }}
+                >
+                  <PlusIcon size={15} /> Add item
+                </button>
+              }
+            >
+              {checklistLocal.length ? (
                 <div style={styles.checklist}>
-                  {checklistItems.map((item) => (
-                    <div key={item.id} style={styles.checklistRow}>
-                      <span style={{ ...styles.checkCircle, ...(item.done ? { background: visual.accent } : {}) }} />
-                      <span style={{ ...styles.checkLabel, ...(item.done ? { textDecoration: "line-through", opacity: 0.5 } : {}) }}>{item.text}</span>
+                  {checklistLocal.map((item, i) => (
+                    <div
+                      key={item.id}
+                      style={{ ...styles.checklistRow, opacity: item.done ? 0.55 : 1 }}
+                      draggable
+                      onDragStart={() => { checklistDragIndex.current = i; }}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={() => {
+                        const from = checklistDragIndex.current;
+                        if (from === null || from === i) return;
+                        const next = [...checklistLocal];
+                        const [moved] = next.splice(from, 1);
+                        next.splice(i, 0, moved);
+                        checklistDragIndex.current = null;
+                        setChecklistLocal(next);
+                        void saveChecklistItems(next);
+                      }}
+                    >
+                      <span style={styles.grabHandle}><GrabHandleIcon size={15} /></span>
+                      <button
+                        type="button"
+                        style={{ ...styles.checkCircle, ...(item.done ? { background: visual.accent, borderColor: visual.accent } : {}) }}
+                        aria-label={item.done ? "Mark undone" : "Mark done"}
+                        onClick={() => {
+                          const updated = checklistLocal.map((c, j) => j === i ? { ...c, done: !c.done } : c);
+                          const undone = updated.filter((c) => !c.done);
+                          const done = updated.filter((c) => c.done);
+                          const next = [...undone, ...done];
+                          setChecklistLocal(next);
+                          void saveChecklistItems(next);
+                        }}
+                      />
+                      <input
+                        style={{ ...styles.checkLabel, ...(item.done ? { textDecoration: "line-through" } : {}), flex: 1, background: "transparent", border: "none", outline: "none", color: "inherit", fontSize: "inherit", fontFamily: "inherit", padding: 0 }}
+                        value={item.text}
+                        onChange={(e) => {
+                          setChecklistLocal(checklistLocal.map((c, j) => j === i ? { ...c, text: e.target.value } : c));
+                        }}
+                        onBlur={() => void saveChecklistItems(checklistLocal)}
+                        placeholder="Item text…"
+                      />
+                      <button
+                        type="button"
+                        style={styles.checkDeleteButton}
+                        aria-label="Remove item"
+                        onClick={() => {
+                          const next = checklistLocal.filter((_, j) => j !== i);
+                          setChecklistLocal(next);
+                          void saveChecklistItems(next);
+                        }}
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p style={styles.bodyText}>No items yet.</p>
+                <button
+                  type="button"
+                  style={{ ...styles.inlineGhost, width: "100%", justifyContent: "center", padding: "12px 0" }}
+                  onClick={() => {
+                    const newItem = { id: Date.now().toString(), text: "", done: false };
+                    setChecklistLocal([newItem]);
+                    void saveChecklistItems([newItem]);
+                  }}
+                >
+                  <PlusIcon size={18} /> Add your first item
+                </button>
               )}
             </SectionCard>
 
-            {toat.notes ? (
-              <SectionCard title="Note">
-                <p style={styles.bodyText}>{toat.notes}</p>
-              </SectionCard>
-            ) : null}
+            <SectionCard title="Notes">
+              <textarea
+                style={styles.notesTextarea}
+                value={notesLocal}
+                onChange={(e) => {
+                  setNotesLocal(e.target.value);
+                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+                }}
+                onBlur={() => void saveNotesText(notesLocal)}
+                placeholder="Add a note…"
+                rows={3}
+              />
+            </SectionCard>
 
             <SectionCard title="Ping me">
               <div style={styles.toggleRow}>
@@ -934,14 +1082,19 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
-            <div style={styles.buttonRow}>
-              <button type="button" style={styles.secondaryButton} onClick={() => void patchToat({ notes: `${toat.notes ?? ""}\n` })}>
-                <DocumentIcon size={20} /> View list
-              </button>
-              <button type="button" style={{ ...styles.primaryButton, background: visual.gradient }} onClick={openPrimaryAction}>
-                <DirectionsIcon size={20} /> Directions
-              </button>
-            </div>
+            {maps ? (
+              <div style={styles.buttonRow}>
+                <button type="button" style={{ ...styles.primaryButton, background: visual.gradient }} onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}>
+                  <SteeringWheelIcon size={18} /> Directions
+                </button>
+              </div>
+            ) : (
+              <div style={styles.buttonRow}>
+                <button type="button" style={styles.secondaryButton} onClick={() => setFlash("Edit this toat to add a location.")}>
+                  <LocationIcon size={18} /> Add location
+                </button>
+              </div>
+            )}
           </>
         ) : null}
 
@@ -950,7 +1103,20 @@ export default function ToatDetailPage() {
             <SectionCard title="Details">
               {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={formatDate(startDate)} subtitle={formatTime(startDate)} /> : null}
               {toat.location ? <InfoRow icon={<LocationIcon size={22} />} label="Where" title={toat.location} /> : null}
-              {toat.notes ? <InfoRow icon={<DocumentIcon size={22} />} label="Notes" title={toat.notes} /> : null}
+            </SectionCard>
+            <SectionCard title="Notes">
+              <textarea
+                style={styles.notesTextarea}
+                value={notesLocal}
+                onChange={(e) => {
+                  setNotesLocal(e.target.value);
+                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+                }}
+                onBlur={() => void saveNotesText(notesLocal)}
+                placeholder="Add a note…"
+                rows={3}
+              />
             </SectionCard>
           </>
         ) : null}
@@ -975,14 +1141,6 @@ export default function ToatDetailPage() {
             <p style={styles.tipText}>Toatre will keep this toat on track with your Pings and the timing you already set.</p>
           </section>
         ) : null}
-
-        <section style={styles.actionStrip}>
-          <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
-          <ActionStripButton icon={<SnoozeIcon size={20} />} label="Snooze" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("snooze", async () => { if (!toat.datetime) throw new Error("This toat has no time to snooze."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 60 * 60000).toISOString() }); })} />
-          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => void runMutation("reschedule", async () => { if (!toat.datetime) throw new Error("This toat has no time to reschedule."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
-          <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
-          <ActionStripButton icon={<TrashIcon size={20} />} label="Delete" tint="#DC2626" disabled={Boolean(actionState)} onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
-        </section>
 
         <div style={{ height: 40 }} />
       </main>
@@ -1971,26 +2129,61 @@ const styles: Record<string, React.CSSProperties> = {
   },
   checklist: {
     display: "grid",
-    gap: 14,
+    gap: 2,
   },
   checklistRow: {
     display: "flex",
     alignItems: "center",
-    gap: 14,
-    paddingBottom: 14,
-    borderBottom: "1px solid rgba(229,231,235,0.6)",
+    gap: 10,
+    padding: "10px 0",
+    borderBottom: "1px solid rgba(229,231,235,0.5)",
+  },
+  grabHandle: {
+    color: "#D1D5DB",
+    cursor: "grab",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
   },
   checkCircle: {
-    width: 26,
-    height: 26,
+    width: 22,
+    height: 22,
     borderRadius: "50%",
-    border: "2px solid rgba(34,197,94,0.65)",
+    border: "2px solid rgba(34,197,94,0.55)",
     flexShrink: 0,
+    cursor: "pointer",
+    background: "transparent",
+    padding: 0,
   },
   checkLabel: {
-    fontSize: 17,
+    fontSize: 15,
     color: "#111827",
-    fontWeight: 600,
+    fontWeight: 500,
+    lineHeight: 1.4,
+  },
+  checkDeleteButton: {
+    background: "transparent",
+    border: "none",
+    color: "#9CA3AF",
+    cursor: "pointer",
+    fontSize: 20,
+    lineHeight: 1,
+    padding: "0 4px",
+    flexShrink: 0,
+  },
+  notesTextarea: {
+    width: "100%",
+    background: "transparent",
+    border: "1px solid rgba(209,213,219,0.6)",
+    borderRadius: 10,
+    padding: "10px 12px",
+    fontSize: 15,
+    color: "#111827",
+    fontFamily: "inherit",
+    lineHeight: 1.6,
+    resize: "vertical" as const,
+    outline: "none",
+    boxSizing: "border-box" as const,
   },
   shareGrid: {
     display: "grid",
