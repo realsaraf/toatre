@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,11 +27,27 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   String? _error;
   String? _workingAction;
 
+  // Notes editing state
+  late TextEditingController _notesCtrl;
+  Timer? _notesSaveTimer;
+
+  // Checklist state (only used when template == 'checklist')
+  List<Map<String, dynamic>> _checklistItems = [];
+  bool _savingChecklist = false;
+
   @override
   void initState() {
     super.initState();
     _toat = widget.initialToat;
+    _notesCtrl = TextEditingController(text: _toat.notes ?? '');
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    _notesSaveTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -167,10 +184,75 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                       const SizedBox(height: 16),
                       _SectionCard(
                         title: 'About this toat',
-                        child: Text(
-                          _toat.notes!,
-                          style: TextStyles.body.copyWith(height: 1.6),
+                        child: TextField(
+                          controller: _notesCtrl,
+                          maxLines: null,
+                          style: TextStyles.body.copyWith(
+                            color: AppColors.text,
+                            height: 1.6,
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (_) {
+                            _notesSaveTimer?.cancel();
+                            _notesSaveTimer = Timer(
+                              const Duration(seconds: 2),
+                              _saveNotes,
+                            );
+                          },
                         ),
+                      ),
+                    ],
+                    if (_toat.template == 'checklist' &&
+                        _checklistItems.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _ChecklistSection(
+                        items: _checklistItems,
+                        saving: _savingChecklist,
+                        onReorder: (items) {
+                          setState(() => _checklistItems = items);
+                          _saveChecklist(items);
+                        },
+                        onToggle: (index) {
+                          final item = Map<String, dynamic>.from(
+                              _checklistItems[index]);
+                          item['done'] = !(item['done'] as bool? ?? false);
+                          final updated = [..._checklistItems];
+                          updated[index] = item;
+                          // Move done items to bottom
+                          final pending = updated.where((x) => !(x['done'] as bool? ?? false)).toList();
+                          final done = updated.where((x) => x['done'] as bool? ?? false).toList();
+                          final sorted = [...pending, ...done];
+                          setState(() => _checklistItems = sorted);
+                          _saveChecklist(sorted);
+                        },
+                        onTextChanged: (index, text) {
+                          final item = Map<String, dynamic>.from(
+                              _checklistItems[index]);
+                          item['text'] = text;
+                          final updated = [..._checklistItems];
+                          updated[index] = item;
+                          setState(() => _checklistItems = updated);
+                          _saveChecklist(updated);
+                        },
+                        onDelete: (index) {
+                          final updated = [..._checklistItems]..removeAt(index);
+                          setState(() => _checklistItems = updated);
+                          _saveChecklist(updated);
+                        },
+                        onAdd: () {
+                          final newItem = <String, dynamic>{
+                            'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                            'text': '',
+                            'done': false,
+                          };
+                          final updated = [..._checklistItems, newItem];
+                          setState(() => _checklistItems = updated);
+                          _saveChecklist(updated);
+                        },
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -212,8 +294,21 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       if (!mounted) {
         return;
       }
+      // Sync checklist items from templateData
+      List<Map<String, dynamic>> items = [];
+      if (toat.template == 'checklist') {
+        final raw = toat.templateData['items'];
+        if (raw is List<dynamic>) {
+          items = raw
+              .whereType<Map<String, dynamic>>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      }
       setState(() {
         _toat = toat;
+        _checklistItems = items;
+        _notesCtrl.text = toat.notes ?? '';
       });
     } catch (error) {
       if (!mounted) {
@@ -228,6 +323,40 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _saveNotes() async {
+    final notes = _notesCtrl.text.trim();
+    try {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        <String, Object?>{'notes': notes},
+      );
+      if (mounted) setState(() => _toat = updated);
+    } catch (_) {
+      // best-effort save — don't block the user
+    }
+  }
+
+  Future<void> _saveChecklist(List<Map<String, dynamic>> items) async {
+    if (_savingChecklist) return;
+    setState(() => _savingChecklist = true);
+    try {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        <String, Object?>{
+          'templateData': <String, Object?>{
+            ..._toat.templateData,
+            'items': items,
+          },
+        },
+      );
+      if (mounted) setState(() => _toat = updated);
+    } catch (_) {
+      // best-effort save
+    } finally {
+      if (mounted) setState(() => _savingChecklist = false);
     }
   }
 
@@ -322,8 +451,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   Future<void> _primaryAction() async {
     final uri = _primaryActionUri(_toat);
     if (uri == null) {
-      await Clipboard.setData(ClipboardData(text: _toat.title));
-      _showMessage('Copied the toat title.');
+      // No location: show a simple dialog / snack encouraging user to set it.
+      // For now just open Apple/Google Maps search with the toat title as hint.
+      _showMessage('Add a location to this toat in the edit view.');
       return;
     }
 
@@ -397,7 +527,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       return 'Directions';
     }
 
-    return 'Copy title';
+    return 'Add location';
   }
 
   Uri? _primaryActionUri(ToatSummary toat) {
@@ -868,9 +998,9 @@ IconData _detailActionIcon(ToatSummary toat) {
     if (link != null && link.isNotEmpty) return Icons.videocam_rounded;
   }
   if (toat.location != null && toat.location!.isNotEmpty) {
-    return Icons.navigation_rounded;
+    return Icons.drive_eta_rounded;
   }
-  return Icons.content_copy_rounded;
+  return Icons.add_location_alt_outlined;
 }
 
 List<Color> _detailActionColors(ToatSummary toat) {
@@ -888,4 +1018,207 @@ List<Color> _detailActionColors(ToatSummary toat) {
     return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];
   }
   return const [Color(0xFF8B5CF6), Color(0xFFEC4899)];
+}
+
+// ---------------------------------------------------------------------------
+// Checklist section — interactive, drag-reorderable
+// ---------------------------------------------------------------------------
+
+class _ChecklistSection extends StatefulWidget {
+  const _ChecklistSection({
+    required this.items,
+    required this.saving,
+    required this.onReorder,
+    required this.onToggle,
+    required this.onTextChanged,
+    required this.onDelete,
+    required this.onAdd,
+  });
+
+  final List<Map<String, dynamic>> items;
+  final bool saving;
+  final void Function(List<Map<String, dynamic>> items) onReorder;
+  final void Function(int index) onToggle;
+  final void Function(int index, String text) onTextChanged;
+  final void Function(int index) onDelete;
+  final VoidCallback onAdd;
+
+  @override
+  State<_ChecklistSection> createState() => _ChecklistSectionState();
+}
+
+class _ChecklistSectionState extends State<_ChecklistSection> {
+  final Map<int, TextEditingController> _controllers = {};
+  final Map<int, FocusNode> _focusNodes = {};
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    for (final f in _focusNodes.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  TextEditingController _ctrl(int index, String text) {
+    return _controllers.putIfAbsent(
+        index, () => TextEditingController(text: text));
+  }
+
+  FocusNode _focus(int index) {
+    return _focusNodes.putIfAbsent(index, () => FocusNode());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.items;
+    final doneCount = items.where((x) => x['done'] as bool? ?? false).length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+            child: Row(
+              children: [
+                Text(
+                  'Checklist',
+                  style: TextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                if (widget.saving)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  )
+                else
+                  Text(
+                    '$doneCount/${items.length}',
+                    style: TextStyles.small.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            onReorder: (oldIndex, newIndex) {
+              final updated = [...items];
+              if (newIndex > oldIndex) newIndex -= 1;
+              final item = updated.removeAt(oldIndex);
+              updated.insert(newIndex, item);
+              // Rebuild controllers map to match new order
+              _controllers.clear();
+              _focusNodes.clear();
+              widget.onReorder(updated);
+            },
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final done = item['done'] as bool? ?? false;
+              final text = item['text'] as String? ?? '';
+              final ctrl = _ctrl(index, text);
+              final focus = _focus(index);
+
+              // Keep controller text in sync when items reorder
+              if (ctrl.text != text && !focus.hasFocus) {
+                ctrl.text = text;
+              }
+
+              return KeyedSubtree(
+                key: ValueKey(item['id'] ?? index),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 3),
+                  child: Row(
+                    children: [
+                      // Drag handle
+                      const Icon(
+                        Icons.drag_handle_rounded,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      // Checkbox
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Checkbox(
+                          value: done,
+                          onChanged: (_) => widget.onToggle(index),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                      // Text field
+                      Expanded(
+                        child: TextField(
+                          controller: ctrl,
+                          focusNode: focus,
+                          style: TextStyles.body.copyWith(
+                            color: done
+                                ? AppColors.textMuted
+                                : AppColors.text,
+                            decoration: done
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (v) => widget.onTextChanged(index, v),
+                        ),
+                      ),
+                      // Delete button
+                      GestureDetector(
+                        onTap: () => widget.onDelete(index),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          // Add item button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+            child: TextButton.icon(
+              onPressed: widget.onAdd,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Add item'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

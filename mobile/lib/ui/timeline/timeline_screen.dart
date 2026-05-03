@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:permission_handler/permission_handler.dart';
@@ -388,9 +390,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Marked done.')));
+      _showConfetti(context);
     } catch (error) {
       if (!mounted) {
         return;
@@ -1179,7 +1179,7 @@ class _UpNextCard extends StatelessWidget {
                 ),
               ),
               child: Icon(
-                _templateIcon(toat.template),
+                _smartIcon(toat.template, toat.title),
                 color: Colors.white,
                 size: 21,
               ),
@@ -1361,7 +1361,7 @@ class _TimelineRow extends StatelessWidget {
                         ),
                       ),
                       child: Icon(
-                        _templateIcon(toat.template),
+                        _smartIcon(toat.template, toat.title),
                         color: Colors.white,
                         size: 20,
                       ),
@@ -1446,23 +1446,10 @@ class _DoneButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE4E7EC)),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                done ? Icons.check_circle_rounded : Icons.check_circle_outline,
-                size: 13,
-                color: AppColors.textMuted,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Done',
-                style: TextStyles.tiny.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          child: Icon(
+            done ? Icons.check_circle_rounded : Icons.check_circle_outline,
+            size: 16,
+            color: AppColors.textMuted,
           ),
         ),
       ),
@@ -1614,30 +1601,258 @@ List<Color> _templateColors(String template) {
   }
 }
 
-// Template-based icon dispatch
-IconData _templateIcon(String template) {
-  switch (template) {
-    case 'meeting':
-      return Icons.videocam_rounded;
-    case 'call':
-      return Icons.call_rounded;
-    case 'appointment':
-      return Icons.medical_services_outlined;
-    case 'event':
-      return Icons.confirmation_number_outlined;
-    case 'deadline':
-      return Icons.timer_outlined;
-    case 'checklist':
-      return Icons.checklist_rounded;
-    case 'errand':
-      return Icons.shopping_cart_outlined;
-    case 'follow_up':
-      return Icons.replay_rounded;
-    case 'idea':
-      return Icons.lightbulb_outline_rounded;
-    default: // task
-      return Icons.mail_outline_rounded;
+// Keyword-aware icon selector — also used by capture screen.
+IconData _smartIcon(String template, String title) {
+  final t = title.toLowerCase();
+  bool has(List<String> kws) => kws.any(t.contains);
+
+  // Sports
+  if (has(['soccer', 'football', 'futbol'])) return Icons.sports_soccer_rounded;
+  if (has(['basketball'])) return Icons.sports_basketball_rounded;
+  if (has(['baseball', 'softball'])) return Icons.sports_baseball_rounded;
+  if (has(['tennis', 'badminton'])) return Icons.sports_tennis_rounded;
+  if (has(['golf'])) return Icons.golf_course_rounded;
+  if (has(['volleyball'])) return Icons.sports_volleyball_rounded;
+  if (has(['gym', 'workout', 'fitness', 'exercise', 'training', 'yoga', 'pilates'])) {
+    return Icons.fitness_center_rounded;
   }
+  if (has(['swim', 'swimming', 'pool', 'diving'])) return Icons.pool_rounded;
+  if (has(['cycling', 'bike', 'bicycle'])) return Icons.directions_bike_rounded;
+  if (has(['run', 'jog', 'jogging', 'marathon'])) return Icons.directions_run_rounded;
+  if (has(['hike', 'hiking', 'trail'])) return Icons.hiking_rounded;
+  if (has(['sport', 'game', 'match', 'tournament'])) return Icons.sports_rounded;
+
+  // Kids / school
+  if (has(['sunday school', 'church school'])) return Icons.church_rounded;
+  if (has(['school', 'class', 'study', 'homework', 'lesson', 'tutor', 'exam', 'test'])) {
+    return Icons.school_rounded;
+  }
+  if (has(['university', 'college', 'campus'])) return Icons.account_balance_rounded;
+  if (has(['read', 'book', 'library', 'reading'])) return Icons.menu_book_rounded;
+
+  // Food & drink
+  if (has(['coffee', 'cafe', 'starbucks', 'latte'])) return Icons.local_cafe_rounded;
+  if (has(['grocery', 'groceries', 'supermarket', 'market'])) return Icons.shopping_cart_rounded;
+  if (has(['restaurant', 'dinner', 'lunch', 'breakfast', 'brunch', 'eat out', 'food'])) {
+    return Icons.restaurant_rounded;
+  }
+
+  // Medical
+  if (has(['pharmacy', 'drugstore', 'prescription', 'medication', 'medicine'])) {
+    return Icons.local_pharmacy_rounded;
+  }
+  if (has(['dentist', 'dental', 'teeth'])) return Icons.local_hospital_rounded;
+  if (has(['doctor', 'physician', 'clinic', 'hospital', 'medical', 'health', 'checkup'])) {
+    return Icons.local_hospital_rounded;
+  }
+  if (has(['haircut', 'barber', 'salon', 'hair'])) return Icons.content_cut_rounded;
+
+  // Transport / travel
+  if (has(['airport', 'fly', 'flight', 'plane', 'travel', 'trip'])) return Icons.flight_rounded;
+  if (has(['train', 'subway', 'metro', 'rail', 'transit', 'bus'])) {
+    return Icons.directions_transit_rounded;
+  }
+  if (has(['drive', 'driving', 'drop son', 'drop daughter', 'pick son', 'pick daughter',
+            'pick up', 'pickup', 'drop off'])) {
+    return Icons.directions_car_rounded;
+  }
+
+  // Faith
+  if (has(['church', 'mosque', 'temple', 'worship', 'prayer', 'pray', 'mass', 'sermon'])) {
+    return Icons.church_rounded;
+  }
+
+  // Work & comms
+  if (has(['zoom', 'teams', 'meet', 'google meet', 'virtual', 'video call', 'video meeting'])) {
+    return Icons.videocam_rounded;
+  }
+  if (has(['email', 'send email', 'reply to', 'respond to'])) return Icons.email_rounded;
+  if (has(['call', 'phone', 'ring', 'talk to', 'catch up with'])) return Icons.call_rounded;
+  if (has(['interview', 'hiring', 'recruiting'])) return Icons.work_rounded;
+  if (has(['deadline', 'due date', 'submit', 'submission'])) return Icons.timer_outlined;
+  if (has(['presentation', 'present', 'deck', 'slides', 'keynote'])) {
+    return Icons.present_to_all_rounded;
+  }
+  if (has(['document', 'report', 'write', 'draft', 'review', 'proposal'])) {
+    return Icons.description_rounded;
+  }
+  if (has(['meeting', 'standup', 'sync', 'catchup', 'catch up', 'huddle'])) {
+    return Icons.groups_rounded;
+  }
+
+  // Home & chores
+  if (has(['clean', 'tidy', 'vacuum', 'laundry', 'wash', 'iron', 'mop'])) {
+    return Icons.cleaning_services_rounded;
+  }
+  if (has(['cook', 'cooking', 'bake', 'baking', 'meal prep', 'prepare meal'])) {
+    return Icons.restaurant_rounded;
+  }
+  if (has(['repair', 'fix', 'plumber', 'electrician', 'maintenance', 'handyman'])) {
+    return Icons.build_rounded;
+  }
+  if (has(['buy', 'purchase', 'order', 'shop', 'store', 'mall'])) {
+    return Icons.shopping_bag_rounded;
+  }
+
+  // People
+  if (has(['baby', 'child', 'kid', 'toddler', 'infant'])) return Icons.child_care_rounded;
+  if (has(['pet', 'dog', 'cat', 'vet', 'puppy', 'kitten'])) return Icons.pets_rounded;
+
+  // Template defaults
+  switch (template) {
+    case 'meeting': return Icons.groups_rounded;
+    case 'call': return Icons.call_rounded;
+    case 'appointment': return Icons.event_rounded;
+    case 'event': return Icons.confirmation_number_outlined;
+    case 'deadline': return Icons.timer_outlined;
+    case 'task': return Icons.task_alt_rounded;
+    case 'checklist': return Icons.checklist_rounded;
+    case 'errand': return Icons.pin_drop_rounded;
+    case 'follow_up': return Icons.replay_rounded;
+    case 'idea': return Icons.lightbulb_outline_rounded;
+    default: return Icons.radio_button_unchecked_rounded;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Confetti system — throttled to once per 2 seconds
+// ---------------------------------------------------------------------------
+
+int _lastConfettiMs = 0;
+
+void _showConfetti(BuildContext context) {
+  final nowMs = DateTime.now().millisecondsSinceEpoch;
+  if (nowMs - _lastConfettiMs < 2000) return;
+  _lastConfettiMs = nowMs;
+
+  final size = MediaQuery.sizeOf(context);
+  final origin = Offset(size.width / 2, size.height * 0.35);
+
+  final overlay = Overlay.of(context, rootOverlay: true);
+  late OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => Positioned.fill(
+      child: IgnorePointer(
+        child: _ConfettiBurst(
+          origin: origin,
+          onDone: entry.remove,
+        ),
+      ),
+    ),
+  );
+  overlay.insert(entry);
+}
+
+class _ConfettiBurst extends StatefulWidget {
+  const _ConfettiBurst({required this.origin, required this.onDone});
+  final Offset origin;
+  final VoidCallback onDone;
+
+  @override
+  State<_ConfettiBurst> createState() => _ConfettiBurstState();
+}
+
+class _ConfettiBurstState extends State<_ConfettiBurst>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final List<_Particle> _particles;
+
+  static const _kColors = [
+    Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFF3B82F6),
+    Color(0xFFEC4899), Color(0xFF8B5CF6), Color(0xFFEF4444),
+    Color(0xFF06B6D4), Color(0xFFFBBF24),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final rnd = math.Random();
+    _particles = List.generate(32, (i) {
+      final angle = (i / 32) * 2 * math.pi + rnd.nextDouble() * 0.5;
+      final speed = 130.0 + rnd.nextDouble() * 180;
+      return _Particle(
+        dx: math.cos(angle) * speed,
+        dy: math.sin(angle) * speed - 80,
+        color: _kColors[i % _kColors.length],
+        width: 6 + rnd.nextDouble() * 6,
+        height: 4 + rnd.nextDouble() * 5,
+        rotation: rnd.nextDouble() * 2 * math.pi,
+      );
+    });
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..forward().whenComplete(widget.onDone);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) => CustomPaint(
+        painter: _ConfettiPainter(_ctrl.value, widget.origin, _particles),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _Particle {
+  const _Particle({
+    required this.dx,
+    required this.dy,
+    required this.color,
+    required this.width,
+    required this.height,
+    required this.rotation,
+  });
+  final double dx, dy;
+  final Color color;
+  final double width, height;
+  final double rotation;
+}
+
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter(this.progress, this.origin, this.particles);
+  final double progress;
+  final Offset origin;
+  final List<_Particle> particles;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final alpha = progress > 0.65
+        ? ((1.0 - progress) / 0.35).clamp(0.0, 1.0)
+        : 1.0;
+    final eased = Curves.easeOut.transform(progress);
+
+    for (final p in particles) {
+      final x = origin.dx + p.dx * eased;
+      final y = origin.dy + p.dy * eased + 220 * eased * eased; // gravity
+
+      final paint = Paint()
+        ..color = p.color.withValues(alpha: alpha)
+        ..style = PaintingStyle.fill;
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(p.rotation + progress * 7);
+      canvas.drawRect(
+        Rect.fromCenter(
+            center: Offset.zero, width: p.width, height: p.height),
+        paint,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
 }
 
 String _supportingText(ToatSummary toat) {
@@ -1725,7 +1940,7 @@ _TimelineAction? _primaryAction(ToatSummary toat) {
       toat.location!.isNotEmpty) {
     return _TimelineAction(
       label: 'Directions',
-      icon: Icons.navigation_rounded,
+      icon: Icons.drive_eta_rounded,
       uri: Uri.https('www.google.com', '/maps/search/', <String, String>{
         'api': '1',
         'query': toat.location!,

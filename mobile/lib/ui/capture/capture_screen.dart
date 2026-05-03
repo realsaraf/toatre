@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/capture_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
+import 'package:toatre/services/api_service.dart';
 import 'package:toatre/ui/timeline/timeline_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
@@ -319,13 +320,75 @@ class _TextCaptureState extends StatelessWidget {
   }
 }
 
-class _ReviewState extends StatelessWidget {
+class _ReviewState extends StatefulWidget {
   const _ReviewState({required this.capture});
 
   final CaptureProvider capture;
 
   @override
+  State<_ReviewState> createState() => _ReviewStateState();
+}
+
+class _ReviewStateState extends State<_ReviewState> {
+  bool _committing = false;
+
+  Future<void> _handleCommit() async {
+    if (widget.capture.selectedCount == 0) return;
+    setState(() => _committing = true);
+    try {
+      await widget.capture.commitCapture();
+      if (!mounted) return;
+      await context.read<ToatsProvider>().fetchToats();
+      widget.capture.reset();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const TimelineScreen()),
+        (_) => false,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _committing = false);
+    }
+  }
+
+  void _handleCancel() {
+    widget.capture.reset();
+    Navigator.of(context).pop();
+  }
+
+  void _openEditModal(ToatSummary toat) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditCaptureToatModal(
+        toat: toat,
+        onSave: (updated) {
+          widget.capture.updateToatLocally(updated);
+          // Also patch the server
+          final api = ApiService.instance;
+          api.patchJson(
+            '/api/toats/${toat.id}',
+            body: <String, Object?>{
+              'title': updated.title,
+              'datetime': updated.datetime?.toIso8601String(),
+              'location': updated.location,
+            },
+            authenticated: true,
+          );
+        },
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final capture = widget.capture;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
       child: Column(
@@ -334,16 +397,16 @@ class _ReviewState extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () {
-                  capture.reset();
-                  Navigator.of(context).pop();
-                },
+                onPressed: _handleCancel,
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
               const Spacer(),
               Text('Captured', style: TextStyles.heading2),
               const Spacer(),
-              const SizedBox(width: 48),
+              TextButton(
+                onPressed: _handleCancel,
+                child: const Text('Cancel'),
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -406,6 +469,7 @@ class _ReviewState extends StatelessWidget {
                   toat: toat,
                   selected: capture.isSelected(toat.id),
                   onToggle: () => capture.toggleSelection(toat.id),
+                  onEdit: () => _openEditModal(toat),
                 );
               },
             ),
@@ -414,20 +478,14 @@ class _ReviewState extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: capture.selectedCount == 0
+              onPressed: (capture.selectedCount == 0 || _committing)
                   ? null
-                  : () async {
-                      await context.read<ToatsProvider>().fetchToats();
-                      capture.reset();
-                      if (!context.mounted) return;
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const TimelineScreen(),
-                        ),
-                        (_) => false,
-                      );
-                    },
-              child: Text('Add to timeline (${capture.selectedCount})'),
+                  : _handleCommit,
+              child: Text(
+                _committing
+                    ? 'Adding…'
+                    : 'Add to timeline (${capture.selectedCount})',
+              ),
             ),
           ),
         ],
@@ -636,14 +694,17 @@ class _CaptureToatCard extends StatelessWidget {
     required this.toat,
     required this.selected,
     required this.onToggle,
+    required this.onEdit,
   });
 
   final ToatSummary toat;
   final bool selected;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
+    final icon = _captureSmartIcon(toat.template, toat.title);
     return GestureDetector(
       onTap: onToggle,
       child: Container(
@@ -671,6 +732,16 @@ class _CaptureToatCard extends StatelessWidget {
               color: selected ? AppColors.primary : AppColors.textMuted,
             ),
             const SizedBox(width: 12),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 17, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,6 +763,18 @@ class _CaptureToatCard extends StatelessWidget {
                   if (toat.location != null && toat.location!.isNotEmpty)
                     Text(toat.location!, style: TextStyles.small),
                 ],
+              ),
+            ),
+            GestureDetector(
+              onTap: onEdit,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
           ],
@@ -829,4 +912,238 @@ String _formatElapsed(int seconds) {
   final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
   final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
   return '$minutes:$remainingSeconds';
+}
+
+// ---------------------------------------------------------------------------
+// Edit modal — shown when user taps the pencil icon on a capture card
+// ---------------------------------------------------------------------------
+
+class _EditCaptureToatModal extends StatefulWidget {
+  const _EditCaptureToatModal({
+    required this.toat,
+    required this.onSave,
+  });
+
+  final ToatSummary toat;
+  final void Function(ToatSummary updated) onSave;
+
+  @override
+  State<_EditCaptureToatModal> createState() => _EditCaptureToatModalState();
+}
+
+class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _locationCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.toat.title);
+    _locationCtrl = TextEditingController(text: widget.toat.location ?? '');
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _locationCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final updated = widget.toat.copyWith(
+      title: _titleCtrl.text.trim(),
+      location: _locationCtrl.text.trim().isEmpty
+          ? null
+          : _locationCtrl.text.trim(),
+    );
+    widget.onSave(updated);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottom),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1C1F2E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Edit toat', style: TextStyles.heading3),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text('Title', style: TextStyles.smallMedium.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _titleCtrl,
+            autofocus: true,
+            style: TextStyles.body.copyWith(color: AppColors.text),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.bgElevated,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Location', style: TextStyles.smallMedium.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _locationCtrl,
+            style: TextStyles.body.copyWith(color: AppColors.text),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.bgElevated,
+              hintText: 'Optional',
+              hintStyle: TextStyle(color: AppColors.textMuted),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _save,
+              child: const Text('Save'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Smart icon — keyword-aware template icon selector (shared with timeline)
+// ---------------------------------------------------------------------------
+
+IconData _captureSmartIcon(String template, String title) {
+  final t = title.toLowerCase();
+
+  bool has(List<String> kws) => kws.any(t.contains);
+
+  // Sports
+  if (has(['soccer', 'football', 'futbol'])) return Icons.sports_soccer_rounded;
+  if (has(['basketball'])) return Icons.sports_basketball_rounded;
+  if (has(['baseball', 'softball'])) return Icons.sports_baseball_rounded;
+  if (has(['tennis', 'badminton'])) return Icons.sports_tennis_rounded;
+  if (has(['golf'])) return Icons.golf_course_rounded;
+  if (has(['volleyball'])) return Icons.sports_volleyball_rounded;
+  if (has(['gym', 'workout', 'fitness', 'exercise', 'training', 'yoga', 'pilates'])) {
+    return Icons.fitness_center_rounded;
+  }
+  if (has(['swim', 'swimming', 'pool', 'diving'])) return Icons.pool_rounded;
+  if (has(['cycling', 'bike', 'bicycle'])) return Icons.directions_bike_rounded;
+  if (has(['run', 'jog', 'jogging', 'marathon'])) return Icons.directions_run_rounded;
+  if (has(['hike', 'hiking', 'trail'])) return Icons.hiking_rounded;
+  if (has(['sport', 'game', 'match', 'tournament'])) return Icons.sports_rounded;
+
+  // Kids / school
+  if (has(['sunday school', 'church school'])) return Icons.church_rounded;
+  if (has(['school', 'class', 'study', 'homework', 'lesson', 'tutor', 'exam', 'test'])) {
+    return Icons.school_rounded;
+  }
+  if (has(['university', 'college', 'campus'])) return Icons.account_balance_rounded;
+  if (has(['read', 'book', 'library', 'reading'])) return Icons.menu_book_rounded;
+
+  // Food & drink
+  if (has(['coffee', 'cafe', 'starbucks', 'latte'])) return Icons.local_cafe_rounded;
+  if (has(['grocery', 'groceries', 'supermarket', 'market'])) return Icons.shopping_cart_rounded;
+  if (has(['restaurant', 'dinner', 'lunch', 'breakfast', 'brunch', 'eat out', 'food'])) {
+    return Icons.restaurant_rounded;
+  }
+
+  // Medical
+  if (has(['pharmacy', 'drugstore', 'prescription', 'medication', 'medicine'])) {
+    return Icons.local_pharmacy_rounded;
+  }
+  if (has(['dentist', 'dental', 'teeth'])) return Icons.local_hospital_rounded;
+  if (has(['doctor', 'physician', 'clinic', 'hospital', 'medical', 'health', 'checkup'])) {
+    return Icons.local_hospital_rounded;
+  }
+  if (has(['haircut', 'barber', 'salon', 'hair'])) return Icons.content_cut_rounded;
+
+  // Transport / travel
+  if (has(['airport', 'fly', 'flight', 'plane', 'travel', 'trip'])) return Icons.flight_rounded;
+  if (has(['train', 'subway', 'metro', 'rail', 'transit', 'bus'])) {
+    return Icons.directions_transit_rounded;
+  }
+  if (has(['drive', 'driving', 'drop son', 'drop daughter', 'pick son', 'pick daughter',
+            'pick up', 'pickup', 'drop off'])) {
+    return Icons.directions_car_rounded;
+  }
+
+  // Faith
+  if (has(['church', 'mosque', 'temple', 'worship', 'prayer', 'pray', 'mass', 'sermon'])) {
+    return Icons.church_rounded;
+  }
+
+  // Work & comms
+  if (has(['zoom', 'teams', 'meet', 'google meet', 'virtual', 'video call', 'video meeting'])) {
+    return Icons.videocam_rounded;
+  }
+  if (has(['email', 'send email', 'reply to', 'respond to'])) return Icons.email_rounded;
+  if (has(['call', 'phone', 'ring', 'talk to', 'catch up with'])) return Icons.call_rounded;
+  if (has(['interview', 'hiring', 'recruiting'])) return Icons.work_rounded;
+  if (has(['deadline', 'due date', 'submit', 'submission'])) return Icons.timer_outlined;
+  if (has(['presentation', 'present', 'deck', 'slides', 'keynote'])) {
+    return Icons.present_to_all_rounded;
+  }
+  if (has(['document', 'report', 'write', 'draft', 'review', 'proposal'])) {
+    return Icons.description_rounded;
+  }
+  if (has(['meeting', 'standup', 'sync', 'catchup', 'catch up', 'huddle'])) {
+    return Icons.groups_rounded;
+  }
+
+  // Home & chores
+  if (has(['clean', 'tidy', 'vacuum', 'laundry', 'wash', 'iron', 'mop'])) {
+    return Icons.cleaning_services_rounded;
+  }
+  if (has(['cook', 'cooking', 'bake', 'baking', 'meal prep', 'prepare meal'])) {
+    return Icons.restaurant_rounded;
+  }
+  if (has(['repair', 'fix', 'plumber', 'electrician', 'maintenance', 'handyman'])) {
+    return Icons.build_rounded;
+  }
+  if (has(['buy', 'purchase', 'order', 'shop', 'store', 'mall'])) {
+    return Icons.shopping_bag_rounded;
+  }
+
+  // People
+  if (has(['baby', 'child', 'kid', 'toddler', 'infant'])) return Icons.child_care_rounded;
+  if (has(['pet', 'dog', 'cat', 'vet', 'puppy', 'kitten'])) return Icons.pets_rounded;
+
+  // Template defaults
+  switch (template) {
+    case 'meeting': return Icons.groups_rounded;
+    case 'call': return Icons.call_rounded;
+    case 'appointment': return Icons.event_rounded;
+    case 'event': return Icons.confirmation_number_outlined;
+    case 'deadline': return Icons.timer_outlined;
+    case 'task': return Icons.task_alt_rounded;
+    case 'checklist': return Icons.checklist_rounded;
+    case 'errand': return Icons.pin_drop_rounded;
+    case 'follow_up': return Icons.replay_rounded;
+    case 'idea': return Icons.lightbulb_outline_rounded;
+    default: return Icons.radio_button_unchecked_rounded;
+  }
 }

@@ -28,6 +28,7 @@ class CaptureProvider extends ChangeNotifier {
   List<double> _waveform = List<double>.filled(18, 0.15);
   List<ToatSummary> _toats = <ToatSummary>[];
   Set<String> _selectedIds = <String>{};
+  String? _captureId;
 
   Timer? _elapsedTimer;
   Timer? _waveformTimer;
@@ -44,6 +45,8 @@ class CaptureProvider extends ChangeNotifier {
   bool get isProcessing => _status == CaptureStatus.processing;
   bool get isReviewing => _status == CaptureStatus.review;
   bool get isTextMode => _mode == CaptureInputMode.text;
+
+  String? get captureId => _captureId;
 
   bool isSelected(String toatId) => _selectedIds.contains(toatId);
 
@@ -213,6 +216,25 @@ class CaptureProvider extends ChangeNotifier {
     _waveform = List<double>.filled(18, 0.15);
     _toats = <ToatSummary>[];
     _selectedIds = <String>{};
+    _captureId = null;
+    notifyListeners();
+  }
+
+  /// Commit the reviewed capture: selected toats become active, others are deleted.
+  Future<void> commitCapture() async {
+    final id = _captureId;
+    if (id == null) return;
+    final selectedIds = _selectedIds.toList();
+    await _api.postJson(
+      '/api/captures/$id/commit',
+      body: <String, Object?>{'selectedIds': selectedIds},
+      authenticated: true,
+    );
+  }
+
+  /// Edit a toat that is currently in the review list (local only — also patches the server).
+  void updateToatLocally(ToatSummary updated) {
+    _toats = _toats.map((t) => t.id == updated.id ? updated : t).toList();
     notifyListeners();
   }
 
@@ -221,6 +243,7 @@ class CaptureProvider extends ChangeNotifier {
     required bool fromVoice,
   }) async {
     _transcript = response['transcript'] as String? ?? _transcript;
+    _captureId = response['captureId'] as String?;
     final toatsJson = response['toats'];
     final list = toatsJson is List<dynamic> ? toatsJson : const <dynamic>[];
     _toats = list
