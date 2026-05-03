@@ -795,19 +795,16 @@ export default function ToatDetailPage() {
                 <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
               ) : null}
               {maps && toat.location ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)" }}>
-                    <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
-                    <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
-                      <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
-                      <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
-                    </div>
-                  </div>
+                <>
+                  <LocationBlock
+                    location={toat.location}
+                    mapsUrl={maps}
+                    gradient={visual.gradient}
+                    accent={visual.accent}
+                    onChangeLocation={() => setLocationSearchOpen(true)}
+                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+                  />
                   <div style={styles.buttonRow}>
-                    <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                      <SteeringWheelIcon size={18} /> Directions
-                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -819,7 +816,7 @@ export default function ToatDetailPage() {
                       {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
                     </button>
                   </div>
-                </div>
+                </>
               ) : (
                 <div style={styles.buttonRow}>
                   <button type="button" onClick={() => setLocationSearchOpen(true)} style={styles.secondaryButton}>
@@ -932,46 +929,28 @@ export default function ToatDetailPage() {
             {startDate ? (
               <>
                 {maps && toat.location ? (
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)", marginBottom: 10 }}>
-                    <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
-                    <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
-                      <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
-                      <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
-                    </div>
-                  </div>
-                ) : null}
-                <div style={styles.buttonRow}>
-                  {maps ? (
-                    <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                      <SteeringWheelIcon size={18} /> Directions
-                    </button>
-                  ) : (
+                  <LocationBlock
+                    location={toat.location}
+                    mapsUrl={maps}
+                    gradient={visual.gradient}
+                    accent={visual.accent}
+                    onChangeLocation={() => setLocationSearchOpen(true)}
+                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+                  />
+                ) : (
+                  <div style={styles.buttonRow}>
                     <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
                       <LocationIcon size={18} /> Add location
                     </button>
-                  )}
+                  </div>
+                )}
+                <div style={styles.buttonRow}>
                   <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
                     <TicketGlyph size={20} /> View tickets
                   </button>
                 </div>
               </>
             ) : null}
-
-            <SectionCard title={toat.location ?? "Venue"}>
-              <p style={styles.infoRowSubtitle}>{toat.location ?? "Venue details coming soon"}</p>
-              <div style={styles.mapCard}>
-                <div style={styles.mapGrid} />
-                <span style={styles.mapPin} />
-                <span style={styles.mapLabel}>{toat.location ?? "Venue"}</span>
-              </div>
-              <div style={styles.mapFooter}>
-                <span><SteeringWheelIcon size={18} /> {startDate ? "25 min drive" : "Directions ready"}</span>
-                <button type="button" style={styles.inlineTextButton} onClick={() => { if (maps) window.open(maps, "_blank", "noopener,noreferrer"); }}>
-                  Open in Maps
-                </button>
-              </div>
-            </SectionCard>
 
             <SectionCard title="Your tickets" action={<button type="button" style={styles.inlineTextButton} onClick={openPrimaryAction}>View details</button>}>
               <div style={styles.ticketCard}>
@@ -1133,21 +1112,14 @@ export default function ToatDetailPage() {
             </SectionCard>
 
             {maps && toat.location ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)" }}>
-                  <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
-                  <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
-                    <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
-                    <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
-                  </div>
-                </div>
-                <div style={styles.buttonRow}>
-                  <button type="button" style={{ ...styles.primaryButton, background: visual.gradient }} onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}>
-                    <SteeringWheelIcon size={18} /> Directions
-                  </button>
-                </div>
-              </div>
+              <LocationBlock
+                location={toat.location}
+                mapsUrl={maps}
+                gradient={visual.gradient}
+                accent={visual.accent}
+                onChangeLocation={() => setLocationSearchOpen(true)}
+                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+              />
             ) : (
               <div style={styles.buttonRow}>
                 <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
@@ -1162,8 +1134,23 @@ export default function ToatDetailPage() {
           <>
             <SectionCard title="Details">
               {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={formatDate(startDate)} subtitle={formatTime(startDate)} /> : null}
-              {toat.location ? <InfoRow icon={<LocationIcon size={22} />} label="Where" title={toat.location} /> : null}
             </SectionCard>
+            {maps && toat.location ? (
+              <LocationBlock
+                location={toat.location}
+                mapsUrl={maps}
+                gradient={visual.gradient}
+                accent={visual.accent}
+                onChangeLocation={() => setLocationSearchOpen(true)}
+                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+              />
+            ) : (
+              <div style={styles.buttonRow}>
+                <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
+                  <LocationIcon size={18} /> Add location
+                </button>
+              </div>
+            )}
             {(showNotes || notesLocal.trim() !== "") ? (
             <SectionCard title="Notes">
               <textarea
@@ -1261,6 +1248,78 @@ export default function ToatDetailPage() {
           onClose={() => { setLocationSearchOpen(false); setLocationQuery(""); setLocationSuggestions([]); }}
         />
       ) : null}
+    </div>
+  );
+}
+
+function LocationBlock({
+  location,
+  mapsUrl,
+  gradient,
+  accent,
+  onChangeLocation,
+  onRemoveLocation,
+}: {
+  location: string;
+  mapsUrl: string;
+  gradient: string;
+  accent: string;
+  onChangeLocation: () => void;
+  onRemoveLocation: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copyAddress = () => {
+    void navigator.clipboard.writeText(location).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Address chip row */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)" }}>
+        <span style={{ color: accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
+        <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{location}</span>
+        <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+          {/* Copy button */}
+          <button
+            type="button"
+            onClick={copyAddress}
+            title="Copy address"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", borderRadius: 6, color: copied ? "#16A34A" : "#9CA3AF", display: "flex", alignItems: "center" }}
+          >
+            {copied ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            )}
+          </button>
+          <button type="button" onClick={onChangeLocation} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
+          <button type="button" onClick={onRemoveLocation} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
+        </div>
+      </div>
+      {/* Map visual */}
+      <div style={{ position: "relative", height: 160, borderRadius: 20, overflow: "hidden", background: "linear-gradient(180deg, #F8FAFC, #F3F4F6)", border: "1px solid rgba(229,231,235,0.8)" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)", backgroundSize: "44px 44px", transform: "skew(-14deg)" }} />
+        <span style={{ position: "absolute", left: "52%", top: "38%", width: 22, height: 22, borderRadius: "50% 50% 50% 0", background: `linear-gradient(135deg, #7C3AED, #5B3DF5)`, transform: "rotate(-45deg)", boxShadow: "0 20px 30px rgba(91,61,245,0.22)", display: "block" }} />
+        <span style={{ position: "absolute", left: "50%", top: "62%", transform: "translateX(-50%)", fontSize: 13, fontWeight: 700, color: "#6D28D9", whiteSpace: "nowrap", maxWidth: "80%", overflow: "hidden", textOverflow: "ellipsis" }}>{location}</span>
+        <button
+          type="button"
+          onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
+          style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: 10, padding: "5px 10px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", gap: 5 }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Open in Maps
+        </button>
+      </div>
+      {/* Directions button */}
+      <button
+        type="button"
+        onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
+        style={{ minHeight: 46, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: "none", borderRadius: 16, background: gradient, color: "#FFFFFF", fontSize: 15, fontWeight: 700, cursor: "pointer", width: "100%" }}
+      >
+        <SteeringWheelIcon size={18} /> Directions
+      </button>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -217,7 +218,20 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Clipboard.setData(ClipboardData(text: _toat.location!));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Address copied'), duration: Duration(seconds: 2)),
+                                      );
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Icon(Icons.copy_rounded, size: 15, color: AppColors.textMuted),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
                                   GestureDetector(
                                     onTap: _workingAction == null
                                         ? _removeLocation
@@ -246,6 +260,71 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                     ),
                     if (_toat.location != null &&
                         _toat.location!.isNotEmpty) ...[const SizedBox(height: 10),
+                      // Decorative map preview
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFFF8FAFC), Color(0xFFF3F4F6)],
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              // Grid lines
+                              CustomPaint(
+                                size: Size.infinite,
+                                painter: _MapGridPainter(),
+                              ),
+                              // Pin
+                              Positioned(
+                                left: MediaQuery.of(context).size.width * 0.46,
+                                top: 42,
+                                child: Transform.rotate(
+                                  angle: -0.785,
+                                  child: Container(
+                                    width: 22,
+                                    height: 22,
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Color(0xFF7C3AED), Color(0xFF5B3DF5)],
+                                      ),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(11),
+                                        topRight: Radius.circular(11),
+                                        bottomLeft: Radius.circular(0),
+                                        bottomRight: Radius.circular(11),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Address label
+                              Positioned(
+                                bottom: 10,
+                                left: 10,
+                                right: 10,
+                                child: Text(
+                                  _toat.location!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF6D28D9),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: Material(
@@ -1581,4 +1660,23 @@ class _LocationSearchContentState extends State<_LocationSearchContent> {
       ],
     );
   }
+}
+
+class _MapGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF94A3B8).withValues(alpha: 0.18)
+      ..strokeWidth = 1;
+    const step = 44.0;
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
