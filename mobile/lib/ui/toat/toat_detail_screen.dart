@@ -185,7 +185,55 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                           _InfoRow(label: 'When', value: _formatWhen(_toat)),
                           if (_toat.location != null &&
                               _toat.location!.isNotEmpty)
-                            _InfoRow(label: 'Where', value: _toat.location!),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 84,
+                                    child: Text(
+                                      'Where',
+                                      style: TextStyles.smallMedium.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      _toat.location!,
+                                      style: TextStyles.body,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: _workingAction == null
+                                        ? _openLocationSearch
+                                        : null,
+                                    child: Text(
+                                      'Change',
+                                      style: TextStyles.small.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: _workingAction == null
+                                        ? _removeLocation
+                                        : null,
+                                    child: const Text(
+                                      '×',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: AppColors.textMuted,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           if (_toat.people.isNotEmpty)
                             _InfoRow(
                               label: 'People',
@@ -196,6 +244,50 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         ],
                       ),
                     ),
+                    if (_toat.location != null &&
+                        _toat.location!.isNotEmpty) ...[const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: Material(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(16),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              final uri = _primaryActionUri(_toat);
+                              if (uri != null) {
+                                await launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              }
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.directions_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Directions',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     if ((_toat.notes != null && _toat.notes!.isNotEmpty) ||
                         _showNotesField) ...[
                       const SizedBox(height: 16),
@@ -452,9 +544,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     await _runAction('reschedule', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
-        <String, Object?>{
-          'datetime': combined.toIso8601String(),
-        },
+        <String, Object?>{'datetime': combined.toIso8601String()},
       );
       if (!mounted) {
         return;
@@ -531,25 +621,46 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   }
 
   void _openLocationSearch() {
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _LocationSearchSheet(
-        onSelect: (description) async {
-          Navigator.of(context).pop();
-          await _runAction('location', () async {
-            final updated = await context.read<ToatsProvider>().updateToat(
-              _toat.id,
-              <String, Object?>{'location': description},
-            );
-            if (!mounted) return;
-            setState(() => _toat = updated);
-            _showMessage('Location saved.');
-          });
-        },
+      barrierDismissible: true,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(
+          height: MediaQuery.of(dialogCtx).size.height * 0.6,
+          child: _LocationSearchContent(
+            onSelect: (description) async {
+              Navigator.of(dialogCtx).pop();
+              await _runAction('location', () async {
+                final updated = await context.read<ToatsProvider>().updateToat(
+                  _toat.id,
+                  <String, Object?>{'location': description},
+                );
+                if (!mounted) return;
+                setState(() => _toat = updated);
+                _showMessage('Location saved.');
+              });
+            },
+          ),
+        ),
       ),
     );
+  }
+
+  Future<void> _removeLocation() async {
+    await _runAction('rm-location', () async {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        <String, Object?>{'location': null},
+      );
+      if (!mounted) return;
+      setState(() => _toat = updated);
+      _showMessage('Location removed.');
+    });
   }
 
   Future<void> _shareToat() async {
@@ -1312,19 +1423,19 @@ class _ChecklistSectionState extends State<_ChecklistSection> {
 }
 
 // ---------------------------------------------------------------------------
-// Location search bottom sheet — uses Google Places Autocomplete REST API
+// Location search dialog content — uses Google Places Autocomplete REST API
 // ---------------------------------------------------------------------------
 
-class _LocationSearchSheet extends StatefulWidget {
-  const _LocationSearchSheet({required this.onSelect});
+class _LocationSearchContent extends StatefulWidget {
+  const _LocationSearchContent({required this.onSelect});
 
   final void Function(String description) onSelect;
 
   @override
-  State<_LocationSearchSheet> createState() => _LocationSearchSheetState();
+  State<_LocationSearchContent> createState() => _LocationSearchContentState();
 }
 
-class _LocationSearchSheetState extends State<_LocationSearchSheet> {
+class _LocationSearchContentState extends State<_LocationSearchContent> {
   final _ctrl = TextEditingController();
   Timer? _debounce;
   List<Map<String, String>> _suggestions = [];
@@ -1343,7 +1454,10 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
       setState(() => _suggestions = []);
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 400), () => _fetchSuggestions(q));
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _fetchSuggestions(q),
+    );
   }
 
   Future<void> _fetchSuggestions(String q) async {
@@ -1351,7 +1465,10 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
     try {
       const apiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
       if (apiKey.isEmpty) {
-        setState(() { _searching = false; _suggestions = []; });
+        setState(() {
+          _searching = false;
+          _suggestions = [];
+        });
         return;
       }
       final uri = Uri.parse(
@@ -1362,92 +1479,106 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
       if (!mounted) return;
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final predictions = (body['predictions'] as List<dynamic>? ?? [])
-          .map((p) => <String, String>{
-                'placeId': (p as Map<String, dynamic>)['place_id'] as String? ?? '',
-                'description': p['description'] as String? ?? '',
-              })
+          .map(
+            (p) => <String, String>{
+              'placeId':
+                  (p as Map<String, dynamic>)['place_id'] as String? ?? '',
+              'description': p['description'] as String? ?? '',
+            },
+          )
           .where((p) => p['description']!.isNotEmpty)
           .toList();
-      setState(() { _suggestions = predictions; _searching = false; });
+      setState(() {
+        _suggestions = predictions;
+        _searching = false;
+      });
     } catch (_) {
-      if (mounted) setState(() { _searching = false; _suggestions = []; });
+      if (mounted) {
+        setState(() {
+          _searching = false;
+          _suggestions = [];
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      maxChildSize: 0.95,
-      minChildSize: 0.4,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.bgElevated,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 8, 0),
+          child: Row(
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textMuted,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: _ctrl,
-                  autofocus: true,
-                  onChanged: _onQueryChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search for a place or address…',
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    suffixIcon: _searching
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: AppColors.bgSecondary,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: _suggestions.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemBuilder: (context, index) {
-                    final s = _suggestions[index];
-                    return ListTile(
-                      leading: const Icon(Icons.location_on_rounded, color: AppColors.primary),
-                      title: Text(s['description'] ?? '', style: TextStyles.body),
-                      onTap: () => widget.onSelect(s['description'] ?? ''),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    );
-                  },
-                ),
+              Text('Add location', style: TextStyles.heading3),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-        );
-      },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: TextField(
+            controller: _ctrl,
+            autofocus: true,
+            onChanged: _onQueryChanged,
+            decoration: InputDecoration(
+              hintText: 'Search for a place or address…',
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: _searching
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppColors.bgSecondary,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+            ),
+          ),
+        ),
+        Flexible(
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _suggestions.length,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            itemBuilder: (context, index) {
+              final s = _suggestions[index];
+              return ListTile(
+                leading: const Icon(
+                  Icons.location_on_rounded,
+                  color: AppColors.primary,
+                ),
+                title: Text(
+                  s['description'] ?? '',
+                  style: TextStyles.body,
+                ),
+                onTap: () => widget.onSelect(s['description'] ?? ''),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

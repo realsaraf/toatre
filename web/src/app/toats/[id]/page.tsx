@@ -794,30 +794,49 @@ export default function ToatDetailPage() {
               {phone ? (
                 <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
               ) : null}
-              <div style={styles.buttonRow}>
-                {maps ? (
-                  <button type="button" onClick={openPrimaryAction} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                    <SteeringWheelIcon size={18} /> Directions
-                  </button>
-                ) : (
+              {maps && toat.location ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)" }}>
+                    <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
+                    <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                      <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
+                      <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
+                    </div>
+                  </div>
+                  <div style={styles.buttonRow}>
+                    <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
+                      <SteeringWheelIcon size={18} /> Directions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; }
+                        void openShareModal();
+                      }}
+                      style={styles.secondaryButton}
+                    >
+                      {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={styles.buttonRow}>
                   <button type="button" onClick={() => setLocationSearchOpen(true)} style={styles.secondaryButton}>
                     <LocationIcon size={18} /> Add location
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (phone) {
-                      window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self");
-                      return;
-                    }
-                    void openShareModal();
-                  }}
-                  style={styles.secondaryButton}
-                >
-                  {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; }
+                      void openShareModal();
+                    }}
+                    style={styles.secondaryButton}
+                  >
+                    {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
+                  </button>
+                </div>
+              )}
             </SectionCard>
 
             {(showNotes || notesLocal.trim() !== "") ? (
@@ -841,7 +860,7 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
             ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
             )}
 
             {reminders.length ? (
@@ -911,20 +930,32 @@ export default function ToatDetailPage() {
         {toat.template === "event" ? (
           <>
             {startDate ? (
-              <div style={styles.buttonRow}>
-                {maps ? (
-                  <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
-                    <SteeringWheelIcon size={18} /> Directions
+              <>
+                {maps && toat.location ? (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)", marginBottom: 10 }}>
+                    <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
+                    <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                      <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
+                      <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
+                    </div>
+                  </div>
+                ) : null}
+                <div style={styles.buttonRow}>
+                  {maps ? (
+                    <button type="button" onClick={() => window.open(maps, "_blank", "noopener,noreferrer")} style={{ ...styles.primaryButton, background: visual.gradient }}>
+                      <SteeringWheelIcon size={18} /> Directions
+                    </button>
+                  ) : (
+                    <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
+                      <LocationIcon size={18} /> Add location
+                    </button>
+                  )}
+                  <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
+                    <TicketGlyph size={20} /> View tickets
                   </button>
-                ) : (
-                  <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
-                    <LocationIcon size={18} /> Add location
-                  </button>
-                )}
-                <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
-                  <TicketGlyph size={20} /> View tickets
-                </button>
-              </div>
+                </div>
+              </>
             ) : null}
 
             <SectionCard title={toat.location ?? "Venue"}>
@@ -972,7 +1003,7 @@ export default function ToatDetailPage() {
               />
             </SectionCard>
             ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
             )}
           </>
         ) : null}
@@ -1085,7 +1116,7 @@ export default function ToatDetailPage() {
               />
             </SectionCard>
             ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
             )}
 
             <SectionCard title="Ping me">
@@ -1101,11 +1132,21 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
-            {maps ? (
-              <div style={styles.buttonRow}>
-                <button type="button" style={{ ...styles.primaryButton, background: visual.gradient }} onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}>
-                  <SteeringWheelIcon size={18} /> Directions
-                </button>
+            {maps && toat.location ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(123,92,246,0.05)", border: "1.5px solid rgba(123,92,246,0.15)" }}>
+                  <span style={{ color: visual.accent, flexShrink: 0, paddingTop: 2, lineHeight: 1 }}><LocationIcon size={16} /></span>
+                  <span style={{ flex: 1, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>{toat.location}</span>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
+                    <button type="button" onClick={() => setLocationSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#7C3AED", fontWeight: 700, padding: "2px 6px", borderRadius: 6 }}>Change</button>
+                    <button type="button" onClick={() => void runMutation("rm-location", () => patchToat({ location: null }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", fontWeight: 400, padding: "0 4px", lineHeight: 1 }}>×</button>
+                  </div>
+                </div>
+                <div style={styles.buttonRow}>
+                  <button type="button" style={{ ...styles.primaryButton, background: visual.gradient }} onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}>
+                    <SteeringWheelIcon size={18} /> Directions
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={styles.buttonRow}>
@@ -1139,7 +1180,7 @@ export default function ToatDetailPage() {
               />
             </SectionCard>
             ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>+ Add notes</button>
+              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
             )}
           </>
         ) : null}
@@ -1238,7 +1279,7 @@ function RescheduleModal({
   onClose: () => void;
 }) {
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 12 }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 480, borderRadius: 28, background: "#FFFFFF", boxShadow: "0 28px 80px rgba(31,41,55,0.18)", padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#0F172A" }}>Reschedule</span>
@@ -1272,8 +1313,19 @@ function LocationSearchModal({
   onSelect: (description: string) => void;
   onClose: () => void;
 }) {
+  const [inputValue, setInputValue] = useState(query);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  const handleChange = (val: string) => {
+    setInputValue(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { void onQueryChange(val); }, 300);
+  };
+
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 12 }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(17,24,39,0.34)", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 520, borderRadius: 28, background: "#FFFFFF", boxShadow: "0 28px 80px rgba(31,41,55,0.18)", padding: 20, display: "flex", flexDirection: "column", gap: 14, maxHeight: "70vh" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#0F172A" }}>Add location</span>
@@ -1282,8 +1334,8 @@ function LocationSearchModal({
         <input
           type="text"
           autoFocus
-          value={query}
-          onChange={(e) => { void onQueryChange(e.target.value); }}
+          value={inputValue}
+          onChange={(e) => handleChange(e.target.value)}
           placeholder="Search for a place or address…"
           style={{ width: "100%", border: "1.5px solid rgba(123,92,246,0.3)", borderRadius: 12, padding: "10px 14px", fontSize: 15, color: "#111827", outline: "none", boxSizing: "border-box" }}
         />
@@ -1302,7 +1354,7 @@ function LocationSearchModal({
               </button>
             ))}
           </div>
-        ) : query.trim() ? (
+        ) : inputValue.trim() ? (
           <p style={{ fontSize: 14, color: "#6B7280", textAlign: "center" }}>No results. Try a different search.</p>
         ) : null}
       </div>

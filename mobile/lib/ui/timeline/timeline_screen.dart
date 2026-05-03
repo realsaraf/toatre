@@ -397,11 +397,15 @@ class _TimelineScreenState extends State<TimelineScreen> {
       setState(() => _removingToatId = toat.id);
       // Delay confetti by 800ms
       Future<void>.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) { _showConfetti(context); }
+        if (mounted) {
+          _showConfetti(context);
+        }
       });
       // Refresh list after animation completes (400ms)
       Future<void>.delayed(const Duration(milliseconds: 400), () {
-        if (!mounted) { return; }
+        if (!mounted) {
+          return;
+        }
         setState(() => _removingToatId = null);
         context.read<ToatsProvider>().fetchToats();
       });
@@ -1173,134 +1177,140 @@ class _UpNextCard extends StatelessWidget {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOut,
         child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _templateColors(toat.template).first.withValues(alpha: 0.10),
-              _templateColors(toat.template).last.withValues(alpha: 0.06),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: _templateColors(toat.template).last.withValues(alpha: 0.18),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(
-                  colors: _templateColors(toat.template),
-                ),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _templateColors(toat.template).first.withValues(alpha: 0.10),
+                  _templateColors(toat.template).last.withValues(alpha: 0.06),
+                ],
               ),
-              child: Icon(
-                _smartIcon(toat.template, toat.title),
-                color: Colors.white,
-                size: 21,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: _templateColors(
+                  toat.template,
+                ).last.withValues(alpha: 0.18),
               ),
             ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(
+                      colors: _templateColors(toat.template),
+                    ),
+                  ),
+                  child: Icon(
+                    _smartIcon(toat.template, toat.title),
+                    color: Colors.white,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.82),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppColors.softPurple),
+                            ),
+                            child: Text(
+                              'UP NEXT',
+                              style: TextStyles.tiny.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (toat.datetime != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.88),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                _formatCompactTime(toat.datetime!),
+                                style: TextStyles.tiny.copyWith(
+                                  color: AppColors.text,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        toat.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyles.smallMedium.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColors.softPurple),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _supportingText(toat),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyles.tiny.copyWith(
+                          color: AppColors.textSecondary,
                         ),
-                        child: Text(
-                          'UP NEXT',
+                      ),
+                      if (toat.datetime != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _timeToGo(toat.datetime!),
                           style: TextStyles.tiny.copyWith(
-                            color: AppColors.primary,
+                            color: _templateColors(toat.template).last,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ),
-                      const Spacer(),
-                      if (toat.datetime != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            _formatCompactTime(toat.datetime!),
-                            style: TextStyles.tiny.copyWith(
-                              color: AppColors.text,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 7),
-                  Text(
-                    toat.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyles.smallMedium.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _supportingText(toat),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyles.tiny.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  if (toat.datetime != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _timeToGo(toat.datetime!),
-                      style: TextStyles.tiny.copyWith(
-                        color: _templateColors(toat.template).last,
-                        fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (action != null) ...[
+                      _ActionButton(
+                        action: action,
+                        filled: true,
+                        onTap: onAction,
                       ),
-                    ),
+                      const SizedBox(height: 6),
+                    ],
+                    _DoneButton(done: toat.status == 'done', onTap: onDone),
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (action != null) ...[
-                  _ActionButton(action: action, filled: true, onTap: onAction),
-                  const SizedBox(height: 6),
-                ],
-                _DoneButton(done: toat.status == 'done', onTap: onDone),
+                ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
     );
@@ -1341,112 +1351,114 @@ class _TimelineRow extends StatelessWidget {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOut,
         child: Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 44,
-            child: Column(
-              children: [
-                Text(
-                  toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
-                  style: TextStyles.smallMedium.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  toat.datetime == null ? '' : _minuteSuffix(toat.datetime!),
-                  style: TextStyles.small,
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 2,
-            margin: const EdgeInsets.only(top: 6),
-            color: const Color(0x22374151),
-            height: 66,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              onTap: onTap,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x12000000),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 44,
+                child: Column(
                   children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: LinearGradient(
-                          colors: _templateColors(toat.template),
-                        ),
-                      ),
-                      child: Icon(
-                        _smartIcon(toat.template, toat.title),
-                        color: Colors.white,
-                        size: 20,
+                    Text(
+                      toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
+                      style: TextStyles.smallMedium.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            toat.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyles.smallMedium.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _supportingText(toat),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyles.tiny.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    if (action != null) ...[
-                      _ActionButton(action: action, onTap: onAction),
-                      const SizedBox(width: 5),
-                    ],
-                    _DoneButton(done: toat.status == 'done', onTap: onDone),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.textMuted,
-                      size: 20,
+                    Text(
+                      toat.datetime == null
+                          ? ''
+                          : _minuteSuffix(toat.datetime!),
+                      style: TextStyles.small,
                     ),
                   ],
                 ),
               ),
-            ),
+              Container(
+                width: 2,
+                margin: const EdgeInsets.only(top: 6),
+                color: const Color(0x22374151),
+                height: 66,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgElevated,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: LinearGradient(
+                              colors: _templateColors(toat.template),
+                            ),
+                          ),
+                          child: Icon(
+                            _smartIcon(toat.template, toat.title),
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                toat.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyles.smallMedium.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _supportingText(toat),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyles.tiny.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        if (action != null) ...[
+                          _ActionButton(action: action, onTap: onAction),
+                          const SizedBox(width: 5),
+                        ],
+                        _DoneButton(done: toat.status == 'done', onTap: onDone),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textMuted,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );
