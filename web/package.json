@@ -16,6 +16,7 @@
     "job:sync-google-calendar": "node scripts/sync-google-calendar.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1041.0",
     "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
     "googleapis": "^171.4.0",

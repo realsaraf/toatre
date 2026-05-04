@@ -715,6 +715,9 @@ export default function ToatDetailPage() {
                   <MenuAction label="Mark done" icon={<DoneIcon size={20} />} tone="#111827" onClick={() => void runMutation("mark-done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
                   <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => { setRescheduleValue(toat.datetime ? new Date(toat.datetime).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
                   <MenuAction label="Duplicate" icon={<DuplicateIcon size={20} />} tone="#111827" onClick={() => void runMutation("duplicate", duplicateToat)} />
+                  {toat.template === "event" ? (
+                    <MenuAction label={ticketUrl ? "Update ticket link" : "Add ticket link"} icon={<TicketGlyph size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setTicketInputOpen(true); }} />
+                  ) : null}
                   <MenuAction label="Delete" icon={<TrashIcon size={20} />} tone="#DC2626" onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
                 </div>
               ) : null}
@@ -945,17 +948,13 @@ export default function ToatDetailPage() {
                     </button>
                   </div>
                 )}
-                <div style={styles.buttonRow}>
-                  {ticketUrl ? (
+                {ticketUrl ? (
+                  <div style={styles.buttonRow}>
                     <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
                       <TicketGlyph size={20} /> View tickets
                     </button>
-                  ) : (
-                    <button type="button" onClick={() => setTicketInputOpen(true)} style={styles.secondaryButton}>
-                      <TicketGlyph size={20} /> Add ticket link
-                    </button>
-                  )}
-                </div>
+                  </div>
+                ) : null}
               </>
             ) : null}
 

@@ -221,14 +221,28 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                                   const SizedBox(width: 4),
                                   GestureDetector(
                                     onTap: () {
-                                      Clipboard.setData(ClipboardData(text: _toat.location!));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Address copied'), duration: Duration(seconds: 2)),
+                                      Clipboard.setData(
+                                        ClipboardData(text: _toat.location!),
+                                      );
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Address copied'),
+                                          duration: Duration(seconds: 2),
+                                        ),
                                       );
                                     },
                                     child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                      child: Icon(Icons.copy_rounded, size: 15, color: AppColors.textMuted),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
+                                      child: Icon(
+                                        Icons.copy_rounded,
+                                        size: 15,
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -259,7 +273,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                       ),
                     ),
                     if (_toat.location != null &&
-                        _toat.location!.isNotEmpty) ...[const SizedBox(height: 10),
+                        _toat.location!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
                       // Decorative map preview
                       ClipRRect(
                         borderRadius: BorderRadius.circular(20),
@@ -291,7 +306,10 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                                     height: 22,
                                     decoration: const BoxDecoration(
                                       gradient: LinearGradient(
-                                        colors: [Color(0xFF7C3AED), Color(0xFF5B3DF5)],
+                                        colors: [
+                                          Color(0xFF7C3AED),
+                                          Color(0xFF5B3DF5),
+                                        ],
                                       ),
                                       borderRadius: BorderRadius.only(
                                         topLeft: Radius.circular(11),
@@ -704,9 +722,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       context: context,
       barrierDismissible: true,
       builder: (dialogCtx) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
         clipBehavior: Clip.hardEdge,
         child: SizedBox(
@@ -1644,10 +1660,7 @@ class _LocationSearchContentState extends State<_LocationSearchContent> {
                   Icons.location_on_rounded,
                   color: AppColors.primary,
                 ),
-                title: Text(
-                  s['description'] ?? '',
-                  style: TextStyles.body,
-                ),
+                title: Text(s['description'] ?? '', style: TextStyles.body),
                 onTap: () => widget.onSelect(s['description'] ?? ''),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
