@@ -256,7 +256,7 @@ class CaptureProvider extends ChangeNotifier {
 
     for (final toat in _toats) {
       await AnalyticsService.logToatCreated(
-        kind: toat.kind,
+        kind: toat.tier,
         tier: toat.tier,
         fromVoice: fromVoice,
       );

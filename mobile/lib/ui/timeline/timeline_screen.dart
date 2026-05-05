@@ -380,16 +380,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _markDone(ToatSummary toat) async {
-    if (toat.status == 'done') {
+    if (toat.state == 'done') {
       return;
     }
 
     try {
       final updated = await context.read<ToatsProvider>().updateToat(
         toat.id,
-        <String, Object?>{'status': 'done'},
+        <String, Object?>{'state': 'done'},
       );
-      await AnalyticsService.logToatCompleted(kind: updated.kind);
+      await AnalyticsService.logToatCompleted(kind: updated.tier);
       if (!mounted) {
         return;
       }
@@ -1185,14 +1185,14 @@ class _UpNextCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  _templateColors(toat.template).first.withValues(alpha: 0.10),
-                  _templateColors(toat.template).last.withValues(alpha: 0.06),
+                  _toatColors(toat).first.withValues(alpha: 0.10),
+                  _toatColors(toat).last.withValues(alpha: 0.06),
                 ],
               ),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: _templateColors(
-                  toat.template,
+                color: _toatColors(
+                  toat,
                 ).last.withValues(alpha: 0.18),
               ),
             ),
@@ -1205,11 +1205,11 @@ class _UpNextCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     gradient: LinearGradient(
-                      colors: _templateColors(toat.template),
+                      colors: _toatColors(toat),
                     ),
                   ),
                   child: Icon(
-                    _smartIcon(toat.template, toat.title),
+                    _toatIcon(toat),
                     color: Colors.white,
                     size: 21,
                   ),
@@ -1284,7 +1284,7 @@ class _UpNextCard extends StatelessWidget {
                         Text(
                           _timeToGo(toat.datetime!),
                           style: TextStyles.tiny.copyWith(
-                            color: _templateColors(toat.template).last,
+                            color: _toatColors(toat).last,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1305,7 +1305,7 @@ class _UpNextCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                     ],
-                    _DoneButton(done: toat.status == 'done', onTap: onDone),
+                    _DoneButton(done: toat.state == 'done', onTap: onDone),
                   ],
                 ),
               ],
@@ -1405,11 +1405,11 @@ class _TimelineRow extends StatelessWidget {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             gradient: LinearGradient(
-                              colors: _templateColors(toat.template),
+                              colors: _toatColors(toat),
                             ),
                           ),
                           child: Icon(
-                            _smartIcon(toat.template, toat.title),
+                            _toatIcon(toat),
                             color: Colors.white,
                             size: 20,
                           ),
@@ -1445,7 +1445,7 @@ class _TimelineRow extends StatelessWidget {
                           _ActionButton(action: action, onTap: onAction),
                           const SizedBox(width: 5),
                         ],
-                        _DoneButton(done: toat.status == 'done', onTap: onDone),
+                        _DoneButton(done: toat.state == 'done', onTap: onDone),
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.chevron_right_rounded,
@@ -1624,6 +1624,31 @@ class _BottomItem extends StatelessWidget {
     );
   }
 }
+
+/// Derives a "kind key" from enrichments for color/icon dispatch.
+String _enrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'follow_up';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+  }
+  final thought = e['thought'];
+  if (thought is Map<String, dynamic>) return 'idea';
+  return 'task';
+}
+
+List<Color> _toatColors(ToatSummary toat) => _templateColors(_enrichmentKey(toat));
+
+IconData _toatIcon(ToatSummary toat) => _smartIcon(_enrichmentKey(toat), toat.title);
 
 // Template-based color dispatch
 List<Color> _templateColors(String template) {
@@ -2003,21 +2028,16 @@ class _ConfettiPainter extends CustomPainter {
 }
 
 String _supportingText(ToatSummary toat) {
-  final phone = _templatePhone(toat);
-  if (phone != null) {
-    return phone;
+  final comm = toat.communicationEnrichment;
+  if (comm != null) {
+    final phone = comm['phone'] as String?;
+    if (phone != null && phone.isNotEmpty) return phone;
+    final joinUrl = comm['joinUrl'] as String?;
+    if (joinUrl != null && joinUrl.isNotEmpty) return _meetingPlatform(joinUrl);
   }
-  if (toat.link != null &&
-      toat.link!.isNotEmpty &&
-      toat.template == 'meeting') {
-    return _meetingPlatform(toat.link!);
-  }
-  if (toat.location != null && toat.location!.isNotEmpty) {
-    return toat.location!;
-  }
-  if (toat.people.isNotEmpty) {
-    return toat.people.first;
-  }
+  final loc = toat.location;
+  if (loc != null && loc.isNotEmpty) return loc;
+  if (toat.people.isNotEmpty) return toat.people.first;
   return 'Personal';
 }
 
@@ -2040,57 +2060,36 @@ String _meetingPlatform(String link) {
   return 'Meeting link';
 }
 
-/// Returns the phone number from typed templateData — no regex needed.
-String? _templatePhone(ToatSummary toat) {
-  final td = toat.templateData;
-  switch (toat.template) {
-    case 'call':
-    case 'appointment':
-    case 'follow_up':
-      final phone = td['phone'];
-      if (phone is String && phone.isNotEmpty) return phone;
-      break;
-    default:
-      break;
-  }
-  return null;
-}
-
 _TimelineAction? _primaryAction(ToatSummary toat) {
-  final phone = _templatePhone(toat);
-  if (phone != null) {
-    return _TimelineAction(
-      label: 'Call',
-      icon: Icons.call_rounded,
-      uri: Uri(scheme: 'tel', path: _normalizedPhone(phone)),
-      type: _TimelineActionType.call,
-    );
-  }
-
-  if (toat.template == 'meeting') {
-    final joinUrl = toat.templateData['joinUrl'] as String?;
-    final link = joinUrl?.isNotEmpty == true ? joinUrl : toat.link;
-    if (link != null && link.isNotEmpty) {
+  final comm = toat.communicationEnrichment;
+  if (comm != null) {
+    final joinUrl = comm['joinUrl'] as String?;
+    if (joinUrl != null && joinUrl.isNotEmpty) {
       return _TimelineAction(
         label: 'Join',
         icon: Icons.videocam_rounded,
-        uri: _externalUri(link),
+        uri: _externalUri(joinUrl),
         type: _TimelineActionType.meeting,
       );
     }
+    final phone = comm['phone'] as String?;
+    if (phone != null && phone.isNotEmpty) {
+      return _TimelineAction(
+        label: 'Call',
+        icon: Icons.call_rounded,
+        uri: Uri(scheme: 'tel', path: _normalizedPhone(phone)),
+        type: _TimelineActionType.call,
+      );
+    }
   }
-
-  if ((toat.template == 'errand' ||
-          toat.template == 'appointment' ||
-          toat.location != null) &&
-      toat.location != null &&
-      toat.location!.isNotEmpty) {
+  final loc = toat.location;
+  if (loc != null && loc.isNotEmpty) {
     return _TimelineAction(
       label: 'Directions',
       icon: Icons.drive_eta_rounded,
       uri: Uri.https('www.google.com', '/maps/search/', <String, String>{
         'api': '1',
-        'query': toat.location!,
+        'query': loc,
       }),
       type: _TimelineActionType.directions,
     );

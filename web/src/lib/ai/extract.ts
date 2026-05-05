@@ -1,64 +1,23 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { MODELS } from "./openai";
 import { flushObservedOpenAI, getObservedOpenAI } from "./langfuse";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-// ─── Schemas ──────────────────────────────────────────────────────────────────
+// ─── Enrichment sub-schemas ───────────────────────────────────────────────────
 
-export const ToatTemplateSchema = z.enum([
-  "meeting",
-  "call",
-  "appointment",
-  "event",
-  "deadline",
-  "task",
-  "checklist",
-  "errand",
-  "follow_up",
-  "idea",
-]);
-
-export const ToatTierSchema = z.enum(["urgent", "important", "regular"]);
-
-// ─── Template data sub-schemas ────────────────────────────────────────────────
-
-const MeetingDataSchema = z.object({
-  template: z.literal("meeting"),
-  joinUrl: z.string().nullable(),
-  attendees: z.array(z.string()),
-  agenda: z.string().nullable(),
+const TimeSchema = z.object({
+  at: z.string().nullable().optional(),
+  startAt: z.string().nullable().optional(),
+  endAt: z.string().nullable().optional(),
+  dueAt: z.string().nullable().optional(),
+  reminderAt: z.string().nullable().optional(),
+  recurrence: z.string().nullable().optional(),
 });
 
-const CallDataSchema = z.object({
-  template: z.literal("call"),
-  phone: z.string().nullable(),
-  contactName: z.string().nullable(),
-});
-
-const AppointmentDataSchema = z.object({
-  template: z.literal("appointment"),
-  providerName: z.string().nullable(),
-  phone: z.string().nullable(),
-  address: z.string().nullable(),
-});
-
-const EventDataSchema = z.object({
-  template: z.literal("event"),
-  venue: z.string().nullable(),
-  ticketUrl: z.string().nullable(),
-  doorsAt: z.string().nullable(),
-});
-
-const DeadlineDataSchema = z.object({
-  template: z.literal("deadline"),
-  dueAt: z.string().nullable(),
-  softDeadline: z.boolean(),
-});
-
-const TaskDataSchema = z.object({
-  template: z.literal("task"),
-  completedAt: z.string().nullable(),
+const PlaceSchema = z.object({
+  placeName: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
 });
 
 const ChecklistItemSchema = z.object({
@@ -67,58 +26,63 @@ const ChecklistItemSchema = z.object({
   done: z.boolean(),
 });
 
-const ChecklistDataSchema = z.object({
-  template: z.literal("checklist"),
-  items: z.array(ChecklistItemSchema),
+const ActionSchema = z.object({
+  type: z.enum(["task", "checklist", "errand"]),
+  checklist: z.array(ChecklistItemSchema).optional(),
+  completedAt: z.string().nullable().optional(),
 });
 
-const ErrandDataSchema = z.object({
-  template: z.literal("errand"),
-  address: z.string().nullable(),
-  storeOrVenue: z.string().nullable(),
+const CommunicationSchema = z.object({
+  contact: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  channel: z.enum(["call", "message", "email"]).nullable().optional(),
+  joinUrl: z.string().nullable().optional(),
+  message: z.string().nullable().optional(),
 });
 
-const FollowUpDataSchema = z.object({
-  template: z.literal("follow_up"),
-  contactName: z.string().nullable(),
-  phone: z.string().nullable(),
-  email: z.string().nullable(),
-  channel: z.enum(["call", "email", "message"]).nullable(),
+const EventSchema = z.object({
+  eventKind: z.enum(["social", "family", "work", "public", "other"]).nullable().optional(),
+  host: z.string().nullable().optional(),
+  guests: z.array(z.string()).optional(),
+  rsvpStatus: z.enum(["going", "maybe", "declined"]).nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  ticketUrl: z.string().nullable().optional(),
 });
 
-const IdeaDataSchema = z.object({
-  template: z.literal("idea"),
-  revisitAt: z.string().nullable(),
-  tags: z.array(z.string()),
+const MoneySchema = z.object({
+  amount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  merchant: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
 });
 
-export const TemplateDataSchema = z.discriminatedUnion("template", [
-  MeetingDataSchema,
-  CallDataSchema,
-  AppointmentDataSchema,
-  EventDataSchema,
-  DeadlineDataSchema,
-  TaskDataSchema,
-  ChecklistDataSchema,
-  ErrandDataSchema,
-  FollowUpDataSchema,
-  IdeaDataSchema,
-]);
+const ThoughtSchema = z.object({
+  type: z.enum(["idea", "note", "decision", "memory"]).nullable().optional(),
+  content: z.string().nullable().optional(),
+  revisitAt: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const EnrichmentsSchema = z.object({
+  time: TimeSchema.optional(),
+  people: z.array(z.string()).optional(),
+  place: PlaceSchema.optional(),
+  action: ActionSchema.optional(),
+  communication: CommunicationSchema.optional(),
+  event: EventSchema.optional(),
+  money: MoneySchema.optional(),
+  thought: ThoughtSchema.optional(),
+});
+
+export const ToatTierSchema = z.enum(["urgent", "important", "regular"]);
 
 export const ExtractedToatSchema = z.object({
-  template: ToatTemplateSchema,
   tier: ToatTierSchema,
   title: z.string(),
-  datetime: z.string().nullable(),
-  endDatetime: z.string().nullable(),
-  location: z.string().nullable(),
-  link: z.string().nullable(),
-  people: z.array(z.string()),
   notes: z.string().nullable(),
-  // Accept any object from the LLM — the API route validates/normalises it with
-  // TemplateDataSchema.safeParse + emptyTemplateData fallback so a bad templateData
-  // never kills the whole capture.
-  templateData: z.record(z.string(), z.unknown()).optional().nullable(),
+  enrichments: EnrichmentsSchema.optional().default({}),
 });
 
 export const ExtractionResultSchema = z.object({
@@ -169,14 +133,8 @@ export async function extractToats(
       temperature: 0,
       response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content: getSystemPrompt(nowIso, timezone, options.connectionContext),
-        },
-        {
-          role: "user",
-          content: transcript,
-        },
+        { role: "system", content: getSystemPrompt(nowIso, timezone, options.connectionContext) },
+        { role: "user", content: transcript },
       ],
     });
 

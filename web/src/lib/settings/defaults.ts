@@ -1,12 +1,10 @@
-import type { ToatKind } from "@/types";
-
 export interface NotificationChannels {
   push: boolean;
   email: boolean;
   sms: boolean;
 }
 
-export type NotificationPreferences = Record<ToatKind, NotificationChannels>;
+export type NotificationPreferences = Record<string, NotificationChannels>;
 
 export type SyncDirection = "sourceToToatre" | "toatreToSource" | "twoWay";
 
@@ -22,7 +20,7 @@ export interface SyncConnection {
 
 export type SyncConnections = Record<string, SyncConnection>;
 
-export const TOAT_KINDS: ToatKind[] = ["task", "event", "meeting", "idea", "errand", "deadline"];
+export const TOAT_KINDS: string[] = ["task", "event", "meeting", "idea", "errand", "deadline"];
 
 const DEFAULT_CHANNELS: NotificationChannels = {
   push: true,

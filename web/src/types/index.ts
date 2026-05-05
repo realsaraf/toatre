@@ -1,45 +1,19 @@
-/**
+﻿/**
  * Shared TypeScript types for Toatre.
- * Mirror of mobile Dart models — keep in sync manually.
+ * Mirror of mobile Dart models â€” keep in sync manually.
+ *
+ * Design philosophy: A Toat is a simple captured unit of intent or awareness.
+ * Structure is added progressively via optional enrichment blocks.
  */
 import { ObjectId } from "mongodb";
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Core enums â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/**
- * The 10 toat templates.  Each discriminates a typed templateData payload.
- * The legacy `kind` field is retained in the DB for backward compat but
- * the template field is the single source of truth for UI dispatch.
- */
-export type ToatTemplate =
-  | "meeting"
-  | "call"
-  | "appointment"
-  | "event"
-  | "deadline"
-  | "task"
-  | "checklist"
-  | "errand"
-  | "follow_up"
-  | "idea";
-
-/** Coarse kind bucket still used for Ping policy.  Derived from template. */
-export type ToatKind =
-  | "task"
-  | "event"
-  | "meeting"
-  | "idea"
-  | "errand"
-  | "deadline";
-
+/** Urgency / priority. */
 export type ToatTier = "urgent" | "important" | "regular";
 
-export type ToatStatus =
-  | "active"
-  | "snoozed"
-  | "done"
-  | "cancelled"
-  | "archived";
+/** Lifecycle state. Replaces the legacy `status` field. */
+export type ToatState = "open" | "done" | "archived";
 
 export type CaptureSource =
   | "mic"
@@ -52,90 +26,80 @@ export type PingChannel = "local" | "push" | "email" | "sms" | "critical_alert";
 
 export type ShareRole = "view" | "edit";
 
-// ─── Template-specific data payloads ─────────────────────────────────────────
+// â”€â”€â”€ Enrichments (all optional, added progressively) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export interface MeetingData {
-  template: "meeting";
-  joinUrl: string | null;       // Zoom / Meet / Teams URL
-  attendees: string[];          // names / handles
-  agenda: string | null;        // free-text agenda
+export interface TimeEnrichment {
+  at?: string | null;           // ISO 8601 â€” primary moment
+  startAt?: string | null;      // ISO 8601 â€” start of a range
+  endAt?: string | null;        // ISO 8601 â€” end of a range
+  dueAt?: string | null;        // ISO 8601 â€” deadline
+  reminderAt?: string | null;   // ISO 8601 â€” when to Ping
+  recurrence?: string | null;   // RRULE or plain description
 }
 
-export interface CallData {
-  template: "call";
-  phone: string | null;         // E.164 or human-readable
-  contactName: string | null;   // resolved connection name
-}
-
-export interface AppointmentData {
-  template: "appointment";
-  providerName: string | null;  // "Dr Smith", "Dentist"
-  phone: string | null;         // clinic phone
-  address: string | null;       // physical address
-}
-
-export interface EventData {
-  template: "event";
-  venue: string | null;
-  ticketUrl: string | null;
-  doorsAt: string | null;       // ISO 8601
-}
-
-export interface DeadlineData {
-  template: "deadline";
-  dueAt: string | null;         // ISO 8601, may differ from scheduledAt
-  softDeadline: boolean;        // true = aspirational, false = hard
-}
-
-export interface TaskData {
-  template: "task";
-  completedAt: string | null;   // ISO 8601
+export interface PlaceEnrichment {
+  placeName?: string | null;    // human name ("Starbucks", "Dr Smith's Office")
+  address?: string | null;      // full address or coords
 }
 
 export interface ChecklistItem {
-  id: string;                   // client-generated stable key
+  id: string;
   text: string;
   done: boolean;
 }
 
-export interface ChecklistData {
-  template: "checklist";
-  items: ChecklistItem[];
+export interface ActionEnrichment {
+  type: "task" | "checklist" | "errand";
+  checklist?: ChecklistItem[];
+  completedAt?: string | null;
 }
 
-export interface ErrandData {
-  template: "errand";
-  address: string | null;
-  storeOrVenue: string | null;
+export interface CommunicationEnrichment {
+  contact?: string | null;      // person's name
+  phone?: string | null;        // E.164 or human-readable
+  email?: string | null;
+  channel?: "call" | "message" | "email" | null;
+  joinUrl?: string | null;      // Zoom/Meet/Teams URL
+  message?: string | null;      // specific text to convey
 }
 
-export interface FollowUpData {
-  template: "follow_up";
-  contactName: string | null;
-  phone: string | null;
-  email: string | null;
-  channel: "call" | "email" | "message" | null;
+export interface EventEnrichment {
+  eventKind?: "social" | "family" | "work" | "public" | "other" | null;
+  host?: string | null;
+  guests?: string[];
+  rsvpStatus?: "going" | "maybe" | "declined" | null;
+  venueName?: string | null;
+  address?: string | null;      // event venue address
+  ticketUrl?: string | null;
 }
 
-export interface IdeaData {
-  template: "idea";
-  revisitAt: string | null;     // ISO 8601
-  tags: string[];
+export interface MoneyEnrichment {
+  amount?: number | null;
+  currency?: string | null;     // ISO 4217 ("USD")
+  merchant?: string | null;
+  category?: string | null;
 }
 
-export type TemplateData =
-  | MeetingData
-  | CallData
-  | AppointmentData
-  | EventData
-  | DeadlineData
-  | TaskData
-  | ChecklistData
-  | ErrandData
-  | FollowUpData
-  | IdeaData;
+export interface ThoughtEnrichment {
+  type?: "idea" | "note" | "decision" | "memory" | null;
+  content?: string | null;
+  revisitAt?: string | null;    // ISO 8601
+  tags?: string[];
+}
 
-// ─── MongoDB document types ───────────────────────────────────────────────────
+/** All enrichments. Every block is optional. */
+export interface Enrichments {
+  time?: TimeEnrichment;
+  people?: string[];
+  place?: PlaceEnrichment;
+  action?: ActionEnrichment;
+  communication?: CommunicationEnrichment;
+  event?: EventEnrichment;
+  money?: MoneyEnrichment;
+  thought?: ThoughtEnrichment;
+}
+
+// â”€â”€â”€ MongoDB document types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface UserDoc {
   _id: ObjectId;
@@ -153,18 +117,11 @@ export interface ToatDoc {
   _id: ObjectId;
   ownerId: ObjectId;
   captureId: ObjectId | null;
-  template: ToatTemplate;
-  kind: ToatKind;               // coarse bucket for Ping policy; derived from template
   tier: ToatTier;
-  status: ToatStatus;
+  state: ToatState;
   title: string;
-  datetime: Date | null;
-  endDatetime: Date | null;
-  location: string | null;      // shared convenience field (address / venue)
-  link: string | null;          // shared convenience field (URL)
-  people: string[];             // names / @handles
   notes: string | null;
-  templateData: TemplateData;
+  enrichments: Enrichments;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -183,7 +140,7 @@ export interface CaptureDoc {
 
 export interface PersonDoc {
   _id: ObjectId;
-  userId: string;           // owner
+  userId: string;
   handle: string | null;
   displayName: string;
   email: string | null;
@@ -196,7 +153,7 @@ export interface AclDoc {
   _id: ObjectId;
   toatId: string;
   ownerId: string;
-  granteeId: string | null; // null = public
+  granteeId: string | null;
   role: ShareRole;
   token: string;
   expiresAt: Date | null;
@@ -222,9 +179,9 @@ export interface UserSettingsDoc {
   reminderPhone: string | null;
   pendingPhone?: string | null;
   phoneVerifiedAt?: Date | string | null;
-  workStart: string;        // "HH:MM" in user's timezone
+  workStart: string;
   workEnd: string;
-  notificationPreferences?: Record<ToatKind, {
+  notificationPreferences?: Record<string, {
     push: boolean;
     email: boolean;
     sms: boolean;
@@ -232,7 +189,7 @@ export interface UserSettingsDoc {
   updatedAt: Date;
 }
 
-// ─── API response types ───────────────────────────────────────────────────────
+// â”€â”€â”€ API response types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -240,21 +197,14 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-/** Shape returned by /api/toats and /api/captures — all dates as ISO strings */
+/** Shape returned by /api/toats and /api/captures â€” all dates as ISO strings. */
 export interface SerializedToat {
   id: string;
-  template: ToatTemplate;
-  kind: ToatKind;
   tier: ToatTier;
+  state: ToatState;
   title: string;
-  datetime: string | null;
-  endDatetime: string | null;
-  location: string | null;
-  link: string | null;
-  people: string[];
   notes: string | null;
-  status: ToatStatus;
-  templateData: TemplateData;
+  enrichments: Enrichments;
   captureId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -262,49 +212,116 @@ export interface SerializedToat {
 
 export interface ExtractionResult {
   toats: Array<{
-    template: ToatTemplate;
-    kind: ToatKind;
     tier: ToatTier;
     title: string;
-    datetime: string | null;     // ISO 8601
-    endDatetime: string | null;
-    location: string | null;
-    link: string | null;
-    people: string[];
     notes: string | null;
-    templateData: TemplateData;
+    enrichments: Enrichments;
   }>;
 }
 
-// ─── Template helper: derive coarse kind from template ───────────────────────
+// â”€â”€â”€ Migration helper: convert legacy templateData â†’ Enrichments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Used by the API serializer to normalise old MongoDB documents on read.
 
-export function templateToKind(template: ToatTemplate): ToatKind {
-  switch (template) {
-    case "meeting": return "meeting";
-    case "call": return "task";
-    case "appointment": return "errand";
-    case "event": return "event";
-    case "deadline": return "deadline";
-    case "task": return "task";
-    case "checklist": return "task";
-    case "errand": return "errand";
-    case "follow_up": return "task";
-    case "idea": return "idea";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function migrateTemplateData(doc: any): Enrichments {
+  const template: string = doc.template ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const td: Record<string, any> = doc.templateData ?? {};
+  const enrichments: Enrichments = {};
+
+  // Carry over top-level convenience fields
+  if (doc.datetime || doc.endDatetime) {
+    enrichments.time = {
+      at: doc.datetime ? new Date(doc.datetime).toISOString() : null,
+      endAt: doc.endDatetime ? new Date(doc.endDatetime).toISOString() : null,
+    };
   }
+  if (doc.location) {
+    enrichments.place = { address: doc.location };
+  }
+  if (doc.people?.length) {
+    enrichments.people = doc.people;
+  }
+
+  // Template-specific migration
+  switch (template) {
+    case "meeting":
+      enrichments.communication = {
+        joinUrl: td.joinUrl ?? null,
+        channel: "message",
+      };
+      if (td.attendees?.length) enrichments.people = [...(enrichments.people ?? []), ...td.attendees];
+      if (td.agenda) enrichments.thought = { type: "note", content: td.agenda };
+      break;
+    case "call":
+      enrichments.communication = {
+        contact: td.contactName ?? null,
+        phone: td.phone ?? null,
+        channel: "call",
+      };
+      break;
+    case "appointment":
+      enrichments.communication = {
+        contact: td.providerName ?? null,
+        phone: td.phone ?? null,
+      };
+      if (td.address) enrichments.place = { address: td.address };
+      break;
+    case "event":
+      enrichments.event = {
+        venueName: td.venue ?? null,
+        ticketUrl: td.ticketUrl ?? null,
+      };
+      if (td.doorsAt) {
+        enrichments.time = { ...enrichments.time, at: td.doorsAt };
+      }
+      break;
+    case "deadline":
+      enrichments.time = { ...enrichments.time, dueAt: td.dueAt ?? null };
+      break;
+    case "task":
+      enrichments.action = { type: "task", completedAt: td.completedAt ?? null };
+      break;
+    case "checklist":
+      enrichments.action = {
+        type: "checklist",
+        checklist: (td.items ?? []).map((i: { id: string; text: string; done: boolean }) => ({
+          id: i.id, text: i.text, done: i.done,
+        })),
+      };
+      break;
+    case "errand":
+      enrichments.action = { type: "errand" };
+      if (td.address || td.storeOrVenue) {
+        enrichments.place = {
+          placeName: td.storeOrVenue ?? null,
+          address: td.address ?? doc.location ?? null,
+        };
+      }
+      break;
+    case "follow_up":
+      enrichments.communication = {
+        contact: td.contactName ?? null,
+        phone: td.phone ?? null,
+        email: td.email ?? null,
+        channel: td.channel ?? null,
+      };
+      break;
+    case "idea":
+      enrichments.thought = {
+        type: "idea",
+        revisitAt: td.revisitAt ?? null,
+        tags: td.tags ?? [],
+      };
+      break;
+  }
+
+  return enrichments;
 }
 
-/** Build a default (empty) templateData for a given template discriminant. */
-export function emptyTemplateData(template: ToatTemplate): TemplateData {
-  switch (template) {
-    case "meeting":    return { template, joinUrl: null, attendees: [], agenda: null };
-    case "call":       return { template, phone: null, contactName: null };
-    case "appointment":return { template, providerName: null, phone: null, address: null };
-    case "event":      return { template, venue: null, ticketUrl: null, doorsAt: null };
-    case "deadline":   return { template, dueAt: null, softDeadline: false };
-    case "task":       return { template, completedAt: null };
-    case "checklist":  return { template, items: [] };
-    case "errand":     return { template, address: null, storeOrVenue: null };
-    case "follow_up":  return { template, contactName: null, phone: null, email: null, channel: null };
-    case "idea":       return { template, revisitAt: null, tags: [] };
-  }
+/** Map legacy status string → ToatState. */
+export function migrateStatus(status: string | undefined): ToatState {
+  if (status === "done") return "done";
+  if (status === "archived" || status === "cancelled") return "archived";
+  return "open";
 }

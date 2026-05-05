@@ -8,10 +8,10 @@ import { serializeToat } from "@/app/api/toats/route";
 /**
  * POST /api/captures/[id]/commit
  *
- * Promotes selected pending toats to "active" and deletes unselected ones.
- * Body: { selectedIds: string[] }
+ * Keeps selected toats and deletes unselected ones for a capture.
+ * Body: { selectedIds: string[], edits?: Record<id, partial-toat> }
  *
- * Returns: { toats: SerializedToat[] } — only the promoted toats
+ * Returns: { toats: SerializedToat[] } — only the kept toats
  */
 export async function POST(
   request: NextRequest,
@@ -34,19 +34,14 @@ export async function POST(
 
   const BodySchema = z.object({
     selectedIds: z.array(z.string()),
-    // Client may also send back edited toat fields keyed by id
     edits: z
       .record(
         z.string(),
         z.object({
           title: z.string().optional(),
           tier: z.enum(["urgent", "important", "regular"]).optional(),
-          datetime: z.string().nullable().optional(),
-          endDatetime: z.string().nullable().optional(),
-          location: z.string().nullable().optional(),
-          link: z.string().nullable().optional(),
-          people: z.array(z.string()).optional(),
           notes: z.string().nullable().optional(),
+          enrichments: z.record(z.string(), z.unknown()).optional(),
         })
       )
       .optional()
@@ -66,19 +61,15 @@ export async function POST(
   const captureOid = new ObjectId(captureId);
   const { toats } = await getCollections();
 
-  // Fetch all pending toats for this capture (owned by this user)
-  const pendingToats = await toats
-    .find({
-      captureId: captureOid,
-      ownerId,
-      status: "pending",
-    })
+  // Fetch all toats for this capture owned by this user
+  const captureToats = await toats
+    .find({ captureId: captureOid, ownerId })
     .toArray();
 
   const selectedSet = new Set(selectedIds);
 
-  // Delete unselected pending toats
-  const unselectedIds = pendingToats
+  // Delete unselected toats
+  const unselectedIds = captureToats
     .filter((t) => !selectedSet.has(t._id.toString()))
     .map((t) => t._id);
 
@@ -86,43 +77,34 @@ export async function POST(
     await toats.deleteMany({ _id: { $in: unselectedIds }, ownerId });
   }
 
-  // Promote selected to active, applying any edits
+  // Apply any edits to selected toats
   const now = new Date();
-  for (const toat of pendingToats) {
+  for (const toat of captureToats) {
     const toatIdStr = toat._id.toString();
     if (!selectedSet.has(toatIdStr)) continue;
 
     const edit = edits[toatIdStr];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const update: Record<string, any> = {
-      status: "active",
-      updatedAt: now,
-    };
+    if (!edit) continue;
 
-    if (edit) {
-      if (edit.title !== undefined) update.title = edit.title;
-      if (edit.tier !== undefined) update.tier = edit.tier;
-      if (edit.datetime !== undefined)
-        update.datetime = edit.datetime ? new Date(edit.datetime) : null;
-      if (edit.endDatetime !== undefined)
-        update.endDatetime = edit.endDatetime ? new Date(edit.endDatetime) : null;
-      if (edit.location !== undefined) update.location = edit.location;
-      if (edit.link !== undefined) update.link = edit.link;
-      if (edit.people !== undefined) update.people = edit.people;
-      if (edit.notes !== undefined) update.notes = edit.notes;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const update: Record<string, any> = { updatedAt: now };
+    if (edit.title !== undefined) update.title = edit.title;
+    if (edit.tier !== undefined) update.tier = edit.tier;
+    if (edit.notes !== undefined) update.notes = edit.notes;
+    if (edit.enrichments !== undefined) update.enrichments = { ...toat.enrichments, ...edit.enrichments };
 
     await toats.updateOne({ _id: toat._id, ownerId }, { $set: update });
   }
 
-  // Return the promoted toats
-  const promotedOids = pendingToats
+  // Return the kept toats
+  const keptOids = captureToats
     .filter((t) => selectedSet.has(t._id.toString()))
     .map((t) => t._id);
 
-  const savedToats = await toats.find({ _id: { $in: promotedOids }, ownerId }).toArray();
+  const savedToats = await toats.find({ _id: { $in: keptOids }, ownerId }).toArray();
 
   return NextResponse.json({
     toats: savedToats.map(serializeToat),
   });
 }
+

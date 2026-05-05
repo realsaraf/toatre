@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,27 +29,7 @@ import {
   UserAvatar,
   VideoGlyph,
 } from "@/components/mobile-ui";
-import type { ToatTemplate, TemplateData } from "@/types";
-
-type ToatTier = "urgent" | "important" | "regular";
-
-interface TimelineToat {
-  id: string;
-  template: ToatTemplate;
-  tier: ToatTier;
-  title: string;
-  datetime: string | null;
-  endDatetime: string | null;
-  location: string | null;
-  link: string | null;
-  people: string[];
-  notes: string | null;
-  status: string;
-  captureId: string | null;
-  templateData: TemplateData;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { SerializedToat as TimelineToat, Enrichments } from "@/types";
 
 interface DayGroup {
   key: string;
@@ -91,11 +71,28 @@ function relativeDayLabel(date: Date, now: Date) {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
+function toatTime(toat: TimelineToat): string | null {
+  const t = toat.enrichments?.time;
+  return t?.at ?? t?.startAt ?? t?.dueAt ?? null;
+}
+
+function toatEndTime(toat: TimelineToat): string | null {
+  return toat.enrichments?.time?.endAt ?? null;
+}
+
+function toatLocation(toat: TimelineToat): string | null {
+  return toat.enrichments?.place?.address ?? toat.enrichments?.place?.placeName ?? toat.enrichments?.event?.address ?? toat.enrichments?.event?.venueName ?? null;
+}
+
+function toatPeople(toat: TimelineToat): string[] {
+  return toat.enrichments?.people ?? [];
+}
+
 function buildDayGroups(toats: TimelineToat[], now: Date): DayGroup[] {
   const buckets = new Map<string, TimelineToat[]>();
 
   for (const toat of toats) {
-    const key = toat.datetime ? startOfDay(new Date(toat.datetime)).toISOString() : "undated";
+    const key = toatTime(toat) ? startOfDay(new Date(toatTime(toat)!)).toISOString() : "undated";
     const existing = buckets.get(key) ?? [];
     existing.push(toat);
     buckets.set(key, existing);
@@ -124,10 +121,12 @@ function buildDayGroups(toats: TimelineToat[], now: Date): DayGroup[] {
 
 function sortToats(toats: TimelineToat[]) {
   return [...toats].sort((left, right) => {
-    if (!left.datetime && !right.datetime) return left.createdAt.localeCompare(right.createdAt);
-    if (!left.datetime) return 1;
-    if (!right.datetime) return -1;
-    return new Date(left.datetime).getTime() - new Date(right.datetime).getTime();
+    const lt = toatTime(left);
+    const rt = toatTime(right);
+    if (!lt && !rt) return left.createdAt.localeCompare(right.createdAt);
+    if (!lt) return 1;
+    if (!rt) return -1;
+    return new Date(lt).getTime() - new Date(rt).getTime();
   });
 }
 
@@ -135,14 +134,15 @@ function buildSections(toats: TimelineToat[]): TimeSection[] {
   const sections = new Map<string, TimelineToat[]>();
 
   for (const toat of toats) {
-    if (!toat.datetime) {
+    const t = toatTime(toat);
+    if (!t) {
       const undated = sections.get("Any time") ?? [];
       undated.push(toat);
       sections.set("Any time", undated);
       continue;
     }
 
-    const hour = new Date(toat.datetime).getHours();
+    const hour = new Date(t).getHours();
     const label = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
     const existing = sections.get(label) ?? [];
     existing.push(toat);
@@ -164,7 +164,7 @@ function mapHref(location: string | null) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 }
 
-// ─── Template-based visual config ─────────────────────────────────────────────
+// â”€â”€â”€ Template-based visual config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ToatVisual {
   label: string;
@@ -177,7 +177,7 @@ interface ToatVisual {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }
 
-// Confetti burst — fires DOM particles from the element that triggered it.
+// Confetti burst â€” fires DOM particles from the element that triggered it.
 // Throttled: max once per 2 seconds globally via module-level ref.
 let lastConfettiTime = 0;
 const CONFETTI_COLORS = ["#6366F1","#A78BFA","#34D399","#FCD34D","#F472B6","#60A5FA","#FB923C"];
@@ -227,42 +227,30 @@ function fireConfetti(anchorEl?: HTMLElement | null) {
   }
 }
 
-const TEMPLATE_VISUAL: Record<ToatTemplate, ToatVisual> = {
-  meeting: {
-    label: "Meeting", cardGradient: "linear-gradient(135deg, #3B82F6, #2563EB)",
-    iconTint: "#3B82F6", softTint: "rgba(59,130,246,0.12)",
-    actionLabel: "Join", actionBackground: "rgba(59,130,246,0.12)", actionColor: "#2563EB",
-    Icon: VideoGlyph,
-  },
-  call: {
+const TEMPLATE_VISUAL: Record<string, ToatVisual> = {
+  communication_call: {
     label: "Call", cardGradient: "linear-gradient(135deg, #F43F5E, #EC4899)",
     iconTint: "#EC4899", softTint: "rgba(236,72,153,0.12)",
     actionLabel: "Call", actionBackground: "rgba(236,72,153,0.12)", actionColor: "#DB2777",
     Icon: PhoneGlyph,
   },
-  appointment: {
-    label: "Appointment", cardGradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
-    iconTint: "#8B5CF6", softTint: "rgba(139,92,246,0.12)",
-    actionLabel: "Directions", actionBackground: "rgba(139,92,246,0.12)", actionColor: "#6D28D9",
-    Icon: ToothGlyph,
+  communication_message: {
+    label: "Message", cardGradient: "linear-gradient(135deg, #06B6D4, #0891B2)",
+    iconTint: "#06B6D4", softTint: "rgba(6,182,212,0.12)",
+    actionLabel: "Message", actionBackground: "rgba(6,182,212,0.12)", actionColor: "#0891B2",
+    Icon: MessageGlyph,
+  },
+  communication_meeting: {
+    label: "Meeting", cardGradient: "linear-gradient(135deg, #3B82F6, #2563EB)",
+    iconTint: "#3B82F6", softTint: "rgba(59,130,246,0.12)",
+    actionLabel: "Join", actionBackground: "rgba(59,130,246,0.12)", actionColor: "#2563EB",
+    Icon: VideoGlyph,
   },
   event: {
     label: "Event", cardGradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
     iconTint: "#7C3AED", softTint: "rgba(124,58,237,0.12)",
     actionLabel: "Tickets", actionBackground: "rgba(124,58,237,0.12)", actionColor: "#6D28D9",
     Icon: TicketGlyph,
-  },
-  deadline: {
-    label: "Deadline", cardGradient: "linear-gradient(135deg, #EF4444, #DC2626)",
-    iconTint: "#EF4444", softTint: "rgba(239,68,68,0.12)",
-    actionLabel: "Open", actionBackground: "rgba(239,68,68,0.12)", actionColor: "#DC2626",
-    Icon: ClockIcon,
-  },
-  task: {
-    label: "Task", cardGradient: "linear-gradient(135deg, #F97316, #FB923C)",
-    iconTint: "#F97316", softTint: "rgba(249,115,22,0.12)",
-    actionLabel: "Open", actionBackground: "rgba(249,115,22,0.12)", actionColor: "#EA580C",
-    Icon: EnvelopeGlyph,
   },
   checklist: {
     label: "Checklist", cardGradient: "linear-gradient(135deg, #22C55E, #16A34A)",
@@ -276,76 +264,67 @@ const TEMPLATE_VISUAL: Record<ToatTemplate, ToatVisual> = {
     actionLabel: "Directions", actionBackground: "rgba(139,92,246,0.12)", actionColor: "#6D28D9",
     Icon: CartGlyph,
   },
-  follow_up: {
-    label: "Follow-up", cardGradient: "linear-gradient(135deg, #06B6D4, #0891B2)",
-    iconTint: "#06B6D4", softTint: "rgba(6,182,212,0.12)",
-    actionLabel: "Call", actionBackground: "rgba(6,182,212,0.12)", actionColor: "#0891B2",
-    Icon: MessageGlyph,
-  },
-  idea: {
+  thought: {
     label: "Idea", cardGradient: "linear-gradient(135deg, #F59E0B, #FBBF24)",
     iconTint: "#F59E0B", softTint: "rgba(245,158,11,0.12)",
     actionLabel: "Open", actionBackground: "rgba(245,158,11,0.12)", actionColor: "#D97706",
     Icon: BulbGlyph,
   },
+  task: {
+    label: "Task", cardGradient: "linear-gradient(135deg, #F97316, #FB923C)",
+    iconTint: "#F97316", softTint: "rgba(249,115,22,0.12)",
+    actionLabel: "Open", actionBackground: "rgba(249,115,22,0.12)", actionColor: "#EA580C",
+    Icon: EnvelopeGlyph,
+  },
 };
 
+function getToatVisualKey(enrichments: Enrichments | undefined): string {
+  if (!enrichments) return "task";
+  if (enrichments.communication?.channel === "call") return "communication_call";
+  if (enrichments.communication?.joinUrl) return "communication_meeting";
+  if (enrichments.communication) return "communication_message";
+  if (enrichments.event) return "event";
+  if (enrichments.action?.type === "checklist") return "checklist";
+  if (enrichments.action?.type === "errand") return "errand";
+  if (enrichments.thought) return "thought";
+  return "task";
+}
+
 function getToatVisual(toat: TimelineToat): ToatVisual {
-  return TEMPLATE_VISUAL[toat.template] ?? TEMPLATE_VISUAL.task;
+  const key = getToatVisualKey(toat.enrichments);
+  return TEMPLATE_VISUAL[key] ?? TEMPLATE_VISUAL.task;
 }
 
 function getPrimaryAction(toat: TimelineToat) {
-  const td = toat.templateData;
-  const directions = mapHref(toat.location);
+  const e = toat.enrichments;
+  const loc = toatLocation(toat);
+  const directions = loc ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}` : null;
 
-  switch (toat.template) {
-    case "meeting": {
-      const url = (td as { template: "meeting"; joinUrl: string | null }).joinUrl ?? toat.link;
-      if (url) return { label: "Join", href: url, external: true };
-      break;
-    }
-    case "call": {
-      const phone = (td as { template: "call"; phone: string | null }).phone;
-      if (phone) return { label: "Call", href: `tel:${phone.replace(/\s+/g, "")}`, external: true };
-      break;
-    }
-    case "follow_up": {
-      const fud = td as { template: "follow_up"; phone: string | null; email: string | null; channel: string | null };
-      if (fud.channel === "call" && fud.phone) return { label: "Call", href: `tel:${fud.phone.replace(/\s+/g, "")}`, external: true };
-      if (fud.channel === "email" && fud.email) return { label: "Email", href: `mailto:${fud.email}`, external: true };
-      break;
-    }
-    case "appointment": {
-      const appt = td as { template: "appointment"; address: string | null };
-      const href = mapHref(appt.address ?? toat.location);
-      if (href) return { label: "Directions", href, external: true };
-      break;
-    }
-    case "errand": {
-      const errand = td as { template: "errand"; address: string | null };
-      const href = mapHref(errand.address ?? toat.location);
-      if (href) return { label: "Directions", href, external: true };
-      break;
-    }
-    case "event": {
-      const ev = td as { template: "event"; ticketUrl: string | null };
-      const url = ev.ticketUrl ?? toat.link;
-      if (url) return { label: "Tickets", href: url, external: true };
-      if (directions) return { label: "Directions", href: directions, external: true };
-      break;
-    }
-    default:
-      if (directions) return { label: "Directions", href: directions, external: true };
+  if (e?.communication?.channel === "call" && e.communication.phone) {
+    return { label: "Call", href: `tel:${e.communication.phone.replace(/\s+/g, "")}`, external: true };
+  }
+  if (e?.communication?.channel === "email" && e.communication.email) {
+    return { label: "Email", href: `mailto:${e.communication.email}`, external: true };
+  }
+  if (e?.communication?.joinUrl) {
+    return { label: "Join", href: e.communication.joinUrl, external: true };
+  }
+  if (e?.event?.ticketUrl) {
+    return { label: "Tickets", href: e.event.ticketUrl, external: true };
+  }
+  if (directions) {
+    return { label: "Directions", href: directions, external: true };
   }
 
   return null;
 }
 
 function getCountdownLabel(toat: TimelineToat, now: Date) {
-  if (!toat.datetime) return "Any time";
+  const t = toatTime(toat);
+  if (!t) return "Any time";
 
-  const start = new Date(toat.datetime);
-  const end = toat.endDatetime ? new Date(toat.endDatetime) : null;
+  const start = new Date(t);
+  const end = toatEndTime(toat) ? new Date(toatEndTime(toat)!) : null;
   const diffMinutes = Math.round((start.getTime() - now.getTime()) / 60000);
 
   if (end && now >= start && now <= end) return "Happening now";
@@ -356,19 +335,22 @@ function getCountdownLabel(toat: TimelineToat, now: Date) {
 }
 
 function getToatDescription(toat: TimelineToat, now: Date) {
-  if (toat.location) return toat.location;
-  if (toat.people.length) return toat.people.join(", ");
+  const loc = toatLocation(toat);
+  const people = toatPeople(toat);
+  if (loc) return loc;
+  if (people.length) return people.join(", ");
   if (toat.notes) return toat.notes;
   return getCountdownLabel(toat, now);
 }
 
 function getUpNext(toats: TimelineToat[], now: Date) {
   return [...toats]
-    .filter((toat) => toat.datetime && toat.status === "active")
-    .sort((left, right) => new Date(left.datetime!).getTime() - new Date(right.datetime!).getTime())
+    .filter((toat) => toatTime(toat) && toat.state === "open")
+    .sort((left, right) => new Date(toatTime(left)!).getTime() - new Date(toatTime(right)!).getTime())
     .find((toat) => {
-      const start = new Date(toat.datetime!);
-      const end = toat.endDatetime ? new Date(toat.endDatetime) : null;
+      const start = new Date(toatTime(toat)!);
+      const endStr = toatEndTime(toat);
+      const end = endStr ? new Date(endStr) : null;
       if (end && now > end) return false;
       return start >= new Date(now.getTime() - 15 * 60000);
     });
@@ -483,7 +465,7 @@ export default function TimelinePage() {
     };
   }, []);
 
-  const activeToats = toats.filter((toat) => toat.status === "active");
+  const activeToats = toats.filter((toat) => toat.state === "open");
   const groups = buildDayGroups(activeToats, now);
   const resolvedSelectedDayKey = selectedDayKey && groups.some((group) => group.key === selectedDayKey)
     ? selectedDayKey
@@ -508,7 +490,7 @@ export default function TimelinePage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: "done" }),
+        body: JSON.stringify({ state: "done" }),
       });
 
       if (!response.ok) {
@@ -589,7 +571,7 @@ export default function TimelinePage() {
         {loading ? (
           <section style={{ ...styles.loadingCard, ...(isPhoneViewport ? styles.loadingCardCompact : {}) }}>
             <div style={styles.loadingSpinner} className="animate-spin" />
-            <p style={styles.loadingText}>Loading your timeline…</p>
+            <p style={styles.loadingText}>Loading your timelineâ€¦</p>
           </section>
         ) : null}
 
@@ -630,9 +612,9 @@ export default function TimelinePage() {
             <span style={{ ...styles.clearSparkle, ...(isPhoneViewport ? styles.clearSparkleCompact : {}) }}><SparkleIcon size={isPhoneViewport ? 14 : 18} /></span>
             <div style={{ minWidth: 0 }}>
               <p style={{ ...styles.clearHeadline, ...(isPhoneViewport ? styles.clearHeadlineCompact : {}) }}>
-                {lastToat?.datetime ? `You’re all clear after ${formatTime(new Date(lastToat.datetime))}` : "You’re all clear."}
+                {lastToat && toatTime(lastToat) ? `You're all clear after ${formatTime(new Date(toatTime(lastToat)!))}` : "You're all clear."}
               </p>
-              <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>Enjoy your {lastToat?.datetime && new Date(lastToat.datetime).getHours() < 17 ? "evening" : "day"}.</p>
+              <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>Enjoy your {lastToat && toatTime(lastToat) && new Date(toatTime(lastToat)!).getHours() < 17 ? "evening" : "day"}.</p>
             </div>
           </div>
           <div style={{ ...styles.clearScene, ...(isPhoneViewport ? styles.clearSceneCompact : {}) }}>
@@ -696,7 +678,7 @@ function UpNextCard({
   const router = useRouter();
   const visual = getToatVisual(toat);
   const Icon = visual.Icon;
-  const time = toat.datetime ? formatTime(new Date(toat.datetime)) : "Any time";
+  const time = toatTime(toat) ? formatTime(new Date(toatTime(toat)!)) : "Any time";
   const action = getPrimaryAction(toat);
 
   const runAction = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -750,8 +732,8 @@ function UpNextCard({
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ ...styles.upNextTitle, ...(compact ? styles.upNextTitleCompact : {}) }}>{toat.title}</h3>
-          {toat.location ? (
-            <p style={{ ...styles.upNextLocation, ...(compact ? styles.upNextLocationCompact : {}) }}><LocationIcon size={compact ? 14 : 18} /> {toat.location}</p>
+          {toatLocation(toat) ? (
+            <p style={{ ...styles.upNextLocation, ...(compact ? styles.upNextLocationCompact : {}) }}><LocationIcon size={compact ? 14 : 18} /> {toatLocation(toat)}</p>
           ) : null}
           <p style={{ ...styles.upNextCountdown, ...(compact ? styles.upNextCountdownCompact : {}), color: visual.actionColor }}>{getCountdownLabel(toat, new Date())}</p>
         </div>
@@ -812,7 +794,7 @@ function TimelineRow({
     }
   };
 
-  const railTime = toat.datetime ? formatRailTime(new Date(toat.datetime)) : { time: "Any", period: "time" };
+  const railTime = toatTime(toat) ? formatRailTime(new Date(toatTime(toat)!)) : { time: "Any", period: "time" };
 
   const doneRowRef = useRef<HTMLButtonElement>(null);
 

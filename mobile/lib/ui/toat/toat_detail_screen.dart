@@ -266,9 +266,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                             _InfoRow(
                               label: 'People',
                               value: _toat.people.join(', '),
-                            ),
-                          if (_toat.link != null && _toat.link!.isNotEmpty)
-                            _InfoRow(label: 'Link', value: _toat.link!),
+                            )
                         ],
                       ),
                     ),
@@ -412,7 +410,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         ),
                       ),
                     ],
-                    if (_toat.template == 'checklist' &&
+                    if (_toat.actionEnrichment?['type'] == 'checklist' &&
                         _checklistItems.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _ChecklistSection(
@@ -473,9 +471,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                       title: 'Details',
                       child: Column(
                         children: [
-                          _InfoRow(label: 'Kind', value: _toat.kind),
                           _InfoRow(label: 'Tier', value: _toat.tier),
-                          _InfoRow(label: 'Status', value: _toat.status),
+                          _InfoRow(label: 'State', value: _toat.state),
                           if (_toat.createdAt != null)
                             _InfoRow(
                               label: 'Captured',
@@ -507,10 +504,10 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       if (!mounted) {
         return;
       }
-      // Sync checklist items from templateData
+      // Sync checklist items from enrichments
       List<Map<String, dynamic>> items = [];
-      if (toat.template == 'checklist') {
-        final raw = toat.templateData['items'];
+      if (toat.actionEnrichment?['type'] == 'checklist') {
+        final raw = toat.actionEnrichment?['checklist'];
         if (raw is List<dynamic>) {
           items = raw
               .whereType<Map<String, dynamic>>()
@@ -559,9 +556,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
         <String, Object?>{
-          'templateData': <String, Object?>{
-            ..._toat.templateData,
-            'items': items,
+          'enrichments.action': <String, Object?>{
+            'type': 'checklist',
+            'checklist': items,
           },
         },
       );
@@ -577,9 +574,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     await _runAction('done', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
-        <String, Object?>{'status': 'done'},
+        <String, Object?>{'state': 'done'},
       );
-      await AnalyticsService.logToatCompleted(kind: updated.kind);
+      await AnalyticsService.logToatCompleted(kind: updated.tier);
       if (!mounted) {
         return;
       }
@@ -600,7 +597,10 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
         <String, Object?>{
-          'datetime': current.add(const Duration(hours: 24)).toIso8601String(),
+          'enrichments.time': <String, Object?>{
+            ..._toat.timeEnrichment ?? {},
+            'at': current.add(const Duration(hours: 24)).toIso8601String(),
+          },
         },
       );
       if (!mounted) {
@@ -641,7 +641,12 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     await _runAction('reschedule', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
-        <String, Object?>{'datetime': combined.toIso8601String()},
+        <String, Object?>{
+          'enrichments.time': <String, Object?>{
+            ..._toat.timeEnrichment ?? {},
+            'at': combined.toIso8601String(),
+          },
+        },
       );
       if (!mounted) {
         return;
@@ -811,11 +816,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     if (_detailPhone(toat) != null) {
       return 'Call';
     }
-    if (toat.template == 'meeting') {
-      final joinUrl = toat.templateData['joinUrl'] as String?;
-      final link = joinUrl?.isNotEmpty == true ? joinUrl : toat.link;
-      if (link != null && link.isNotEmpty) return 'Join';
-    }
+    final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
+    if (joinUrl != null && joinUrl.isNotEmpty) return 'Join';
     if (toat.location != null && toat.location!.isNotEmpty) {
       return 'Directions';
     }
@@ -829,11 +831,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       return Uri(scheme: 'tel', path: _normalizedPhone(phone));
     }
 
-    if (toat.template == 'meeting') {
-      final joinUrl = toat.templateData['joinUrl'] as String?;
-      final link = joinUrl?.isNotEmpty == true ? joinUrl : toat.link;
-      if (link != null && link.isNotEmpty) return _externalUri(link);
-    }
+    final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
+    if (joinUrl != null && joinUrl.isNotEmpty) return _externalUri(joinUrl);
 
     if (toat.location != null && toat.location!.isNotEmpty) {
       return Uri.https('www.google.com', '/maps/search/', <String, String>{
@@ -884,15 +883,15 @@ class _HeroSection extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _detailTemplateColors(toat.template).first.withValues(alpha: 0.10),
-            _detailTemplateColors(toat.template).last.withValues(alpha: 0.05),
+            _detailEnrichmentColors(toat).first.withValues(alpha: 0.10),
+            _detailEnrichmentColors(toat).last.withValues(alpha: 0.05),
             Colors.white.withValues(alpha: 0.86),
           ],
         ),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: _detailTemplateColors(
-            toat.template,
+          color: _detailEnrichmentColors(
+            toat,
           ).last.withValues(alpha: 0.12),
         ),
         boxShadow: const [
@@ -915,12 +914,12 @@ class _HeroSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   gradient: LinearGradient(
-                    colors: _detailTemplateColors(toat.template),
+                    colors: _detailEnrichmentColors(toat),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: _detailTemplateColors(
-                        toat.template,
+                      color: _detailEnrichmentColors(
+                        toat,
                       ).last.withValues(alpha: 0.24),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
@@ -928,7 +927,7 @@ class _HeroSection extends StatelessWidget {
                   ],
                 ),
                 child: Icon(
-                  _detailTemplateIcon(toat.template),
+                  _detailEnrichmentIcon(toat),
                   color: Colors.white,
                   size: 42,
                 ),
@@ -939,8 +938,8 @@ class _HeroSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Pill(
-                      label: toat.template.toUpperCase(),
-                      color: _detailTemplateColors(toat.template).last,
+                      label: _detailEnrichmentKey(toat).toUpperCase(),
+                      color: _detailEnrichmentColors(toat).last,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -1193,10 +1192,9 @@ String _detailSubtitle(ToatSummary toat) {
   if (toat.location != null && toat.location!.isNotEmpty) {
     return toat.location!;
   }
-  if (toat.link != null &&
-      toat.link!.isNotEmpty &&
-      toat.template == 'meeting') {
-    return _meetingPlatform(toat.link!);
+  final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
+  if (joinUrl != null && joinUrl.isNotEmpty) {
+    return _meetingPlatform(joinUrl);
   }
   if (toat.people.isNotEmpty) {
     return toat.people.join(', ');
@@ -1215,19 +1213,10 @@ String _meetingPlatform(String link) {
   return 'Meeting link';
 }
 
-/// Returns phone from typed templateData — no regex.
+/// Returns phone from communication enrichment.
 String? _detailPhone(ToatSummary toat) {
-  final td = toat.templateData;
-  switch (toat.template) {
-    case 'call':
-    case 'appointment':
-    case 'follow_up':
-      final phone = td['phone'];
-      if (phone is String && phone.isNotEmpty) return phone;
-      break;
-    default:
-      break;
-  }
+  final phone = toat.communicationEnrichment?['phone'];
+  if (phone is String && phone.isNotEmpty) return phone;
   return null;
 }
 
@@ -1283,13 +1272,38 @@ IconData _detailTemplateIcon(String template) {
   }
 }
 
+/// Derives a "kind key" from enrichments for color/icon dispatch.
+String _detailEnrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'follow_up';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+  }
+  final thought = e['thought'];
+  if (thought is Map<String, dynamic>) return 'idea';
+  return 'task';
+}
+
+List<Color> _detailEnrichmentColors(ToatSummary toat) =>
+    _detailTemplateColors(_detailEnrichmentKey(toat));
+
+IconData _detailEnrichmentIcon(ToatSummary toat) =>
+    _detailTemplateIcon(_detailEnrichmentKey(toat));
+
+
 IconData _detailActionIcon(ToatSummary toat) {
   if (_detailPhone(toat) != null) return Icons.call_rounded;
-  if (toat.template == 'meeting') {
-    final joinUrl = toat.templateData['joinUrl'] as String?;
-    final link = joinUrl?.isNotEmpty == true ? joinUrl : toat.link;
-    if (link != null && link.isNotEmpty) return Icons.videocam_rounded;
-  }
+  final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
+  if (joinUrl != null && joinUrl.isNotEmpty) return Icons.videocam_rounded;
   if (toat.location != null && toat.location!.isNotEmpty) {
     return Icons.drive_eta_rounded;
   }
@@ -1300,12 +1314,9 @@ List<Color> _detailActionColors(ToatSummary toat) {
   if (_detailPhone(toat) != null) {
     return const [Color(0xFFFB7185), Color(0xFFEC4899)];
   }
-  if (toat.template == 'meeting') {
-    final joinUrl = toat.templateData['joinUrl'] as String?;
-    final link = joinUrl?.isNotEmpty == true ? joinUrl : toat.link;
-    if (link != null && link.isNotEmpty) {
-      return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
-    }
+  final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
+  if (joinUrl != null && joinUrl.isNotEmpty) {
+    return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
   }
   if (toat.location != null && toat.location!.isNotEmpty) {
     return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];

@@ -272,7 +272,7 @@ class _ToatPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _templateColors(toat.template);
+    final colors = _templateColors(_shareEnrichmentKey(toat));
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -783,17 +783,14 @@ List<Color> _templateColors(String template) {
 }
 
 IconData _kindIcon(ToatSummary toat) {
-  switch (toat.template) {
+  final key = _shareEnrichmentKey(toat);
+  switch (key) {
     case 'meeting':
       return Icons.videocam_rounded;
     case 'call':
       return Icons.call_rounded;
-    case 'appointment':
-      return Icons.medical_services_rounded;
     case 'event':
       return Icons.calendar_month_rounded;
-    case 'deadline':
-      return Icons.flag_rounded;
     case 'checklist':
       return Icons.checklist_rounded;
     case 'errand':
@@ -805,6 +802,25 @@ IconData _kindIcon(ToatSummary toat) {
     default: // task
       return Icons.check_rounded;
   }
+}
+
+String _shareEnrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'follow_up';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+  }
+  if (e['thought'] is Map<String, dynamic>) return 'idea';
+  return 'task';
 }
 
 String _formatDateLine(ToatSummary toat) {

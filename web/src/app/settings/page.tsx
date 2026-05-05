@@ -14,7 +14,7 @@ import {
 } from "@/components/mobile-ui";
 import { TOAT_KINDS, type NotificationPreferences } from "@/lib/settings/defaults";
 import { useAuth } from "@/lib/auth/auth-context";
-import type { ToatKind } from "@/types";
+
 
 type SettingsTab = "profile" | "connections" | "pings" | "sync";
 type NoticeTone = "idle" | "success" | "error";
@@ -89,7 +89,7 @@ const EMPTY_CONNECTION_DRAFT: ConnectionDraft = {
   notes: "",
 };
 
-const KIND_LABELS: Record<ToatKind, string> = {
+const KIND_LABELS: Record<string, string> = {
   task: "Tasks",
   event: "Events",
   meeting: "Meetings",
@@ -587,7 +587,7 @@ export default function SettingsPage() {
     }
   }, [router, signOut]);
 
-  const toggleNotificationChannel = useCallback((kind: ToatKind, channel: keyof NotificationPreferences[ToatKind]) => {
+  const toggleNotificationChannel = useCallback((kind: string, channel: keyof NotificationPreferences[string]) => {
     setNotificationPreferences((current) => {
       if (!current) {
         return current;

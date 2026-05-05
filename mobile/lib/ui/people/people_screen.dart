@@ -331,7 +331,7 @@ class _ToatMiniCard extends StatelessWidget {
           children: [
             Text(toat.title, style: TextStyles.bodyMedium),
             const SizedBox(height: 6),
-            Text('${toat.kind} · ${toat.tier}', style: TextStyles.small),
+            Text('${_peopleEnrichmentKey(toat)} · ${toat.tier}', style: TextStyles.small),
           ],
         ),
       ),
@@ -394,4 +394,23 @@ class _IconCircleButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String _peopleEnrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'message';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+  }
+  if (e['thought'] is Map<String, dynamic>) return 'idea';
+  return 'task';
 }

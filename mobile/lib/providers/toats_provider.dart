@@ -83,22 +83,17 @@ class ToatsProvider extends ChangeNotifier {
     await _api.deleteJson('/api/toats/${toat.id}', authenticated: true);
     _toats = _toats.where((entry) => entry.id != toat.id).toList();
     notifyListeners();
-    await AnalyticsService.logToatDeleted(kind: toat.kind);
+    await AnalyticsService.logToatDeleted(kind: toat.tier);
   }
 
   Future<ToatSummary> duplicateToat(ToatSummary toat) async {
     final response = await _api.postJson(
       '/api/toats',
       body: <String, Object?>{
-        'kind': toat.kind,
         'tier': toat.tier,
         'title': '${toat.title} copy',
-        'datetime': toat.datetime?.toIso8601String(),
-        'endDatetime': toat.endDatetime?.toIso8601String(),
-        'location': toat.location,
-        'link': toat.link,
-        'people': toat.people,
         'notes': toat.notes,
+        'enrichments': toat.enrichments,
       },
       authenticated: true,
     );

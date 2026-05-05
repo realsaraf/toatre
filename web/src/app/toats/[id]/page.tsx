@@ -34,24 +34,19 @@ import {
   UserAvatar,
   VideoGlyph,
 } from "@/components/mobile-ui";
-import type { ToatTemplate, TemplateData } from "@/types";
+import type { Enrichments } from "@/types";
 
 type ToatTier = "urgent" | "important" | "regular";
+type ToatState = "open" | "done" | "archived";
 
 interface ToatDetail {
   id: string;
-  template: ToatTemplate;
   tier: ToatTier;
+  state: ToatState;
   title: string;
-  datetime: string | null;
-  endDatetime: string | null;
-  location: string | null;
-  link: string | null;
-  people: string[];
   notes: string | null;
-  status: string;
+  enrichments: Enrichments;
   captureId: string | null;
-  templateData: TemplateData;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,10 +79,12 @@ function formatShortDate(date: Date) {
 }
 
 function formatRelativeChip(toat: ToatDetail, now: Date) {
-  if (!toat.datetime) return null;
+  const t = toatTime(toat);
+  if (!t) return null;
 
-  const start = new Date(toat.datetime);
-  const end = toat.endDatetime ? new Date(toat.endDatetime) : null;
+  const start = new Date(t);
+  const endStr = toatEndTime(toat);
+  const end = endStr ? new Date(endStr) : null;
   const diffMinutes = Math.round((start.getTime() - now.getTime()) / 60000);
   const diffDays = Math.floor((new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
 
@@ -119,7 +116,25 @@ function mapHref(location: string | null) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 }
 
-// ─── Template-based visual + action dispatch ──────────────────────────────────
+function toatTime(toat: ToatDetail): string | null {
+  const t = toat.enrichments?.time;
+  return t?.at ?? t?.startAt ?? t?.dueAt ?? null;
+}
+
+function toatEndTime(toat: ToatDetail): string | null {
+  return toat.enrichments?.time?.endAt ?? null;
+}
+
+function toatLocation(toat: ToatDetail): string | null {
+  return toat.enrichments?.place?.address ?? toat.enrichments?.place?.placeName
+    ?? toat.enrichments?.event?.address ?? toat.enrichments?.event?.venueName ?? null;
+}
+
+function toatPeople(toat: ToatDetail): string[] {
+  return toat.enrichments?.people ?? [];
+}
+
+// ─── Enrichment-based visual + action dispatch ───────────────────────────────
 
 interface DetailVisual {
   kicker: string;
@@ -129,62 +144,39 @@ interface DetailVisual {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }
 
-const TEMPLATE_VISUAL: Record<ToatTemplate, DetailVisual> = {
-  meeting:    { kicker: "Meeting",    gradient: "linear-gradient(135deg, #3B82F6, #2563EB)", soft: "rgba(59,130,246,0.12)",   accent: "#2563EB", Icon: VideoGlyph },
-  call:       { kicker: "Call",       gradient: "linear-gradient(135deg, #F43F5E, #EC4899)", soft: "rgba(236,72,153,0.12)",   accent: "#DB2777", Icon: PhoneGlyph },
-  appointment:{ kicker: "Appointment",gradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)", soft: "rgba(139,92,246,0.12)",   accent: "#6D28D9", Icon: ToothGlyph },
-  event:      { kicker: "Event",      gradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)", soft: "rgba(124,58,237,0.12)",   accent: "#6D28D9", Icon: TicketGlyph },
-  deadline:   { kicker: "Deadline",   gradient: "linear-gradient(135deg, #EF4444, #DC2626)", soft: "rgba(239,68,68,0.12)",    accent: "#DC2626", Icon: ClockIcon },
-  task:       { kicker: "Task",       gradient: "linear-gradient(135deg, #F97316, #FB923C)", soft: "rgba(249,115,22,0.12)",   accent: "#EA580C", Icon: EnvelopeGlyph },
-  checklist:  { kicker: "Checklist",  gradient: "linear-gradient(135deg, #22C55E, #16A34A)", soft: "rgba(34,197,94,0.12)",    accent: "#16A34A", Icon: CartGlyph },
-  errand:     { kicker: "Errand",     gradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)", soft: "rgba(139,92,246,0.12)",   accent: "#6D28D9", Icon: CartGlyph },
-  follow_up:  { kicker: "Follow-up",  gradient: "linear-gradient(135deg, #06B6D4, #0891B2)", soft: "rgba(6,182,212,0.12)",    accent: "#0891B2", Icon: MessageGlyph },
-  idea:       { kicker: "Idea",       gradient: "linear-gradient(135deg, #F59E0B, #FBBF24)", soft: "rgba(245,158,11,0.12)",   accent: "#D97706", Icon: BulbGlyph },
-};
-
 function getVisual(toat: ToatDetail): DetailVisual {
-  return TEMPLATE_VISUAL[toat.template] ?? TEMPLATE_VISUAL.task;
+  const e = toat.enrichments;
+  if (e?.communication?.channel === "call" || (e?.communication?.phone && !e?.communication?.joinUrl))
+    return { kicker: "Call", gradient: "linear-gradient(135deg, #F43F5E, #EC4899)", soft: "rgba(236,72,153,0.12)", accent: "#DB2777", Icon: PhoneGlyph };
+  if (e?.communication?.joinUrl)
+    return { kicker: "Meeting", gradient: "linear-gradient(135deg, #3B82F6, #2563EB)", soft: "rgba(59,130,246,0.12)", accent: "#2563EB", Icon: VideoGlyph };
+  if (e?.communication)
+    return { kicker: "Message", gradient: "linear-gradient(135deg, #06B6D4, #0891B2)", soft: "rgba(6,182,212,0.12)", accent: "#0891B2", Icon: MessageGlyph };
+  if (e?.event)
+    return { kicker: "Event", gradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)", soft: "rgba(124,58,237,0.12)", accent: "#6D28D9", Icon: TicketGlyph };
+  if (e?.action?.type === "checklist")
+    return { kicker: "Checklist", gradient: "linear-gradient(135deg, #22C55E, #16A34A)", soft: "rgba(34,197,94,0.12)", accent: "#16A34A", Icon: CartGlyph };
+  if (e?.action?.type === "errand")
+    return { kicker: "Errand", gradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)", soft: "rgba(139,92,246,0.12)", accent: "#6D28D9", Icon: CartGlyph };
+  if (e?.thought)
+    return { kicker: "Idea", gradient: "linear-gradient(135deg, #F59E0B, #FBBF24)", soft: "rgba(245,158,11,0.12)", accent: "#D97706", Icon: BulbGlyph };
+  return { kicker: "Task", gradient: "linear-gradient(135deg, #F97316, #FB923C)", soft: "rgba(249,115,22,0.12)", accent: "#EA580C", Icon: EnvelopeGlyph };
 }
 
 function getPrimaryAction(toat: ToatDetail): ActionConfig {
-  const td = toat.templateData;
-  const directions = mapHref(toat.location);
+  const e = toat.enrichments;
+  const loc = toatLocation(toat);
+  const directions = mapHref(loc);
 
-  switch (toat.template) {
-    case "meeting": {
-      const url = (td as { template: "meeting"; joinUrl: string | null }).joinUrl ?? toat.link;
-      if (url) return { label: "Join now", href: url, external: true };
-      break;
-    }
-    case "call": {
-      const phone = (td as { template: "call"; phone: string | null }).phone;
-      if (phone) return { label: "Call", href: `tel:${phone.replace(/\s+/g, "")}`, external: true };
-      break;
-    }
-    case "event": {
-      const ticketUrl = (td as { template: "event"; ticketUrl: string | null }).ticketUrl ?? toat.link;
-      if (ticketUrl) return { label: "View tickets", href: ticketUrl, external: true };
-      if (directions) return { label: "Directions", href: directions, external: true };
-      break;
-    }
-    case "appointment":
-    case "errand": {
-      const addr = (td as { address: string | null }).address;
-      const href = mapHref(addr ?? toat.location);
-      if (href) return { label: "Directions", href, external: true };
-      break;
-    }
-    case "follow_up": {
-      const fud = td as { template: "follow_up"; phone: string | null; email: string | null; channel: string | null };
-      if (fud.channel === "call" && fud.phone) return { label: "Call", href: `tel:${fud.phone.replace(/\s+/g, "")}`, external: true };
-      if (fud.channel === "email" && fud.email) return { label: "Email", href: `mailto:${fud.email}`, external: true };
-      if (fud.phone) return { label: "Call", href: `tel:${fud.phone.replace(/\s+/g, "")}`, external: true };
-      break;
-    }
-    default:
-      if (directions) return { label: "Directions", href: directions, external: true };
-  }
-
+  if (e?.communication?.joinUrl) return { label: "Join now", href: e.communication.joinUrl, external: true };
+  if (e?.communication?.channel === "call" && e.communication.phone)
+    return { label: "Call", href: `tel:${e.communication.phone.replace(/\s+/g, "")}`, external: true };
+  if (e?.event?.ticketUrl) return { label: "View tickets", href: e.event.ticketUrl, external: true };
+  if (e?.communication?.channel === "email" && e.communication.email)
+    return { label: "Email", href: `mailto:${e.communication.email}`, external: true };
+  if (e?.communication?.phone)
+    return { label: "Call", href: `tel:${e.communication.phone.replace(/\s+/g, "")}`, external: true };
+  if (directions) return { label: "Directions", href: directions, external: true };
   return { label: "Open details", href: `/toats/${toat.id}`, external: false };
 }
 
@@ -197,27 +189,18 @@ function parseAgenda(notes: string | null) {
     .slice(0, 5);
 }
 
-/** For meetings: derive agenda lines from templateData.agenda or fall back to notes */
 function getAgendaLines(toat: ToatDetail) {
-  if (toat.template === "meeting") {
-    const md = toat.templateData as { template: "meeting"; agenda: string | null };
-    if (md.agenda) return parseAgenda(md.agenda);
-  }
   return parseAgenda(toat.notes);
 }
 
-/** For checklists: use real items from templateData */
 function getChecklistItems(toat: ToatDetail): Array<{ id: string; text: string; done: boolean }> {
-  if (toat.template === "checklist") {
-    const cd = toat.templateData as { template: "checklist"; items: Array<{ id: string; text: string; done: boolean }> };
-    return cd.items;
-  }
-  return [];
+  return toat.enrichments?.action?.checklist ?? [];
 }
 
 function buildReminderLines(toat: ToatDetail) {
-  if (!toat.datetime) return [];
-  const start = new Date(toat.datetime);
+  const t = toatTime(toat);
+  if (!t) return [];
+  const start = new Date(t);
   const tenMinutesBefore = new Date(start.getTime() - 10 * 60000);
   const dayBefore = new Date(start.getTime() - 24 * 60 * 60000);
   return [
@@ -427,10 +410,7 @@ export default function ToatDetailPage() {
           if (data.toat) {
             setNotesLocal(data.toat.notes ?? "");
             setShowNotes(Boolean(data.toat.notes?.trim()));
-            if (data.toat.template === "checklist") {
-              const cd = data.toat.templateData as { template: "checklist"; items: Array<{ id: string; text: string; done: boolean }> };
-              setChecklistLocal(cd.items ?? []);
-            }
+            setChecklistLocal(data.toat.enrichments?.action?.checklist ?? []);
           }
         }
       } catch (err) {
@@ -490,7 +470,7 @@ export default function ToatDetailPage() {
       await fetch(`/api/toats/${toat.id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ templateData: { template: "checklist", items } }),
+        body: JSON.stringify({ "enrichments.action": { type: "checklist", checklist: items } }),
       });
     } catch {
       // silently ignore autosave failures
@@ -537,16 +517,10 @@ export default function ToatDetailPage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        template: toat.template,
         tier: toat.tier,
         title: `${toat.title} copy`,
-        datetime: toat.datetime,
-        endDatetime: toat.endDatetime,
-        location: toat.location,
-        link: toat.link,
-        people: toat.people,
         notes: toat.notes,
-        templateData: toat.templateData,
+        enrichments: toat.enrichments,
       }),
     });
 
@@ -675,18 +649,18 @@ export default function ToatDetailPage() {
   const reminders = buildReminderLines(toat);
   const agenda = getAgendaLines(toat);
   const checklistItems = getChecklistItems(toat);
-  const ticketUrl = toat.template === "event" ? (toat.templateData as { template: "event"; ticketUrl: string | null }).ticketUrl : null;
-  const startDate = toat.datetime ? new Date(toat.datetime) : null;
-  const endDate = toat.endDatetime ? new Date(toat.endDatetime) : null;
-  // Phone: typed from templateData, not regex-scraped from notes
-  const phone = (() => {
-    const td = toat.templateData;
-    if (td.template === "call") return td.phone;
-    if (td.template === "appointment") return td.phone;
-    if (td.template === "follow_up") return td.phone;
-    return null;
-  })();
-  const maps = mapHref(toat.location);
+  const ticketUrl = toat.enrichments?.event?.ticketUrl ?? null;
+  const startDate = toatTime(toat) ? new Date(toatTime(toat)!) : null;
+  const endDate = toatEndTime(toat) ? new Date(toatEndTime(toat)!) : null;
+  const phone = toat.enrichments?.communication?.phone ?? null;
+  const joinUrl = toat.enrichments?.communication?.joinUrl ?? null;
+  const loc = toatLocation(toat);
+  const maps = mapHref(loc);
+  const people = toatPeople(toat);
+  // Enrichment presence flags for render branching
+  const isMeeting = !!joinUrl;
+  const isEvent = !!toat.enrichments?.event;
+  const isChecklist = toat.enrichments?.action?.type === "checklist";
   const isPhoneViewport = viewportWidth === null || viewportWidth <= 768;
 
   return (
@@ -712,10 +686,10 @@ export default function ToatDetailPage() {
               </CircleIconButton>
               {menuOpen ? (
                 <div style={styles.menuCard}>
-                  <MenuAction label="Mark done" icon={<DoneIcon size={20} />} tone="#111827" onClick={() => void runMutation("mark-done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
-                  <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => { setRescheduleValue(toat.datetime ? new Date(toat.datetime).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
+                  <MenuAction label="Mark done" icon={<DoneIcon size={20} />} tone="#111827" onClick={() => void runMutation("mark-done", async () => { await patchToat({ state: "done" }); router.replace("/timeline"); })} />
+                  <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => { setRescheduleValue(toatTime(toat) ? new Date(toatTime(toat)!).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
                   <MenuAction label="Duplicate" icon={<DuplicateIcon size={20} />} tone="#111827" onClick={() => void runMutation("duplicate", duplicateToat)} />
-                  {toat.template === "event" ? (
+                  {isEvent ? (
                     <MenuAction label={ticketUrl ? "Update ticket link" : "Add ticket link"} icon={<TicketGlyph size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setTicketInputOpen(true); }} />
                   ) : null}
                   <MenuAction label="Delete" icon={<TrashIcon size={20} />} tone="#DC2626" onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
@@ -732,28 +706,28 @@ export default function ToatDetailPage() {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.heroKickerRow}>
-              {toat.template === "appointment" ? <span style={{ ...styles.heroKicker, color: visual.accent }}>• {visual.kicker.toUpperCase()}</span> : null}
+              {loc && !isMeeting && !isEvent ? <span style={{ ...styles.heroKicker, color: visual.accent }}>• {visual.kicker.toUpperCase()}</span> : null}
               {heroChip ? <DetailBadge text={heroChip.text} style={heroChip.style} accent={visual.accent} /> : null}
             </div>
             <h1 style={{ ...styles.heroTitle, ...(isPhoneViewport ? styles.heroTitleCompact : {}) }}>{toat.title}</h1>
 
-            {toat.template === "meeting" ? (
+            {isMeeting ? (
               <div style={styles.heroMeetingMeta}>
-                <span style={{ ...styles.heroMetaChip, ...(isPhoneViewport ? styles.heroMetaChipCompact : {}) }}><VideoGlyph size={isPhoneViewport ? 16 : 20} /> {toat.link ? "Meeting link" : "Meeting"}</span>
-                {toat.people.length ? (
+                <span style={{ ...styles.heroMetaChip, ...(isPhoneViewport ? styles.heroMetaChipCompact : {}) }}><VideoGlyph size={isPhoneViewport ? 16 : 20} /> {joinUrl ? "Meeting link" : "Meeting"}</span>
+                {people.length ? (
                   <div style={styles.peopleRow}>
-                    {toat.people.slice(0, 4).map((person) => (
+                    {people.slice(0, 4).map((person) => (
                       <span key={person} style={{ ...styles.personBadge, ...(isPhoneViewport ? styles.personBadgeCompact : {}) }}>{initials(person)}</span>
                     ))}
-                    {toat.people.length > 4 ? <span style={{ ...styles.personOverflow, ...(isPhoneViewport ? styles.personBadgeCompact : {}) }}>+{toat.people.length - 4}</span> : null}
+                    {people.length > 4 ? <span style={{ ...styles.personOverflow, ...(isPhoneViewport ? styles.personBadgeCompact : {}) }}>+{people.length - 4}</span> : null}
                   </div>
                 ) : null}
               </div>
             ) : null}
 
-            {toat.location ? <p style={{ ...styles.heroLocation, ...(isPhoneViewport ? styles.heroLocationCompact : {}) }}><LocationIcon size={isPhoneViewport ? 18 : 22} /> {toat.location}</p> : null}
-            {toat.template === "event" && toat.link ? <p style={{ ...styles.heroSecondary, ...(isPhoneViewport ? styles.heroSecondaryCompact : {}) }}><TicketGlyph size={isPhoneViewport ? 16 : 20} /> Tickets ready</p> : null}
-            {(toat.template === "task" || toat.template === "idea" || toat.template === "deadline") && startDate ? <p style={{ ...styles.heroSecondary, ...(isPhoneViewport ? styles.heroSecondaryCompact : {}) }}><ClockIcon size={isPhoneViewport ? 16 : 20} /> {formatDate(startDate)}</p> : null}
+            {loc ? <p style={{ ...styles.heroLocation, ...(isPhoneViewport ? styles.heroLocationCompact : {}) }}><LocationIcon size={isPhoneViewport ? 18 : 22} /> {loc}</p> : null}
+            {isEvent && ticketUrl ? <p style={{ ...styles.heroSecondary, ...(isPhoneViewport ? styles.heroSecondaryCompact : {}) }}><TicketGlyph size={isPhoneViewport ? 16 : 20} /> Tickets ready</p> : null}
+            {!isMeeting && !isEvent && startDate ? <p style={{ ...styles.heroSecondary, ...(isPhoneViewport ? styles.heroSecondaryCompact : {}) }}><ClockIcon size={isPhoneViewport ? 16 : 20} /> {formatDate(startDate)}</p> : null}
           </div>
         </section>
 
@@ -761,20 +735,24 @@ export default function ToatDetailPage() {
 
         {/* Quick actions — moved to top so they're always visible */}
         <section style={styles.actionStrip}>
-          <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ status: "done" }); router.replace("/timeline"); })} />
-          <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { if (!toat.datetime) throw new Error("This toat has no time to move."); await patchToat({ datetime: new Date(new Date(toat.datetime).getTime() + 24 * 60 * 60000).toISOString() }); })} />
-          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { setRescheduleValue(toat.datetime ? new Date(toat.datetime).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
+          <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ state: "done" }); router.replace("/timeline"); })} />
+          <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => {
+            const t = toatTime(toat);
+            if (!t) throw new Error("This toat has no time to move.");
+            await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } });
+          })} />
+          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { setRescheduleValue(toatTime(toat) ? new Date(toatTime(toat)!).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
           <ActionStripButton icon={<TrashIcon size={20} />} label="Delete" tint="#DC2626" disabled={Boolean(actionState)} onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
         </section>
 
-        {toat.template === "meeting" ? (
+        {isMeeting ? (
           <button type="button" onClick={openPrimaryAction} style={{ ...styles.fullWidthPrimary, ...(isPhoneViewport ? styles.fullWidthPrimaryCompact : {}), background: visual.gradient }}>
             <VideoGlyph size={isPhoneViewport ? 20 : 24} /> {primaryAction.label}
           </button>
         ) : null}
 
-        {(toat.template === "appointment" || toat.template === "task" || toat.template === "deadline" || toat.template === "follow_up" || toat.template === "idea") ? (
+        {(!isMeeting && !isEvent && !isChecklist) ? (
           <>
             <SectionCard title="When & where" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
               {startDate ? (
@@ -785,11 +763,11 @@ export default function ToatDetailPage() {
                   subtitle={endDate ? `${formatTime(startDate)} – ${formatTime(endDate)}` : formatTime(startDate)}
                 />
               ) : null}
-              {toat.location ? (
+              {loc ? (
                 <InfoRow
                   icon={<LocationIcon size={22} />}
                   label="Where"
-                  title={toat.location}
+                  title={loc}
                   subtitle={maps ? "Open in Maps" : null}
                   onClick={maps ? () => window.open(maps, "_blank", "noopener,noreferrer") : undefined}
                   trailing={maps ? <span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span> : undefined}
@@ -798,15 +776,15 @@ export default function ToatDetailPage() {
               {phone ? (
                 <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
               ) : null}
-              {maps && toat.location ? (
+              {maps && loc ? (
                 <>
                   <LocationBlock
-                    location={toat.location}
+                    location={loc}
                     mapsUrl={maps}
                     gradient={visual.gradient}
                     accent={visual.accent}
                     onChangeLocation={() => setLocationSearchOpen(true)}
-                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
                   />
                   <div style={styles.buttonRow}>
                     <button
@@ -883,12 +861,12 @@ export default function ToatDetailPage() {
           </>
         ) : null}
 
-        {toat.template === "meeting" ? (
+        {isMeeting ? (
           <>
             <SectionCard title="Meeting details">
               {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={`${formatDate(startDate)} · ${formatTime(startDate)}`} subtitle={endDate ? `Ends at ${formatTime(endDate)}` : null} /> : null}
-              {toat.link ? <InfoRow icon={<VideoGlyph size={22} />} label="Link" title="Open meeting room" subtitle={toat.link.replace(/^https?:\/\//, "")} onClick={() => window.open(toat.link!, "_blank", "noopener,noreferrer")} trailing={<span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span>} /> : null}
-              <InfoRow icon={<MessageGlyph size={22} />} label="People" title={`${toat.people.length || 1} people`} subtitle={toat.people.length ? toat.people.join(", ") : "Just you so far"} />
+              {joinUrl ? <InfoRow icon={<VideoGlyph size={22} />} label="Link" title="Open meeting room" subtitle={joinUrl.replace(/^https?:\/\//, "")} onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} trailing={<span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span>} /> : null}
+              <InfoRow icon={<MessageGlyph size={22} />} label="People" title={`${people.length || 1} people`} subtitle={people.length ? people.join(", ") : "Just you so far"} />
             </SectionCard>
 
             <SectionCard title="Agenda" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
@@ -903,13 +881,13 @@ export default function ToatDetailPage() {
               )}
             </SectionCard>
 
-            {toat.link ? (
+            {joinUrl ? (
               <SectionCard title="Attachment">
-                <button type="button" onClick={() => window.open(toat.link!, "_blank", "noopener,noreferrer")} style={{ ...styles.attachmentRow, ...styles.attachmentRowButton }}>
+                <button type="button" onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} style={{ ...styles.attachmentRow, ...styles.attachmentRowButton }}>
                   <span style={{ ...styles.attachmentIcon, color: visual.accent, background: visual.soft }}><DocumentIcon size={24} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={styles.attachmentTitle}>Meeting link</p>
-                    <p style={styles.attachmentSubtitle}>{toat.link.replace(/^https?:\/\//, "")}</p>
+                    <p style={styles.attachmentSubtitle}>{joinUrl.replace(/^https?:\/\//, "")}</p>
                   </div>
                   <span style={{ color: visual.accent }}><ChevronRightIcon size={20} /></span>
                 </button>
@@ -928,73 +906,7 @@ export default function ToatDetailPage() {
           </>
         ) : null}
 
-        {toat.template === "event" ? (
-          <>
-            {startDate ? (
-              <>
-                {maps && toat.location ? (
-                  <LocationBlock
-                    location={toat.location}
-                    mapsUrl={maps}
-                    gradient={visual.gradient}
-                    accent={visual.accent}
-                    onChangeLocation={() => setLocationSearchOpen(true)}
-                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
-                  />
-                ) : (
-                  <div style={styles.buttonRow}>
-                    <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
-                      <LocationIcon size={18} /> Add location
-                    </button>
-                  </div>
-                )}
-                {ticketUrl ? (
-                  <div style={styles.buttonRow}>
-                    <button type="button" onClick={openPrimaryAction} style={styles.secondaryButton}>
-                      <TicketGlyph size={20} /> View tickets
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-
-            {ticketUrl ? (
-              <SectionCard title="Your tickets" action={
-                <button type="button" style={styles.inlineTextButton} onClick={() => void runMutation("rm-ticket", () => patchToat({ templateData: { ...toat.templateData, ticketUrl: null } }))}>Remove</button>
-              }>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 28 }}>🎟</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>Tickets ready</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticketUrl}</p>
-                  </div>
-                  <button type="button" onClick={openPrimaryAction} style={{ flexShrink: 0, background: "linear-gradient(135deg, #7C3AED, #5B3DF5)", border: "none", borderRadius: 12, padding: "8px 14px", color: "#FFFFFF", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Open</button>
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {(showNotes || notesLocal.trim() !== "") ? (
-            <SectionCard title="Notes">
-              <textarea
-                style={styles.notesTextarea}
-                value={notesLocal}
-                onChange={(e) => {
-                  setNotesLocal(e.target.value);
-                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
-                }}
-                onBlur={() => void saveNotesText(notesLocal)}
-                placeholder="Add a note…"
-                rows={3}
-              />
-            </SectionCard>
-            ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
-            )}
-          </>
-        ) : null}
-
-        {toat.template === "checklist" ? (
+        {isChecklist ? (
           <>
             <SectionCard
               title="Checklist"
@@ -1118,14 +1030,14 @@ export default function ToatDetailPage() {
               </div>
             </SectionCard>
 
-            {maps && toat.location ? (
+            {maps && loc ? (
               <LocationBlock
-                location={toat.location}
+                location={loc}
                 mapsUrl={maps}
                 gradient={visual.gradient}
                 accent={visual.accent}
                 onChangeLocation={() => setLocationSearchOpen(true)}
-                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
               />
             ) : (
               <div style={styles.buttonRow}>
@@ -1137,19 +1049,19 @@ export default function ToatDetailPage() {
           </>
         ) : null}
 
-        {(toat.template === "task" || toat.template === "deadline" || toat.template === "idea" || toat.template === "follow_up") ? (
+        {(!isMeeting && !isEvent && !isChecklist) ? (
           <>
             <SectionCard title="Details">
               {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={formatDate(startDate)} subtitle={formatTime(startDate)} /> : null}
             </SectionCard>
-            {maps && toat.location ? (
+            {maps && loc ? (
               <LocationBlock
-                location={toat.location}
+                location={loc}
                 mapsUrl={maps}
                 gradient={visual.gradient}
                 accent={visual.accent}
                 onChangeLocation={() => setLocationSearchOpen(true)}
-                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ location: null }))}
+                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
               />
             ) : (
               <div style={styles.buttonRow}>
@@ -1179,10 +1091,10 @@ export default function ToatDetailPage() {
           </>
         ) : null}
 
-        {toat.people.length ? (
+        {people.length ? (
           <SectionCard title="Sharing">
             <div style={styles.shareGrid}>
-              {toat.people.map((person) => (
+              {people.map((person) => (
                 <div key={person} style={styles.sharePerson}>
                   <span style={styles.shareAvatar}>{initials(person)}</span>
                   <p style={styles.shareName}>{person}</p>
@@ -1193,7 +1105,7 @@ export default function ToatDetailPage() {
           </SectionCard>
         ) : null}
 
-        {toat.template !== "meeting" ? (
+        {!isMeeting ? (
           <section style={styles.tipCard}>
             <span style={styles.tipSpark}><SparkleIcon size={20} /></span>
             <p style={styles.tipText}>Toatre will keep this toat on track with your Pings and the timing you already set.</p>
@@ -1226,7 +1138,7 @@ export default function ToatDetailPage() {
           busy={actionState === "reschedule"}
           onConfirm={() => void runMutation("reschedule", async () => {
             if (!rescheduleValue) throw new Error("Pick a date and time.");
-            await patchToat({ datetime: new Date(rescheduleValue).toISOString() });
+            await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(rescheduleValue).toISOString() } });
             setRescheduleOpen(false);
           })}
           onClose={() => setRescheduleOpen(false)}
@@ -1247,7 +1159,7 @@ export default function ToatDetailPage() {
             } catch { setLocationSuggestions([]); }
           }}
           onSelect={(description) => void runMutation("location", async () => {
-            await patchToat({ location: description });
+            await patchToat({ "enrichments.place": { address: description } });
             setLocationSearchOpen(false);
             setLocationQuery("");
             setLocationSuggestions([]);
@@ -1258,7 +1170,7 @@ export default function ToatDetailPage() {
       {ticketInputOpen ? (
         <TicketInputModal
           onSave={(url) => void runMutation("ticket-url", async () => {
-            await patchToat({ templateData: { ...toat.templateData, ticketUrl: url } });
+            await patchToat({ "enrichments.event": { ...toat.enrichments?.event, ticketUrl: url } });
             setTicketInputOpen(false);
           })}
           onClose={() => setTicketInputOpen(false)}
@@ -1515,7 +1427,7 @@ function ShareToatModal({
           <div style={styles.sharePreviewIcon}><ShareIcon size={22} /></div>
           <div style={{ minWidth: 0 }}>
             <p style={styles.sharePreviewTitle}>{toat.title}</p>
-            <p style={styles.sharePreviewMeta}>{toat.datetime ? new Date(toat.datetime).toLocaleString() : "No time set"}</p>
+            <p style={styles.sharePreviewMeta}>{toatTime(toat) ? new Date(toatTime(toat)!).toLocaleString() : "No time set"}</p>
           </div>
         </article>
 

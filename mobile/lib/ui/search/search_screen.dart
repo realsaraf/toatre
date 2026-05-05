@@ -168,9 +168,9 @@ class _SearchScreenState extends State<SearchScreen> {
     return toats.where((toat) {
       final haystack = <String>[
         toat.title,
-        toat.kind,
+        _searchEnrichmentKey(toat),
         toat.tier,
-        toat.status,
+        toat.state,
         toat.location ?? '',
         toat.notes ?? '',
         ...toat.people,
@@ -216,10 +216,10 @@ class _ResultCard extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: _kindColor(toat.kind).withValues(alpha: 0.16),
+                color: _kindColor(_searchEnrichmentKey(toat)).withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(_kindIcon(toat.kind), color: _kindColor(toat.kind)),
+              child: Icon(_kindIcon(_searchEnrichmentKey(toat)), color: _kindColor(_searchEnrichmentKey(toat))),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -230,7 +230,7 @@ class _ResultCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     [
-                      toat.kind,
+                      _searchEnrichmentKey(toat),
                       toat.tier,
                       if (toat.location != null && toat.location!.isNotEmpty)
                         toat.location!,
@@ -340,4 +340,24 @@ Color _kindColor(String kind) {
     default:
       return AppColors.success;
   }
+}
+
+String _searchEnrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'message';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+    if (action['type'] == 'deadline') return 'deadline';
+  }
+  if (e['thought'] is Map<String, dynamic>) return 'idea';
+  return 'task';
 }

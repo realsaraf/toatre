@@ -1,70 +1,97 @@
 class ToatSummary {
   const ToatSummary({
     required this.id,
-    required this.template,
-    required this.kind,
     required this.tier,
+    required this.state,
     required this.title,
-    required this.datetime,
-    required this.endDatetime,
-    required this.location,
-    required this.link,
-    required this.people,
     required this.notes,
-    required this.status,
+    required this.enrichments,
     required this.captureId,
-    required this.templateData,
     required this.createdAt,
     required this.updatedAt,
   });
 
   final String id;
 
-  /// One of: meeting, call, appointment, event, deadline, task, checklist,
-  /// errand, follow_up, idea
-  final String template;
-
-  /// Legacy kind field kept for backward compat; use [template] for dispatch.
-  final String kind;
+  /// One of: urgent, important, regular
   final String tier;
+
+  /// One of: open, done, archived
+  final String state;
   final String title;
-  final DateTime? datetime;
-  final DateTime? endDatetime;
-  final String? location;
-  final String? link;
-  final List<String> people;
   final String? notes;
-  final String status;
   final String? captureId;
 
-  /// Template-specific typed data (phone, joinUrl, checklist items, etc.).
-  final Map<String, dynamic> templateData;
+  /// Progressive enrichment data (time, place, action, communication, event,
+  /// money, thought, people).
+  final Map<String, dynamic> enrichments;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  // ── Convenience accessors ────────────────────────────────────────────────
+
+  Map<String, dynamic>? get timeEnrichment {
+    final t = enrichments['time'];
+    return t is Map<String, dynamic> ? t : null;
+  }
+
+  Map<String, dynamic>? get placeEnrichment {
+    final p = enrichments['place'];
+    return p is Map<String, dynamic> ? p : null;
+  }
+
+  Map<String, dynamic>? get actionEnrichment {
+    final a = enrichments['action'];
+    return a is Map<String, dynamic> ? a : null;
+  }
+
+  Map<String, dynamic>? get communicationEnrichment {
+    final c = enrichments['communication'];
+    return c is Map<String, dynamic> ? c : null;
+  }
+
+  Map<String, dynamic>? get eventEnrichment {
+    final e = enrichments['event'];
+    return e is Map<String, dynamic> ? e : null;
+  }
+
+  /// Primary datetime from time enrichment (at, startAt, or dueAt).
+  DateTime? get datetime {
+    final t = timeEnrichment;
+    if (t == null) return null;
+    return _parseDate(t['at']) ?? _parseDate(t['startAt']) ?? _parseDate(t['dueAt']);
+  }
+
+  DateTime? get endDatetime {
+    return _parseDate(timeEnrichment?['endAt']);
+  }
+
+  String? get location {
+    return placeEnrichment?['address'] as String?
+        ?? placeEnrichment?['placeName'] as String?
+        ?? eventEnrichment?['address'] as String?
+        ?? eventEnrichment?['venueName'] as String?;
+  }
+
+  List<String> get people {
+    final p = enrichments['people'];
+    return p is List<dynamic> ? p.whereType<String>().toList() : const <String>[];
+  }
+
   factory ToatSummary.fromJson(Map<String, dynamic> json) {
-    final peopleJson = json['people'];
-    final tdJson = json['templateData'];
+    final enrichmentsJson = json['enrichments'];
 
     return ToatSummary(
       id: json['id'] as String? ?? '',
-      template: json['template'] as String? ?? 'task',
-      kind: json['kind'] as String? ?? 'task',
       tier: json['tier'] as String? ?? 'regular',
+      state: json['state'] as String? ?? 'open',
       title: json['title'] as String? ?? '',
-      datetime: _parseDate(json['datetime']),
-      endDatetime: _parseDate(json['endDatetime']),
-      location: json['location'] as String?,
-      link: json['link'] as String?,
-      people: peopleJson is List<dynamic>
-          ? peopleJson.whereType<String>().toList()
-          : const <String>[],
       notes: json['notes'] as String?,
-      status: json['status'] as String? ?? 'active',
-      captureId: json['captureId'] as String?,
-      templateData: tdJson is Map<String, dynamic>
-          ? tdJson
+      enrichments: enrichmentsJson is Map<String, dynamic>
+          ? enrichmentsJson
           : const <String, dynamic>{},
+      captureId: json['captureId'] as String?,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
@@ -72,43 +99,25 @@ class ToatSummary {
 
   ToatSummary copyWith({
     String? id,
-    String? template,
-    String? kind,
     String? tier,
+    String? state,
     String? title,
-    DateTime? datetime,
-    bool clearDatetime = false,
-    DateTime? endDatetime,
-    bool clearEndDatetime = false,
-    String? location,
-    bool clearLocation = false,
-    String? link,
-    bool clearLink = false,
-    List<String>? people,
     String? notes,
     bool clearNotes = false,
-    String? status,
+    Map<String, dynamic>? enrichments,
     String? captureId,
     bool clearCaptureId = false,
-    Map<String, dynamic>? templateData,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return ToatSummary(
       id: id ?? this.id,
-      template: template ?? this.template,
-      kind: kind ?? this.kind,
       tier: tier ?? this.tier,
+      state: state ?? this.state,
       title: title ?? this.title,
-      datetime: clearDatetime ? null : datetime ?? this.datetime,
-      endDatetime: clearEndDatetime ? null : endDatetime ?? this.endDatetime,
-      location: clearLocation ? null : location ?? this.location,
-      link: clearLink ? null : link ?? this.link,
-      people: people ?? this.people,
       notes: clearNotes ? null : notes ?? this.notes,
-      status: status ?? this.status,
+      enrichments: enrichments ?? this.enrichments,
       captureId: clearCaptureId ? null : captureId ?? this.captureId,
-      templateData: templateData ?? this.templateData,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -117,19 +126,12 @@ class ToatSummary {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'id': id,
-      'template': template,
-      'kind': kind,
       'tier': tier,
+      'state': state,
       'title': title,
-      'datetime': datetime?.toIso8601String(),
-      'endDatetime': endDatetime?.toIso8601String(),
-      'location': location,
-      'link': link,
-      'people': people,
       'notes': notes,
-      'status': status,
+      'enrichments': enrichments,
       'captureId': captureId,
-      'templateData': templateData,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -143,3 +145,4 @@ class ToatSummary {
     return DateTime.tryParse(value)?.toLocal();
   }
 }
+

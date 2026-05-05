@@ -7,6 +7,8 @@ import { flushObservedOpenAI, getObservedOpenAI } from "@/lib/ai/langfuse";
 import { buildConnectionContext, serializeConnection } from "@/lib/connections";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Enrichments } from "@/types";
 
 const RequestBodySchema = z.object({
   transcript: z.string().min(1).max(5000),
@@ -133,42 +135,18 @@ export async function POST(request: NextRequest) {
   });
   const captureId = captureResult.insertedId;
 
-  // Import helpers here to avoid circular imports at module-level
-  const { templateToKind, emptyTemplateData } = await import("@/types");
-  const { TemplateDataSchema } = await import("@/lib/ai/extract");
-
-  // Insert toats
-  const toatDocs = extraction.toats.map((t) => {
-    // Validate templateData from LLM; fall back to empty shape if malformed.
-    // Inject the template discriminator in case the LLM omitted it.
-    const rawTd = t.templateData != null
-      ? { template: t.template, ...t.templateData }
-      : { template: t.template };
-    const tdResult = TemplateDataSchema.safeParse(rawTd);
-    const templateData = tdResult.success ? tdResult.data : emptyTemplateData(t.template);
-
-    return {
-      ownerId,
-      captureId,
-      template: t.template,
-      kind: templateToKind(t.template),
-      tier: t.tier,
-      title: t.title,
-      datetime: t.datetime ? new Date(t.datetime) : null,
-      endDatetime: t.endDatetime ? new Date(t.endDatetime) : null,
-      location: t.location ?? null,
-      link: t.link ?? null,
-      people: t.people ?? [],
-      notes: t.notes ?? null,
-      templateData,
-      // Saved as "pending" until the user commits their selection in the review UI.
-      // The /api/captures/[id]/commit endpoint promotes selected toats to "active"
-      // and deletes unselected ones.
-      status: "pending",
-      createdAt: now,
-      updatedAt: now,
-    };
-  });
+  // Insert toats using new enrichment model
+  const toatDocs = extraction.toats.map((t) => ({
+    ownerId,
+    captureId,
+    tier: t.tier,
+    state: "open",
+    title: t.title,
+    notes: t.notes ?? null,
+    enrichments: t.enrichments ?? {},
+    createdAt: now,
+    updatedAt: now,
+  }));
 
   let insertedIds: ObjectId[] = [];
   if (toatDocs.length > 0) {
@@ -177,12 +155,13 @@ export async function POST(request: NextRequest) {
   }
 
   const savedToats = toatDocs.map((t, i) => ({
-    ...t,
-    _id: insertedIds[i]?.toString() ?? null,
-    ownerId: t.ownerId.toString(),
+    id: insertedIds[i]?.toString() ?? null,
+    tier: t.tier,
+    state: t.state,
+    title: t.title,
+    notes: t.notes,
+    enrichments: t.enrichments,
     captureId: t.captureId.toString(),
-    datetime: t.datetime?.toISOString() ?? null,
-    endDatetime: t.endDatetime?.toISOString() ?? null,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
   }));

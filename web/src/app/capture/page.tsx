@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/lib/auth/auth-context";
-import type { ToatTemplate } from "@/types";
+import type { SerializedToat, Enrichments } from "@/types";
 
 type CaptureStatus = "idle" | "listening" | "processing" | "review" | "error";
 type CaptureMode = "voice" | "text";
@@ -15,34 +15,21 @@ const MIN_ANALYSER_FFT_SIZE = 32;
 
 type ToatTier = "urgent" | "important" | "regular";
 
-interface ExtractedToat {
-  id: string;           // MongoDB _id returned from /api/captures
-  template: ToatTemplate;
-  tier: ToatTier;
-  title: string;
-  datetime: string | null;
-  endDatetime: string | null;
-  location: string | null;
-  link: string | null;
-  people: string[];
-  notes: string | null;
+type ExtractedToat = SerializedToat;
+
+function getEnrichmentMeta(enrichments: Enrichments | undefined): { color: string; bg: string; icon: string } {
+  if (enrichments?.communication?.channel === "call") return { color: "#DB2777", bg: "#FCE7F3", icon: "📞" };
+  if (enrichments?.communication?.joinUrl) return { color: "#2563EB", bg: "#DBEAFE", icon: "📹" };
+  if (enrichments?.communication?.channel === "email") return { color: "#0891B2", bg: "#CFFAFE", icon: "✉️" };
+  if (enrichments?.event) return { color: "#7C3AED", bg: "#F3E8FF", icon: "🎫" };
+  if (enrichments?.action?.type === "checklist") return { color: "#16A34A", bg: "#DCFCE7", icon: "🛒" };
+  if (enrichments?.action?.type === "errand") return { color: "#D97706", bg: "#FEF3C7", icon: "📍" };
+  if (enrichments?.thought) return { color: "#059669", bg: "#D1FAE5", icon: "💡" };
+  return { color: "#6366F1", bg: "#EDE9FE", icon: "✅" };
 }
 
-const TEMPLATE_META: Record<ToatTemplate, { color: string; bg: string }> = {
-  task:       { color: "#6366F1", bg: "#EDE9FE" },
-  checklist:  { color: "#16A34A", bg: "#DCFCE7" },
-  event:      { color: "#7C3AED", bg: "#F3E8FF" },
-  meeting:    { color: "#2563EB", bg: "#DBEAFE" },
-  call:       { color: "#DB2777", bg: "#FCE7F3" },
-  appointment:{ color: "#7C3AED", bg: "#F3E8FF" },
-  errand:     { color: "#D97706", bg: "#FEF3C7" },
-  follow_up:  { color: "#0891B2", bg: "#CFFAFE" },
-  deadline:   { color: "#DC2626", bg: "#FEE2E2" },
-  idea:       { color: "#059669", bg: "#D1FAE5" },
-};
-
-// Context-aware icon resolver: uses title keywords then falls back to template default
-function getTemplateIcon(template: ToatTemplate, title = ""): string {
+// Context-aware icon resolver: uses title keywords then falls back to enrichment default
+function getTitleIcon(title = "", enrichments?: Enrichments): string {
   const t = title.toLowerCase();
   // Sports
   if (/soccer|football|nycfc|mls/.test(t)) return "⚽";
@@ -85,20 +72,8 @@ function getTemplateIcon(template: ToatTemplate, title = ""): string {
   if (/clean|laundry|wash/.test(t)) return "🧹";
   if (/cook|bake/.test(t)) return "🍳";
   if (/repair|fix|plumber|electrician/.test(t)) return "🔧";
-  // Template defaults
-  switch (template) {
-    case "meeting": return "💼";
-    case "call": return "📞";
-    case "appointment": return "📅";
-    case "event": return "🎫";
-    case "deadline": return "⏰";
-    case "task": return "✅";
-    case "checklist": return "🛒";
-    case "errand": return "📍";
-    case "follow_up": return "🔄";
-    case "idea": return "💡";
-    default: return "📌";
-  }
+  // Enrichment-based fallback
+  return getEnrichmentMeta(enrichments).icon;
 }
 
 function getAnalyserFftSize(barCount: number): number {
@@ -272,15 +247,14 @@ function CapturePageContent() {
           setCaptureId(data.captureId ?? null);
           const extracted: ExtractedToat[] = (data.toats ?? []).map((t: Record<string, unknown>) => ({
             id: String(t._id ?? t.id ?? ""),
-            template: t.template as ToatTemplate,
             tier: (t.tier ?? "regular") as ToatTier,
+            state: (t.state ?? "open") as "open" | "done" | "archived",
             title: String(t.title ?? ""),
-            datetime: t.datetime as string | null ?? null,
-            endDatetime: t.endDatetime as string | null ?? null,
-            location: t.location as string | null ?? null,
-            link: t.link as string | null ?? null,
-            people: Array.isArray(t.people) ? t.people as string[] : [],
             notes: t.notes as string | null ?? null,
+            enrichments: (t.enrichments ?? {}) as Enrichments,
+            captureId: t.captureId as string | null ?? null,
+            createdAt: String(t.createdAt ?? new Date().toISOString()),
+            updatedAt: String(t.updatedAt ?? new Date().toISOString()),
           }));
           setToats(extracted);
           setSelected(extracted.map(() => true));
@@ -380,15 +354,14 @@ function CapturePageContent() {
       setCaptureId(data.captureId ?? null);
       const extracted: ExtractedToat[] = (data.toats ?? []).map((t: Record<string, unknown>) => ({
         id: String(t._id ?? t.id ?? ""),
-        template: t.template as ToatTemplate,
         tier: (t.tier ?? "regular") as ToatTier,
+        state: (t.state ?? "open") as "open" | "done" | "archived",
         title: String(t.title ?? ""),
-        datetime: t.datetime as string | null ?? null,
-        endDatetime: t.endDatetime as string | null ?? null,
-        location: t.location as string | null ?? null,
-        link: t.link as string | null ?? null,
-        people: Array.isArray(t.people) ? t.people as string[] : [],
         notes: t.notes as string | null ?? null,
+        enrichments: (t.enrichments ?? {}) as Enrichments,
+        captureId: t.captureId as string | null ?? null,
+        createdAt: String(t.createdAt ?? new Date().toISOString()),
+        updatedAt: String(t.updatedAt ?? new Date().toISOString()),
       }));
       setToats(extracted);
       setSelected(extracted.map(() => true));
@@ -416,12 +389,13 @@ function CapturePageContent() {
     setIsCommitting(true);
     try {
       const selectedIds = editedToats.filter((_, i) => sel[i]).map((t) => t.id);
-      const edits: Record<string, Partial<ExtractedToat>> = {};
+      const edits: Record<string, Partial<Pick<ExtractedToat, "title" | "tier" | "notes" | "enrichments">>> = {};
       for (const t of editedToats.filter((_, i) => sel[i])) {
         edits[t.id] = {
-          title: t.title, tier: t.tier, datetime: t.datetime,
-          endDatetime: t.endDatetime, location: t.location,
-          link: t.link, people: t.people, notes: t.notes,
+          title: t.title,
+          tier: t.tier,
+          notes: t.notes,
+          enrichments: t.enrichments,
         };
       }
       await fetch(`/api/captures/${captureId}/commit`, {
@@ -787,21 +761,27 @@ function ReviewScreen({
 }
 
 function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedToat; checked: boolean; onToggle: () => void; onEdit: () => void }) {
-  const meta = TEMPLATE_META[toat.template];
-  const dt = toat.datetime ? new Date(toat.datetime) : null;
-  const timeStr = dt ? dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + ", " + dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : null;
+  const meta = getEnrichmentMeta(toat.enrichments);
+  const timeStr = (() => {
+    const t = toat.enrichments?.time;
+    const iso = t?.at ?? t?.startAt ?? null;
+    if (!iso) return null;
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  })();
+  const loc = toat.enrichments?.place?.address ?? toat.enrichments?.place?.placeName ?? toat.enrichments?.event?.venueName ?? null;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 16, padding: "14px 16px", opacity: checked ? 1 : 0.55, transition: "opacity 0.2s" }}>
       <button onClick={onToggle} style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${checked ? "#6366F1" : "#D1D5DB"}`, background: checked ? "#6366F1" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }} aria-label={checked ? "Deselect" : "Select"}>
         {checked && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
       </button>
       <div style={{ width: 44, height: 44, borderRadius: 12, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: 20 }}>{getTemplateIcon(toat.template, toat.title)}</span>
+        <span style={{ fontSize: 20 }}>{getTitleIcon(toat.title, toat.enrichments)}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", marginBottom: 4, margin: 0 }}>{toat.title}</p>
         {timeStr && <p style={{ fontSize: 12, color: meta.color, margin: "4px 0 0" }}>📅 {timeStr}</p>}
-        {toat.location && <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "2px 0 0" }}>📍 {toat.location}</p>}
+        {loc && <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "2px 0 0" }}>📍 {loc}</p>}
       </div>
       <button onClick={onEdit} style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 10, padding: "5px 14px", fontSize: 13, color: "#374151", cursor: "pointer", flexShrink: 0 }}>Edit</button>
       <span style={{ fontSize: 16, color: "#D1D5DB", cursor: "grab" }} aria-hidden>⠿</span>
@@ -810,13 +790,15 @@ function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedTo
 }
 
 function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave: (updated: Partial<ExtractedToat>) => void; onClose: () => void }) {
-  const meta = TEMPLATE_META[toat.template];
+  const meta = getEnrichmentMeta(toat.enrichments);
   const [title, setTitle] = useState(toat.title);
-  const [location, setLocation] = useState(toat.location ?? "");
+  const initLoc = toat.enrichments?.place?.address ?? toat.enrichments?.place?.placeName ?? toat.enrichments?.event?.venueName ?? "";
+  const [location, setLocation] = useState(initLoc);
   const [notes, setNotes] = useState(toat.notes ?? "");
+  const initIso = toat.enrichments?.time?.at ?? toat.enrichments?.time?.startAt ?? null;
   const [datetime, setDatetime] = useState(() => {
-    if (!toat.datetime) return "";
-    const d = new Date(toat.datetime);
+    if (!initIso) return "";
+    const d = new Date(initIso);
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   });
@@ -827,9 +809,9 @@ function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave:
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 18 }}>{getTemplateIcon(toat.template)}</span>
+              <span style={{ fontSize: 18 }}>{meta.icon}</span>
             </div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)", textTransform: "capitalize" }}>{toat.template.replace("_", " ")}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{toat.title}</span>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-muted)", lineHeight: 1, padding: 4 }}>✕</button>
         </div>
@@ -857,8 +839,14 @@ function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave:
           <button onClick={onClose} style={{ flex: 1, padding: "14px", borderRadius: 14, border: "1.5px solid var(--color-border)", background: "none", fontSize: 15, fontWeight: 600, color: "var(--color-text-muted)", cursor: "pointer" }}>Cancel</button>
           <button
             onClick={() => {
-              const dt = datetime ? new Date(datetime).toISOString() : null;
-              onSave({ title: title.trim() || toat.title, location: location.trim() || null, notes: notes.trim() || null, datetime: dt });
+              const timeIso = datetime ? new Date(datetime).toISOString() : null;
+              const loc = location.trim() || null;
+              const updatedEnrichments: Enrichments = {
+                ...toat.enrichments,
+                ...(timeIso ? { time: { ...toat.enrichments?.time, at: timeIso } } : {}),
+                ...(loc ? { place: { ...toat.enrichments?.place, address: loc } } : {}),
+              };
+              onSave({ title: title.trim() || toat.title, notes: notes.trim() || null, enrichments: updatedEnrichments });
             }}
             style={{ flex: 2, padding: "14px", borderRadius: 14, background: "linear-gradient(135deg, #8B5CF6, #6366F1)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
           >

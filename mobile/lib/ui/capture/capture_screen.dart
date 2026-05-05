@@ -701,7 +701,7 @@ class _CaptureToatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _captureSmartIcon(toat.template, toat.title);
+    final icon = _captureSmartIcon(_captureEnrichmentKey(toat), toat.title);
     return GestureDetector(
       onTap: onToggle,
       child: Container(
@@ -944,11 +944,16 @@ class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
   }
 
   void _save() {
+    final locationText = _locationCtrl.text.trim();
+    final newEnrichments = Map<String, dynamic>.from(widget.toat.enrichments);
+    if (locationText.isEmpty) {
+      newEnrichments.remove('place');
+    } else {
+      newEnrichments['place'] = <String, dynamic>{'address': locationText};
+    }
     final updated = widget.toat.copyWith(
       title: _titleCtrl.text.trim(),
-      location: _locationCtrl.text.trim().isEmpty
-          ? null
-          : _locationCtrl.text.trim(),
+      enrichments: newEnrichments,
     );
     widget.onSave(updated);
     Navigator.of(context).pop();
@@ -1035,6 +1040,26 @@ class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
 // ---------------------------------------------------------------------------
 // Smart icon — keyword-aware template icon selector (shared with timeline)
 // ---------------------------------------------------------------------------
+
+String _captureEnrichmentKey(ToatSummary toat) {
+  final e = toat.enrichments;
+  final comm = e['communication'];
+  if (comm is Map<String, dynamic>) {
+    if (comm['joinUrl'] is String) return 'meeting';
+    if (comm['channel'] == 'call' || comm['phone'] is String) return 'call';
+    return 'follow_up';
+  }
+  final event = e['event'];
+  if (event is Map<String, dynamic>) return 'event';
+  final action = e['action'];
+  if (action is Map<String, dynamic>) {
+    if (action['type'] == 'checklist') return 'checklist';
+    if (action['type'] == 'errand') return 'errand';
+  }
+  final thought = e['thought'];
+  if (thought is Map<String, dynamic>) return 'idea';
+  return 'task';
+}
 
 IconData _captureSmartIcon(String template, String title) {
   final t = title.toLowerCase();
