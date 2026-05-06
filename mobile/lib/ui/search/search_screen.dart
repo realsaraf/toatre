@@ -364,5 +364,15 @@ String _searchEnrichmentKey(ToatSummary toat) {
     if (action['type'] == 'deadline') return 'deadline';
   }
   if (e['thought'] is Map<String, dynamic>) return 'idea';
+  // Keyword fallback
+  final t = toat.title.toLowerCase();
+  bool has(List<String> kws) => kws.any(t.contains);
+  if (has(['grocery', 'groceries', 'supermarket', 'market', 'shopping', 'buy ', 'pick up', 'pickup', 'order', 'pharmacy']))
+    return 'errand';
+  if (has(['call', 'phone', 'ring', 'dial'])) return 'call';
+  if (has(['meeting', 'standup', 'sync', 'zoom', 'meet '])) return 'meeting';
+  if (has(['party', 'wedding', 'concert', 'ceremony', 'festival', 'birthday', 'graduation', 'game', 'match']))
+    return 'event';
+  if (has(['idea', 'thought', 'note', 'remember'])) return 'idea';
   return 'task';
 }

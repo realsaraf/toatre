@@ -2,9 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { TopNav } from "@/components/TopNav";
-import { useAuth } from "@/lib/auth/auth-context";
 import type { SerializedToat, Enrichments } from "@/types";
+import { useAuth } from "@/lib/auth/auth-context";
+import { getToatVisual } from "@/components/toat-visual";
+import { TopNav } from "@/components/TopNav";
 
 type CaptureStatus = "idle" | "listening" | "processing" | "review" | "error";
 type CaptureMode = "voice" | "text";
@@ -17,64 +18,6 @@ type ToatTier = "urgent" | "important" | "regular";
 
 type ExtractedToat = SerializedToat;
 
-function getEnrichmentMeta(enrichments: Enrichments | undefined): { color: string; bg: string; icon: string } {
-  if (enrichments?.communication?.channel === "call") return { color: "#DB2777", bg: "#FCE7F3", icon: "📞" };
-  if (enrichments?.communication?.joinUrl) return { color: "#2563EB", bg: "#DBEAFE", icon: "📹" };
-  if (enrichments?.communication?.channel === "email") return { color: "#0891B2", bg: "#CFFAFE", icon: "✉️" };
-  if (enrichments?.event) return { color: "#7C3AED", bg: "#F3E8FF", icon: "🎫" };
-  if (enrichments?.action?.type === "checklist") return { color: "#16A34A", bg: "#DCFCE7", icon: "🛒" };
-  if (enrichments?.action?.type === "errand") return { color: "#D97706", bg: "#FEF3C7", icon: "📍" };
-  if (enrichments?.thought) return { color: "#059669", bg: "#D1FAE5", icon: "💡" };
-  return { color: "#6366F1", bg: "#EDE9FE", icon: "✅" };
-}
-
-// Context-aware icon resolver: uses title keywords then falls back to enrichment default
-function getTitleIcon(title = "", enrichments?: Enrichments): string {
-  const t = title.toLowerCase();
-  // Sports
-  if (/soccer|football|nycfc|mls/.test(t)) return "⚽";
-  if (/basketball|nba/.test(t)) return "🏀";
-  if (/baseball|mlb/.test(t)) return "⚾";
-  if (/tennis/.test(t)) return "🎾";
-  if (/golf/.test(t)) return "⛳";
-  if (/hockey|nhl/.test(t)) return "🏒";
-  if (/cricket/.test(t)) return "🏏";
-  if (/rugby/.test(t)) return "🏉";
-  if (/game|match|stadium|sport/.test(t)) return "🏟️";
-  // School / education
-  if (/school|class|lesson|tutori|study|homework|exam|test|lecture|college|university/.test(t)) return "🏫";
-  if (/sunday school/.test(t)) return "⛪";
-  // Grocery / shopping
-  if (/groceri|supermark|walmart|target|costco/.test(t)) return "🛒";
-  if (/pharmacy|drug store/.test(t)) return "💊";
-  if (/coffee|starbucks/.test(t)) return "☕";
-  if (/restaurant|dinner|lunch|breakfast|food|eat/.test(t)) return "🍽️";
-  // Medical
-  if (/doctor|physician|hospital|clinic/.test(t)) return "🏥";
-  if (/dentist|dental/.test(t)) return "🦷";
-  if (/gym|workout|fitness/.test(t)) return "💪";
-  if (/haircut|salon|barber/.test(t)) return "💈";
-  // Transport
-  if (/airport|flight|plane/.test(t)) return "✈️";
-  if (/train|subway|metro/.test(t)) return "🚇";
-  if (/drive|driving|car/.test(t)) return "🚗";
-  if (/drop.?(off|son|daughter|kid|child)/.test(t)) return "👨‍👦";
-  if (/pick.?up/.test(t)) return "🤝";
-  // Work
-  if (/meeting|standup|sync/.test(t)) return "💼";
-  if (/zoom|google meet|teams|video call/.test(t)) return "📹";
-  if (/email|send|reply/.test(t)) return "✉️";
-  if (/call|phone/.test(t)) return "📞";
-  if (/interview/.test(t)) return "👔";
-  if (/deadline|submit|due|deliver/.test(t)) return "⏰";
-  if (/report|document|presentation|deck/.test(t)) return "📄";
-  // Home
-  if (/clean|laundry|wash/.test(t)) return "🧹";
-  if (/cook|bake/.test(t)) return "🍳";
-  if (/repair|fix|plumber|electrician/.test(t)) return "🔧";
-  // Enrichment-based fallback
-  return getEnrichmentMeta(enrichments).icon;
-}
 
 function getAnalyserFftSize(barCount: number): number {
   return 2 ** Math.ceil(Math.log2(Math.max(barCount * 4, MIN_ANALYSER_FFT_SIZE)));
@@ -761,7 +704,7 @@ function ReviewScreen({
 }
 
 function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedToat; checked: boolean; onToggle: () => void; onEdit: () => void }) {
-  const meta = getEnrichmentMeta(toat.enrichments);
+  const meta = getToatVisual(toat.title, toat.enrichments ?? undefined);
   const timeStr = (() => {
     const t = toat.enrichments?.time;
     const iso = t?.at ?? t?.startAt ?? null;
@@ -775,12 +718,12 @@ function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedTo
       <button onClick={onToggle} style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${checked ? "#6366F1" : "#D1D5DB"}`, background: checked ? "#6366F1" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }} aria-label={checked ? "Deselect" : "Select"}>
         {checked && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
       </button>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: 20 }}>{getTitleIcon(toat.title, toat.enrichments)}</span>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: meta.chipBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: 20 }}>{meta.emoji}</span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", marginBottom: 4, margin: 0 }}>{toat.title}</p>
-        {timeStr && <p style={{ fontSize: 12, color: meta.color, margin: "4px 0 0" }}>📅 {timeStr}</p>}
+        {timeStr && <p style={{ fontSize: 12, color: meta.chipColor, margin: "4px 0 0" }}>📅 {timeStr}</p>}
         {loc && <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "2px 0 0" }}>📍 {loc}</p>}
       </div>
       <button onClick={onEdit} style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 10, padding: "5px 14px", fontSize: 13, color: "#374151", cursor: "pointer", flexShrink: 0 }}>Edit</button>
@@ -790,7 +733,7 @@ function ReviewToatCard({ toat, checked, onToggle, onEdit }: { toat: ExtractedTo
 }
 
 function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave: (updated: Partial<ExtractedToat>) => void; onClose: () => void }) {
-  const meta = getEnrichmentMeta(toat.enrichments);
+  const meta = getToatVisual(toat.title, toat.enrichments ?? undefined);
   const [title, setTitle] = useState(toat.title);
   const initLoc = toat.enrichments?.place?.address ?? toat.enrichments?.place?.placeName ?? toat.enrichments?.event?.venueName ?? "";
   const [location, setLocation] = useState(initLoc);
@@ -808,8 +751,8 @@ function EditToatModal({ toat, onSave, onClose }: { toat: ExtractedToat; onSave:
       <div style={{ width: "100%", maxWidth: 560, background: "var(--color-card)", borderRadius: "24px 24px 0 0", padding: "24px 24px 40px", boxShadow: "0 -8px 48px rgba(0,0,0,0.18)", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 18 }}>{meta.icon}</span>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.chipBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 18 }}>{meta.emoji}</span>
             </div>
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{toat.title}</span>
           </div>

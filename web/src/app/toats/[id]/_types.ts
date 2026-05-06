@@ -1,4 +1,6 @@
 import type { Enrichments } from "@/types";
+import type { ToatVisual } from "@/components/toat-visual";
+export type { ToatVisual as DetailVisual };
 
 export type ToatTier = "urgent" | "important" | "regular";
 export type ToatState = "open" | "done" | "archived";
@@ -30,13 +32,6 @@ export interface ActionConfig {
   external: boolean;
 }
 
-export interface DetailVisual {
-  kicker: string;
-  gradient: string;
-  soft: string;
-  accent: string;
-  Icon: React.ComponentType<{ size: number }>;
-}
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
@@ -52,7 +47,7 @@ export interface ToatLayout {
   startDate: Date | null;
   endDate: Date | null;
   ticketUrl: string | null;
-  visual: DetailVisual;
+  visual: ToatVisual;
   heroChip: { text: string; style: "solid" | "soft" | "outline" } | null;
   primaryAction: ActionConfig;
   reminders: Array<{ title: string; subtitle: string }>;

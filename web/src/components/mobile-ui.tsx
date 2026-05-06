@@ -649,3 +649,61 @@ export function GrabHandleIcon({ size = 20 }: { size?: number }) {
     </svg>
   );
 }
+
+export function CheckGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" />
+      <path d="M8 12.5l2.5 2.5 5-5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function SchoolGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 3L2 8l10 5 10-5-10-5Z" fill={color} />
+      <path d="M6 10.5V16c1.5 1.5 8.5 1.5 12 0v-5.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M20 8v5" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function CarGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 12l1.5-4h11L19 12" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="12" width="18" height="6" rx="2" stroke={color} strokeWidth="1.8" />
+      <circle cx="8" cy="18" r="1.5" fill={color} />
+      <circle cx="16" cy="18" r="1.5" fill={color} />
+    </svg>
+  );
+}
+
+export function ForkGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M8 3v5a3 3 0 0 0 3 3v8" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 3v14" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M6 3v3M10 3v3" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function MedGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="4" y="4" width="16" height="16" rx="4" stroke={color} strokeWidth="1.8" />
+      <path d="M12 8v8M8 12h8" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SportGlyph({ size = 28, color = "#FFFFFF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" />
+      <path d="M12 3c0 4-3.5 7-9 7M12 3c0 4 3.5 7 9 7M12 21c0-4-3.5-7-9-7M12 21c0-4 3.5-7 9-7" stroke={color} strokeWidth="1.3" />
+    </svg>
+  );
+}

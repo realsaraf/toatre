@@ -415,7 +415,7 @@ export default function ToatDetailPage() {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={heroStyles.heroKickerRow}>
-              {loc && !isMeeting && !isEvent ? <span style={{ ...heroStyles.heroKicker, color: visual.accent }}>&bull; {visual.kicker.toUpperCase()}</span> : null}
+              {loc && !isMeeting && !isEvent ? <span style={{ ...heroStyles.heroKicker, color: visual.accent }}>&bull; {visual.label.toUpperCase()}</span> : null}
               {heroChip ? <DetailBadge text={heroChip.text} style={heroChip.style} accent={visual.accent} /> : null}
             </div>
             <h1 style={{ ...heroStyles.heroTitle, ...(isPhoneViewport ? heroStyles.heroTitleCompact : {}) }}>{toat.title}</h1>

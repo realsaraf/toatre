@@ -6,30 +6,23 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   AppBrand,
   BottomTabBar,
-  BulbGlyph,
   CalendarIcon,
-  CartGlyph,
   ChevronDownIcon,
   ClockIcon,
   DoneIcon,
-  EnvelopeGlyph,
   FloatingMicButton,
   InboxIcon,
   KeyboardIcon,
   LocationIcon,
-  MessageGlyph,
   PeopleIcon,
-  PhoneGlyph,
   SearchIcon,
   SparkleIcon,
   SteeringWheelIcon,
-  TicketGlyph,
   TimelineIcon,
-  ToothGlyph,
   UserAvatar,
-  VideoGlyph,
 } from "@/components/mobile-ui";
-import type { SerializedToat as TimelineToat, Enrichments } from "@/types";
+import { getToatVisual, type ToatVisual } from "@/components/toat-visual";
+import type { SerializedToat as TimelineToat } from "@/types";
 
 interface DayGroup {
   key: string;
@@ -164,18 +157,6 @@ function mapHref(location: string | null) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 }
 
-// â”€â”€â”€ Template-based visual config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface ToatVisual {
-  label: string;
-  cardGradient: string;
-  iconTint: string;
-  softTint: string;
-  actionLabel: string;
-  actionBackground: string;
-  actionColor: string;
-  Icon: React.ComponentType<{ size?: number; color?: string }>;
-}
 
 // Confetti burst â€” fires DOM particles from the element that triggered it.
 // Throttled: max once per 2 seconds globally via module-level ref.
@@ -225,89 +206,6 @@ function fireConfetti(anchorEl?: HTMLElement | null) {
     `;
     document.head.appendChild(styleEl);
   }
-}
-
-const TEMPLATE_VISUAL: Record<string, ToatVisual> = {
-  communication_call: {
-    label: "Call", cardGradient: "linear-gradient(135deg, #F43F5E, #EC4899)",
-    iconTint: "#EC4899", softTint: "rgba(236,72,153,0.12)",
-    actionLabel: "Call", actionBackground: "rgba(236,72,153,0.12)", actionColor: "#DB2777",
-    Icon: PhoneGlyph,
-  },
-  communication_message: {
-    label: "Message", cardGradient: "linear-gradient(135deg, #06B6D4, #0891B2)",
-    iconTint: "#06B6D4", softTint: "rgba(6,182,212,0.12)",
-    actionLabel: "Message", actionBackground: "rgba(6,182,212,0.12)", actionColor: "#0891B2",
-    Icon: MessageGlyph,
-  },
-  communication_meeting: {
-    label: "Meeting", cardGradient: "linear-gradient(135deg, #3B82F6, #2563EB)",
-    iconTint: "#3B82F6", softTint: "rgba(59,130,246,0.12)",
-    actionLabel: "Join", actionBackground: "rgba(59,130,246,0.12)", actionColor: "#2563EB",
-    Icon: VideoGlyph,
-  },
-  event: {
-    label: "Event", cardGradient: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
-    iconTint: "#7C3AED", softTint: "rgba(124,58,237,0.12)",
-    actionLabel: "Tickets", actionBackground: "rgba(124,58,237,0.12)", actionColor: "#6D28D9",
-    Icon: TicketGlyph,
-  },
-  checklist: {
-    label: "Checklist", cardGradient: "linear-gradient(135deg, #22C55E, #16A34A)",
-    iconTint: "#22C55E", softTint: "rgba(34,197,94,0.12)",
-    actionLabel: "Open", actionBackground: "rgba(34,197,94,0.12)", actionColor: "#16A34A",
-    Icon: CartGlyph,
-  },
-  errand: {
-    label: "Errand", cardGradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)",
-    iconTint: "#8B5CF6", softTint: "rgba(139,92,246,0.12)",
-    actionLabel: "Directions", actionBackground: "rgba(139,92,246,0.12)", actionColor: "#6D28D9",
-    Icon: CartGlyph,
-  },
-  thought: {
-    label: "Idea", cardGradient: "linear-gradient(135deg, #F59E0B, #FBBF24)",
-    iconTint: "#F59E0B", softTint: "rgba(245,158,11,0.12)",
-    actionLabel: "Open", actionBackground: "rgba(245,158,11,0.12)", actionColor: "#D97706",
-    Icon: BulbGlyph,
-  },
-  task: {
-    label: "Task", cardGradient: "linear-gradient(135deg, #F97316, #FB923C)",
-    iconTint: "#F97316", softTint: "rgba(249,115,22,0.12)",
-    actionLabel: "Open", actionBackground: "rgba(249,115,22,0.12)", actionColor: "#EA580C",
-    Icon: EnvelopeGlyph,
-  },
-};
-
-function getToatVisualKey(title: string, enrichments: Enrichments | undefined): string {
-  // Enrichment-based dispatch — authoritative when AI populated these fields.
-  if (enrichments) {
-    // Phone number present or explicit call channel → phone icon.
-    if (enrichments.communication?.channel === "call" || enrichments.communication?.phone) return "communication_call";
-    // Join URL → video meeting icon.
-    if (enrichments.communication?.joinUrl) return "communication_meeting";
-    // Any other communication enrichment → message icon.
-    if (enrichments.communication) return "communication_message";
-    if (enrichments.event) return "event";
-    if (enrichments.action?.type === "checklist") return "checklist";
-    if (enrichments.action?.type === "errand") return "errand";
-    if (enrichments.thought) return "thought";
-  }
-  // Title keyword fallback — catches common patterns when enrichments weren't set.
-  const t = title.toLowerCase();
-  if (/\b(call|phone|ring)\b/.test(t)) return "communication_call";
-  if (/\b(zoom|google meet|teams|webex|standup|stand.?up|video.?call|video chat|sync|scrum|1.?on.?1)\b/.test(t)) return "communication_meeting";
-  if (/\b(meeting|catch.?up|check.?in)\b/.test(t)) return "communication_meeting";
-  if (/\b(email|text|message|reply|send|follow.?up|dm\b)\b/.test(t)) return "communication_message";
-  if (/\b(groceri|supermark|walmart|target|costco|aldi|trader joe)\b/.test(t)) return "checklist";
-  if (/\b(errand|pick.?up|drop.?off|pharmacy|hardware|post office)\b/.test(t)) return "errand";
-  if (/\b(dinner|lunch|brunch|breakfast|party|wedding|concert|game|match|ceremony|gala|festival|show)\b/.test(t)) return "event";
-  if (/\b(idea|brainstorm|thought|note|remember|concept|reflect|insight)\b/.test(t)) return "thought";
-  return "task";
-}
-
-function getToatVisual(toat: TimelineToat): ToatVisual {
-  const key = getToatVisualKey(toat.title, toat.enrichments);
-  return TEMPLATE_VISUAL[key] ?? TEMPLATE_VISUAL.task;
 }
 
 function getPrimaryAction(toat: TimelineToat) {
@@ -691,7 +589,7 @@ function UpNextCard({
   removing?: boolean;
 }) {
   const router = useRouter();
-  const visual = getToatVisual(toat);
+  const visual = getToatVisual(toat.title, toat.enrichments ?? undefined);
   const Icon = visual.Icon;
   const time = toatTime(toat) ? formatTime(new Date(toatTime(toat)!)) : "Any time";
   const action = getPrimaryAction(toat);
@@ -741,7 +639,7 @@ function UpNextCard({
       </div>
 
       <div style={{ ...styles.upNextBody, ...(compact ? styles.upNextBodyCompact : {}) }}>
-        <div style={{ ...styles.iconPanel, ...(compact ? styles.iconPanelCompact : {}), background: visual.cardGradient }}>
+        <div style={{ ...styles.iconPanel, ...(compact ? styles.iconPanelCompact : {}), background: visual.gradient }}>
           <Icon size={compact ? 24 : 30} />
         </div>
 
@@ -750,12 +648,12 @@ function UpNextCard({
           {toatLocation(toat) ? (
             <p style={{ ...styles.upNextLocation, ...(compact ? styles.upNextLocationCompact : {}) }}><LocationIcon size={compact ? 14 : 18} /> {toatLocation(toat)}</p>
           ) : null}
-          <p style={{ ...styles.upNextCountdown, ...(compact ? styles.upNextCountdownCompact : {}), color: visual.actionColor }}>{getCountdownLabel(toat, new Date())}</p>
+          <p style={{ ...styles.upNextCountdown, ...(compact ? styles.upNextCountdownCompact : {}), color: visual.accent }}>{getCountdownLabel(toat, new Date())}</p>
         </div>
 
         <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
           {action ? (
-            <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
+            <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.accent, background: visual.soft }}>
               {action.label === "Directions" ? <><SteeringWheelIcon size={compact ? 13 : 15} /> Directions</> : action.label}
             </button>
           ) : null}
@@ -784,7 +682,7 @@ function TimelineRow({
   compact?: boolean;
   removing?: boolean;
 }) {
-  const visual = getToatVisual(toat);
+  const visual = getToatVisual(toat.title, toat.enrichments ?? undefined);
   const Icon = visual.Icon;
   const action = getPrimaryAction(toat);
   const description = getToatDescription(toat, new Date());
@@ -832,11 +730,11 @@ function TimelineRow({
 
       <div style={styles.railTrackWrap}>
         <div style={styles.railLine} />
-        <span style={{ ...styles.railDot, ...(compact ? styles.railDotCompact : {}), background: visual.iconTint }} />
+        <span style={{ ...styles.railDot, ...(compact ? styles.railDotCompact : {}), background: visual.tint }} />
       </div>
 
       <div role="button" tabIndex={0} onClick={onOpen} onKeyDown={onKeyDown} style={{ ...styles.toatCard, ...(compact ? styles.toatCardCompact : {}) }}>
-        <div style={{ ...styles.iconPanel, ...(compact ? styles.timelineIconPanelCompact : styles.timelineIconPanel), background: visual.cardGradient, boxShadow: `0 18px 32px ${visual.softTint}` }}>
+        <div style={{ ...styles.iconPanel, ...(compact ? styles.timelineIconPanelCompact : styles.timelineIconPanel), background: visual.gradient, boxShadow: `0 18px 32px ${visual.soft}` }}>
           <Icon size={compact ? 24 : 30} />
         </div>
 
@@ -849,7 +747,7 @@ function TimelineRow({
 
         <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
           {action ? (
-            <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.actionColor, background: visual.actionBackground }}>
+            <button type="button" onClick={runAction} style={{ ...styles.cardActionButton, ...(compact ? styles.cardActionButtonCompact : {}), color: visual.accent, background: visual.soft }}>
               {action.label === "Directions" ? <><SteeringWheelIcon size={compact ? 13 : 15} /> Directions</> : action.label}
             </button>
           ) : null}
@@ -1806,3 +1704,4 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(16px)",
   },
 };
+
