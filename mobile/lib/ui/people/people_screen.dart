@@ -331,7 +331,10 @@ class _ToatMiniCard extends StatelessWidget {
           children: [
             Text(toat.title, style: TextStyles.bodyMedium),
             const SizedBox(height: 6),
-            Text('${_peopleEnrichmentKey(toat)} · ${toat.tier}', style: TextStyles.small),
+            Text(
+              '${_peopleEnrichmentKey(toat)} · ${toat.tier}',
+              style: TextStyles.small,
+            ),
           ],
         ),
       ),

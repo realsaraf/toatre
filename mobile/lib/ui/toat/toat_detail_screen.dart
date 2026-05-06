@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:toatre/config/app_config.dart';
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
@@ -112,377 +113,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                       ),
                     ),
                   ] else ...[
-                    _HeroSection(
-                      toat: _toat,
-                      primaryActionLabel: _primaryActionLabel(_toat),
-                      onPrimaryAction: _primaryAction,
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Quick actions',
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          _ActionChip(
-                            label: _workingAction == 'done'
-                                ? 'Saving…'
-                                : 'Mark done',
-                            onTap: _workingAction == null ? _markDone : null,
-                          ),
-                          _ActionChip(
-                            label: _workingAction == 'add1d'
-                                ? 'Saving…'
-                                : '+1 Day',
-                            onTap:
-                                _workingAction == null && _toat.datetime != null
-                                ? _addOneDay
-                                : null,
-                          ),
-                          _ActionChip(
-                            label: _workingAction == 'reschedule'
-                                ? 'Saving…'
-                                : 'Reschedule',
-                            onTap: _workingAction == null ? _reschedule : null,
-                          ),
-                          _ActionChip(
-                            label: _workingAction == 'duplicate'
-                                ? 'Saving…'
-                                : 'Duplicate',
-                            onTap: _workingAction == null ? _duplicate : null,
-                          ),
-                          _ActionChip(
-                            label: 'Share',
-                            onTap: _workingAction == null ? _shareToat : null,
-                          ),
-                          _ActionChip(
-                            label: _primaryActionLabel(_toat),
-                            onTap: _workingAction == null
-                                ? _primaryAction
-                                : null,
-                          ),
-                          if (!_showNotesField &&
-                              (_toat.notes == null || _toat.notes!.isEmpty))
-                            _ActionChip(
-                              label: 'Add notes',
-                              onTap: () =>
-                                  setState(() => _showNotesField = true),
-                            ),
-                          _ActionChip(
-                            label: _workingAction == 'delete'
-                                ? 'Deleting…'
-                                : 'Delete',
-                            destructive: true,
-                            onTap: _workingAction == null ? _delete : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'When & where',
-                      child: Column(
-                        children: [
-                          _InfoRow(label: 'When', value: _formatWhen(_toat)),
-                          if (_toat.location != null &&
-                              _toat.location!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 84,
-                                    child: Text(
-                                      'Where',
-                                      style: TextStyles.smallMedium.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      _toat.location!,
-                                      style: TextStyles.body,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: _workingAction == null
-                                        ? _openLocationSearch
-                                        : null,
-                                    child: Text(
-                                      'Change',
-                                      style: TextStyles.small.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Clipboard.setData(
-                                        ClipboardData(text: _toat.location!),
-                                      );
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Address copied'),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 2,
-                                      ),
-                                      child: Icon(
-                                        Icons.copy_rounded,
-                                        size: 15,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: _workingAction == null
-                                        ? _removeLocation
-                                        : null,
-                                    child: const Text(
-                                      '×',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        color: AppColors.textMuted,
-                                        height: 1,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (_toat.people.isNotEmpty)
-                            _InfoRow(
-                              label: 'People',
-                              value: _toat.people.join(', '),
-                            )
-                        ],
-                      ),
-                    ),
-                    if (_toat.location != null &&
-                        _toat.location!.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      // Decorative map preview
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          height: 150,
-                          width: double.infinity,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Color(0xFFF8FAFC), Color(0xFFF3F4F6)],
-                            ),
-                          ),
-                          child: Stack(
-                            children: [
-                              // Grid lines
-                              CustomPaint(
-                                size: Size.infinite,
-                                painter: _MapGridPainter(),
-                              ),
-                              // Pin
-                              Positioned(
-                                left: MediaQuery.of(context).size.width * 0.46,
-                                top: 42,
-                                child: Transform.rotate(
-                                  angle: -0.785,
-                                  child: Container(
-                                    width: 22,
-                                    height: 22,
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Color(0xFF7C3AED),
-                                          Color(0xFF5B3DF5),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(11),
-                                        topRight: Radius.circular(11),
-                                        bottomLeft: Radius.circular(0),
-                                        bottomRight: Radius.circular(11),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Address label
-                              Positioned(
-                                bottom: 10,
-                                left: 10,
-                                right: 10,
-                                child: Text(
-                                  _toat.location!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF6D28D9),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: Material(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () async {
-                              final uri = _primaryActionUri(_toat);
-                              if (uri != null) {
-                                await launchUrl(
-                                  uri,
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              }
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.directions_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Directions',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    if ((_toat.notes != null && _toat.notes!.isNotEmpty) ||
-                        _showNotesField) ...[
-                      const SizedBox(height: 16),
-                      _SectionCard(
-                        title: 'About this toat',
-                        child: TextField(
-                          controller: _notesCtrl,
-                          maxLines: null,
-                          style: TextStyles.body.copyWith(
-                            color: AppColors.text,
-                            height: 1.6,
-                          ),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (_) {
-                            _notesSaveTimer?.cancel();
-                            _notesSaveTimer = Timer(
-                              const Duration(seconds: 2),
-                              _saveNotes,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    if (_toat.actionEnrichment?['type'] == 'checklist' &&
-                        _checklistItems.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      _ChecklistSection(
-                        items: _checklistItems,
-                        saving: _savingChecklist,
-                        onReorder: (items) {
-                          setState(() => _checklistItems = items);
-                          _saveChecklist(items);
-                        },
-                        onToggle: (index) {
-                          final item = Map<String, dynamic>.from(
-                            _checklistItems[index],
-                          );
-                          item['done'] = !(item['done'] as bool? ?? false);
-                          final updated = [..._checklistItems];
-                          updated[index] = item;
-                          // Move done items to bottom
-                          final pending = updated
-                              .where((x) => !(x['done'] as bool? ?? false))
-                              .toList();
-                          final done = updated
-                              .where((x) => x['done'] as bool? ?? false)
-                              .toList();
-                          final sorted = [...pending, ...done];
-                          setState(() => _checklistItems = sorted);
-                          _saveChecklist(sorted);
-                        },
-                        onTextChanged: (index, text) {
-                          final item = Map<String, dynamic>.from(
-                            _checklistItems[index],
-                          );
-                          item['text'] = text;
-                          final updated = [..._checklistItems];
-                          updated[index] = item;
-                          setState(() => _checklistItems = updated);
-                          _saveChecklist(updated);
-                        },
-                        onDelete: (index) {
-                          final updated = [..._checklistItems]..removeAt(index);
-                          setState(() => _checklistItems = updated);
-                          _saveChecklist(updated);
-                        },
-                        onAdd: () {
-                          final newItem = <String, dynamic>{
-                            'id': DateTime.now().millisecondsSinceEpoch
-                                .toString(),
-                            'text': '',
-                            'done': false,
-                          };
-                          final updated = [..._checklistItems, newItem];
-                          setState(() => _checklistItems = updated);
-                          _saveChecklist(updated);
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Details',
-                      child: Column(
-                        children: [
-                          _InfoRow(label: 'Tier', value: _toat.tier),
-                          _InfoRow(label: 'State', value: _toat.state),
-                          if (_toat.createdAt != null)
-                            _InfoRow(
-                              label: 'Captured',
-                              value: DateFormat.yMMMd().add_jm().format(
-                                _toat.createdAt!,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    ..._buildCards(),
                   ],
                 ],
               ),
@@ -799,17 +430,135 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  String _formatWhen(ToatSummary toat) {
-    if (toat.datetime == null) {
-      return 'Any time';
-    }
+  // \u2500\u2500 Layout hook \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Single place that decides which cards to render and in what order.
+  // All logic lives here; card widgets are pure presentational components.
+  List<Widget> _buildCards() {
+    final isMeeting = (_toat.communicationEnrichment?['joinUrl'] as String?)
+            ?.isNotEmpty ==
+        true;
+    final isChecklist = _toat.actionEnrichment?['type'] == 'checklist';
+    final hasLocation = _toat.location?.isNotEmpty == true;
+    final hasNotes = (_toat.notes?.isNotEmpty == true) || _showNotesField;
+    final hasChecklist = isChecklist && _checklistItems.isNotEmpty;
 
-    final start = DateFormat.yMMMd().add_jm().format(toat.datetime!);
-    if (toat.endDatetime == null) {
-      return start;
-    }
-
-    return '$start → ${DateFormat.jm().format(toat.endDatetime!)}';
+    return [
+      _HeroCard(
+        toat: _toat,
+        primaryActionLabel: _primaryActionLabel(_toat),
+        onPrimaryAction: _primaryAction,
+      ),
+      const SizedBox(height: 16),
+      _ActionStripCard(
+        toat: _toat,
+        workingAction: _workingAction,
+        onMarkDone: _workingAction == null ? _markDone : null,
+        onAddOneDay:
+            (_workingAction == null && _toat.datetime != null)
+                ? _addOneDay
+                : null,
+        onReschedule: _workingAction == null ? _reschedule : null,
+        onDuplicate: _workingAction == null ? _duplicate : null,
+        onDelete: _workingAction == null ? _delete : null,
+      ),
+      const SizedBox(height: 16),
+      if (isMeeting) ...[
+        _MeetingDetailsCard(toat: _toat),
+        const SizedBox(height: 16),
+      ] else ...[
+        _WhenWhereCard(
+          toat: _toat,
+          onChangeLocation: _workingAction == null ? _openLocationSearch : null,
+          onRemoveLocation: _workingAction == null ? _removeLocation : null,
+        ),
+        const SizedBox(height: 16),
+      ],
+      if (hasLocation) ...[
+        _LocationSection(
+          location: _toat.location!,
+          actionLabel: _primaryActionLabel(_toat),
+          actionColors: _detailActionColors(_toat),
+          actionIcon: _detailActionIcon(_toat),
+          onChangeLocation: _workingAction == null ? _openLocationSearch : null,
+          onRemoveLocation: _workingAction == null ? _removeLocation : null,
+          onPrimaryAction: _workingAction == null ? _primaryAction : null,
+        ),
+        const SizedBox(height: 16),
+      ] else ...[
+        _AddLocationButton(
+          onTap: _workingAction == null ? _openLocationSearch : null,
+        ),
+        const SizedBox(height: 16),
+      ],
+      if (hasChecklist) ...[
+        _ChecklistCard(
+          items: _checklistItems,
+          saving: _savingChecklist,
+          onReorder: (items) {
+            setState(() => _checklistItems = items);
+            _saveChecklist(items);
+          },
+          onToggle: (index) {
+            final item =
+                Map<String, dynamic>.from(_checklistItems[index]);
+            item['done'] = !(item['done'] as bool? ?? false);
+            final updated =
+                List<Map<String, dynamic>>.from(_checklistItems);
+            updated[index] = item;
+            final pending =
+                updated.where((x) => !(x['done'] as bool? ?? false)).toList();
+            final done =
+                updated.where((x) => x['done'] as bool? ?? false).toList();
+            final sorted = [...pending, ...done];
+            setState(() => _checklistItems = sorted);
+            _saveChecklist(sorted);
+          },
+          onTextChanged: (index, text) {
+            final item =
+                Map<String, dynamic>.from(_checklistItems[index]);
+            item['text'] = text;
+            final updated =
+                List<Map<String, dynamic>>.from(_checklistItems);
+            updated[index] = item;
+            setState(() => _checklistItems = updated);
+            _saveChecklist(updated);
+          },
+          onDelete: (index) {
+            final updated =
+                List<Map<String, dynamic>>.from(_checklistItems)
+                  ..removeAt(index);
+            setState(() => _checklistItems = updated);
+            _saveChecklist(updated);
+          },
+          onAdd: () {
+            final newItem = <String, dynamic>{
+              'id': DateTime.now().millisecondsSinceEpoch.toString(),
+              'text': '',
+              'done': false,
+            };
+            setState(() => _checklistItems = [..._checklistItems, newItem]);
+            _saveChecklist(_checklistItems);
+          },
+        ),
+        const SizedBox(height: 16),
+      ],
+      if (hasNotes) ...[
+        _NotesCard(
+          controller: _notesCtrl,
+          onChanged: (_) {
+            _notesSaveTimer?.cancel();
+            _notesSaveTimer = Timer(const Duration(seconds: 2), _saveNotes);
+          },
+        ),
+        const SizedBox(height: 16),
+      ] else ...[
+        _AddNotesButton(
+          onTap: () => setState(() => _showNotesField = true),
+        ),
+        const SizedBox(height: 16),
+      ],
+      _DetailsCard(toat: _toat),
+    ];
   }
 
   String _primaryActionLabel(ToatSummary toat) {
@@ -863,8 +612,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   }
 }
 
-class _HeroSection extends StatelessWidget {
-  const _HeroSection({
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({
     required this.toat,
     required this.primaryActionLabel,
     required this.onPrimaryAction,
@@ -890,9 +639,7 @@ class _HeroSection extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
-          color: _detailEnrichmentColors(
-            toat,
-          ).last.withValues(alpha: 0.12),
+          color: _detailEnrichmentColors(toat).last.withValues(alpha: 0.12),
         ),
         boxShadow: const [
           BoxShadow(
@@ -1108,38 +855,545 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  const _ActionChip({
-    required this.label,
-    required this.onTap,
-    this.destructive = false,
+class _ActionStripCard extends StatelessWidget {
+  const _ActionStripCard({
+    required this.toat,
+    required this.workingAction,
+    required this.onMarkDone,
+    required this.onAddOneDay,
+    required this.onReschedule,
+    required this.onDuplicate,
+    required this.onDelete,
   });
 
+  final ToatSummary toat;
+  final String? workingAction;
+  final VoidCallback? onMarkDone;
+  final VoidCallback? onAddOneDay;
+  final VoidCallback? onReschedule;
+  final VoidCallback? onDuplicate;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _StripAction(
+            icon: Icons.check_circle_outline_rounded,
+            label: workingAction == 'done' ? '\u2026' : 'Mark done',
+            tint: const Color(0xFF16A34A),
+            onTap: onMarkDone,
+          ),
+          _StripAction(
+            icon: Icons.update_rounded,
+            label: workingAction == 'add1d' ? '\u2026' : '+1 Day',
+            tint: const Color(0xFF2563EB),
+            onTap: onAddOneDay,
+          ),
+          _StripAction(
+            icon: Icons.schedule_rounded,
+            label: workingAction == 'reschedule' ? '\u2026' : 'Reschedule',
+            tint: const Color(0xFF7C3AED),
+            onTap: onReschedule,
+          ),
+          _StripAction(
+            icon: Icons.copy_all_rounded,
+            label: workingAction == 'duplicate' ? '\u2026' : 'Duplicate',
+            tint: const Color(0xFF6B7280),
+            onTap: onDuplicate,
+          ),
+          _StripAction(
+            icon: Icons.delete_outline_rounded,
+            label: workingAction == 'delete' ? '\u2026' : 'Delete',
+            tint: const Color(0xFFDC2626),
+            onTap: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StripAction extends StatelessWidget {
+  const _StripAction({
+    required this.icon,
+    required this.label,
+    required this.tint,
+    required this.onTap,
+  });
+
+  final IconData icon;
   final String label;
+  final Color tint;
   final VoidCallback? onTap;
-  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Opacity(
+        opacity: onTap == null ? 0.45 : 1,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: tint.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: tint, size: 22),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: tint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WhenWhereCard extends StatelessWidget {
+  const _WhenWhereCard({
+    required this.toat,
+    required this.onChangeLocation,
+    required this.onRemoveLocation,
+  });
+
+  final ToatSummary toat;
+  final VoidCallback? onChangeLocation;
+  final VoidCallback? onRemoveLocation;
+
+  String _formatWhen(ToatSummary t) {
+    if (t.datetime == null) return 'Any time';
+    final start = DateFormat.yMMMd().add_jm().format(t.datetime!);
+    if (t.endDatetime == null) return start;
+    return '$start \u2192 ${DateFormat.jm().format(t.endDatetime!)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = toat.location;
+    final hasLocation = loc != null && loc.isNotEmpty;
+    return _SectionCard(
+      title: 'When & where',
+      child: Column(
+        children: [
+          _InfoRow(label: 'When', value: _formatWhen(toat)),
+          if (hasLocation)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 84,
+                    child: Text(
+                      'Where',
+                      style: TextStyles.smallMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Text(loc, style: TextStyles.body)),
+                  GestureDetector(
+                    onTap: onChangeLocation,
+                    child: Text(
+                      'Change',
+                      style: TextStyles.small.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: loc));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Address copied'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Icon(
+                        Icons.copy_rounded,
+                        size: 15,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: onRemoveLocation,
+                    child: const Text(
+                      '\u00d7',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: AppColors.textMuted,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (toat.people.isNotEmpty)
+            _InfoRow(label: 'People', value: toat.people.join(', ')),
+        ],
+      ),
+    );
+  }
+}
+
+class _MeetingDetailsCard extends StatelessWidget {
+  const _MeetingDetailsCard({required this.toat});
+
+  final ToatSummary toat;
+
+  @override
+  Widget build(BuildContext context) {
+    final joinUrl =
+        toat.communicationEnrichment?['joinUrl'] as String?;
+    return _SectionCard(
+      title: 'Meeting details',
+      child: Column(
+        children: [
+          if (toat.datetime != null)
+            _InfoRow(
+              label: 'When',
+              value: DateFormat.yMMMd().add_jm().format(toat.datetime!),
+            ),
+          if (joinUrl != null && joinUrl.isNotEmpty)
+            _InfoRow(
+              label: 'Link',
+              value: joinUrl.replaceFirst(RegExp(r'^https?://'), ''),
+            ),
+          if (toat.people.isNotEmpty)
+            _InfoRow(label: 'People', value: toat.people.join(', ')),
+        ],
+      ),
+    );
+  }
+}
+
+class _MapCard extends StatelessWidget {
+  const _MapCard({required this.location});
+
+  final String location;
+
+  @override
+  Widget build(BuildContext context) {
+    final mapUrl = AppConfig.apiUri(
+      '/api/places/staticmap',
+      queryParameters: {'q': location},
+    ).toString();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        height: 160,
+        width: double.infinity,
+        child: Image.network(
+          mapUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              color: AppColors.bgElevated,
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.bgElevated,
+            child: const Center(
+              child: Icon(
+                Icons.map_outlined,
+                color: AppColors.textMuted,
+                size: 32,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationSection extends StatelessWidget {
+  const _LocationSection({
+    required this.location,
+    required this.actionLabel,
+    required this.actionColors,
+    required this.actionIcon,
+    required this.onChangeLocation,
+    required this.onRemoveLocation,
+    required this.onPrimaryAction,
+  });
+
+  final String location;
+  final String actionLabel;
+  final List<Color> actionColors;
+  final IconData actionIcon;
+  final VoidCallback? onChangeLocation;
+  final VoidCallback? onRemoveLocation;
+  final VoidCallback? onPrimaryAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.location_on_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  location,
+                  style: TextStyles.small.copyWith(color: AppColors.text),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: location));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Address copied'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 15,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onChangeLocation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    'Change',
+                    style: TextStyles.small.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onRemoveLocation,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 2),
+                  child: Text(
+                    '\u00d7',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: AppColors.textMuted,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _MapCard(location: location),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onPrimaryAction,
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: actionColors),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(actionIcon, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        actionLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddLocationButton extends StatelessWidget {
+  const _AddLocationButton({required this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: destructive
-              ? const Color(0x22EF4444)
-              : const Color(0x121C2540),
-          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: destructive ? const Color(0x44EF4444) : AppColors.border,
+            color: AppColors.primary.withValues(alpha: 0.25),
           ),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Text(
-          label,
-          style: TextStyles.smallMedium.copyWith(
-            color: destructive ? AppColors.error : AppColors.text,
+        child: Row(
+          children: [
+            const Icon(
+              Icons.add_location_alt_outlined,
+              size: 20,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Add location',
+              style:
+                  TextStyles.bodyMedium.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotesCard extends StatelessWidget {
+  const _NotesCard({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Notes',
+      child: TextField(
+        controller: controller,
+        maxLines: null,
+        style: TextStyles.body.copyWith(color: AppColors.text, height: 1.6),
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+          hintText: 'Add a note\u2026',
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _AddNotesButton extends StatelessWidget {
+  const _AddNotesButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.25),
           ),
+          borderRadius: BorderRadius.circular(16),
         ),
+        child: Row(
+          children: [
+            const Icon(Icons.add_rounded, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(
+              'Add notes',
+              style:
+                  TextStyles.bodyMedium.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailsCard extends StatelessWidget {
+  const _DetailsCard({required this.toat});
+
+  final ToatSummary toat;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Details',
+      child: Column(
+        children: [
+          _InfoRow(label: 'Tier', value: toat.tier),
+          _InfoRow(label: 'State', value: toat.state),
+          if (toat.createdAt != null)
+            _InfoRow(
+              label: 'Captured',
+              value: DateFormat.yMMMd().add_jm().format(toat.createdAt!),
+            ),
+        ],
       ),
     );
   }
@@ -1299,7 +1553,6 @@ List<Color> _detailEnrichmentColors(ToatSummary toat) =>
 IconData _detailEnrichmentIcon(ToatSummary toat) =>
     _detailTemplateIcon(_detailEnrichmentKey(toat));
 
-
 IconData _detailActionIcon(ToatSummary toat) {
   if (_detailPhone(toat) != null) return Icons.call_rounded;
   final joinUrl = toat.communicationEnrichment?['joinUrl'] as String?;
@@ -1328,8 +1581,8 @@ List<Color> _detailActionColors(ToatSummary toat) {
 // Checklist section — interactive, drag-reorderable
 // ---------------------------------------------------------------------------
 
-class _ChecklistSection extends StatefulWidget {
-  const _ChecklistSection({
+class _ChecklistCard extends StatefulWidget {
+  const _ChecklistCard({
     required this.items,
     required this.saving,
     required this.onReorder,
@@ -1348,10 +1601,10 @@ class _ChecklistSection extends StatefulWidget {
   final VoidCallback onAdd;
 
   @override
-  State<_ChecklistSection> createState() => _ChecklistSectionState();
+  State<_ChecklistCard> createState() => _ChecklistCardState();
 }
 
-class _ChecklistSectionState extends State<_ChecklistSection> {
+class _ChecklistCardState extends State<_ChecklistCard> {
   final Map<int, TextEditingController> _controllers = {};
   final Map<int, FocusNode> _focusNodes = {};
 
@@ -1569,17 +1822,9 @@ class _LocationSearchContentState extends State<_LocationSearchContent> {
   Future<void> _fetchSuggestions(String q) async {
     setState(() => _searching = true);
     try {
-      const apiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
-      if (apiKey.isEmpty) {
-        setState(() {
-          _searching = false;
-          _suggestions = [];
-        });
-        return;
-      }
-      final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json'
-        '?input=${Uri.encodeComponent(q)}&key=$apiKey&types=geocode|establishment',
+      final uri = AppConfig.apiUri(
+        '/api/places/autocomplete',
+        queryParameters: {'q': q},
       );
       final response = await http.get(uri);
       if (!mounted) return;
@@ -1684,23 +1929,4 @@ class _LocationSearchContentState extends State<_LocationSearchContent> {
       ],
     );
   }
-}
-
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF94A3B8).withValues(alpha: 0.18)
-      ..strokeWidth = 1;
-    const step = 44.0;
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

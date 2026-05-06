@@ -222,6 +222,49 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+// ─── Layout hook ─────────────────────────────────────────────────────────────
+interface ToatLayout {
+  isMeeting: boolean;
+  isEvent: boolean;
+  isChecklist: boolean;
+  loc: string | null;
+  maps: string | null;
+  phone: string | null;
+  joinUrl: string | null;
+  people: string[];
+  startDate: Date | null;
+  endDate: Date | null;
+  ticketUrl: string | null;
+  visual: DetailVisual;
+  heroChip: ReturnType<typeof formatRelativeChip>;
+  primaryAction: ActionConfig;
+  reminders: Array<{ title: string; subtitle: string }>;
+  agenda: string[];
+}
+
+function useToatLayout(toat: ToatDetail, now: Date): ToatLayout {
+  const joinUrl = toat.enrichments?.communication?.joinUrl ?? null;
+  const phone = toat.enrichments?.communication?.phone ?? null;
+  const loc = toatLocation(toat);
+  const maps = mapHref(loc);
+  const people = toatPeople(toat);
+  const startDate = toatTime(toat) ? new Date(toatTime(toat)!) : null;
+  const endDate = toatEndTime(toat) ? new Date(toatEndTime(toat)!) : null;
+  const ticketUrl = toat.enrichments?.event?.ticketUrl ?? null;
+  return {
+    isMeeting: !!joinUrl,
+    isEvent: !!toat.enrichments?.event,
+    isChecklist: toat.enrichments?.action?.type === "checklist",
+    loc, maps, phone, joinUrl, people,
+    startDate, endDate, ticketUrl,
+    visual: getVisual(toat),
+    heroChip: formatRelativeChip(toat, now),
+    primaryAction: getPrimaryAction(toat),
+    reminders: buildReminderLines(toat),
+    agenda: getAgendaLines(toat),
+  };
+}
+
 function DetailBadge({ text, style, accent }: { text: string; style: "solid" | "soft" | "outline"; accent: string }) {
   const badgeStyle =
     style === "solid"
@@ -642,25 +685,9 @@ export default function ToatDetailPage() {
     );
   }
 
-  const visual = getVisual(toat);
+  const layout = useToatLayout(toat, now);
+  const { isMeeting, isEvent, isChecklist, loc, maps, phone, joinUrl, people, startDate, endDate, ticketUrl, visual, heroChip, primaryAction, reminders, agenda } = layout;
   const Icon = visual.Icon;
-  const heroChip = formatRelativeChip(toat, now);
-  const primaryAction = getPrimaryAction(toat);
-  const reminders = buildReminderLines(toat);
-  const agenda = getAgendaLines(toat);
-  const checklistItems = getChecklistItems(toat);
-  const ticketUrl = toat.enrichments?.event?.ticketUrl ?? null;
-  const startDate = toatTime(toat) ? new Date(toatTime(toat)!) : null;
-  const endDate = toatEndTime(toat) ? new Date(toatEndTime(toat)!) : null;
-  const phone = toat.enrichments?.communication?.phone ?? null;
-  const joinUrl = toat.enrichments?.communication?.joinUrl ?? null;
-  const loc = toatLocation(toat);
-  const maps = mapHref(loc);
-  const people = toatPeople(toat);
-  // Enrichment presence flags for render branching
-  const isMeeting = !!joinUrl;
-  const isEvent = !!toat.enrichments?.event;
-  const isChecklist = toat.enrichments?.action?.type === "checklist";
   const isPhoneViewport = viewportWidth === null || viewportWidth <= 768;
 
   return (
@@ -753,342 +780,69 @@ export default function ToatDetailPage() {
         ) : null}
 
         {(!isMeeting && !isEvent && !isChecklist) ? (
-          <>
-            <SectionCard title="When & where" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
-              {startDate ? (
-                <InfoRow
-                  icon={<ClockIcon size={22} />}
-                  label="When"
-                  title={formatDate(startDate)}
-                  subtitle={endDate ? `${formatTime(startDate)} – ${formatTime(endDate)}` : formatTime(startDate)}
-                />
-              ) : null}
-              {loc ? (
-                <InfoRow
-                  icon={<LocationIcon size={22} />}
-                  label="Where"
-                  title={loc}
-                  subtitle={maps ? "Open in Maps" : null}
-                  onClick={maps ? () => window.open(maps, "_blank", "noopener,noreferrer") : undefined}
-                  trailing={maps ? <span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span> : undefined}
-                />
-              ) : null}
-              {phone ? (
-                <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
-              ) : null}
-              {maps && loc ? (
-                <>
-                  <LocationBlock
-                    location={loc}
-                    mapsUrl={maps}
-                    gradient={visual.gradient}
-                    accent={visual.accent}
-                    onChangeLocation={() => setLocationSearchOpen(true)}
-                    onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
-                  />
-                  <div style={styles.buttonRow}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; }
-                        void openShareModal();
-                      }}
-                      style={styles.secondaryButton}
-                    >
-                      {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div style={styles.buttonRow}>
-                  <button type="button" onClick={() => setLocationSearchOpen(true)} style={styles.secondaryButton}>
-                    <LocationIcon size={18} /> Add location
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; }
-                      void openShareModal();
-                    }}
-                    style={styles.secondaryButton}
-                  >
-                    {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
-                  </button>
-                </div>
-              )}
-            </SectionCard>
-
-            {(showNotes || notesLocal.trim() !== "") ? (
-            <SectionCard title="Notes">
-              <textarea
-                style={styles.notesTextarea}
-                value={notesLocal}
-                onChange={(e) => {
-                  setNotesLocal(e.target.value);
-                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
-                }}
-                onBlur={() => void saveNotesText(notesLocal)}
-                placeholder="Add a note…"
-                rows={3}
-              />
-              <div style={styles.captureLine}>
-                <span style={styles.captureAvatar}>{user?.displayName?.[0]?.toUpperCase() ?? "T"}</span>
-                <span>Captured {formatShortDate(new Date(toat.createdAt))}</span>
-                <span style={{ color: visual.accent }}><SparkleIcon size={16} /></span>
-              </div>
-            </SectionCard>
-            ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
-            )}
-
-            {reminders.length ? (
-              <SectionCard title="Reminders">
-                {reminders.map((reminder) => (
-                  <div key={reminder.title} style={styles.toggleRow}>
-                    <div style={styles.toggleRowText}>
-                      <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
-                      <div>
-                        <p style={styles.toggleTitle}>{reminder.title}</p>
-                        <p style={styles.toggleSubtitle}>{reminder.subtitle}</p>
-                      </div>
-                    </div>
-                    <SwitchVisual on={true} />
-                  </div>
-                ))}
-              </SectionCard>
-            ) : null}
-          </>
+          <WhenWhereCard
+            startDate={startDate}
+            endDate={endDate}
+            loc={loc}
+            maps={maps}
+            phone={phone}
+            visual={visual}
+            notesLocal={notesLocal}
+            showNotes={showNotes}
+            setNotesLocal={setNotesLocal}
+            saveNotesText={saveNotesText}
+            notesSaveTimer={notesSaveTimer}
+            setShowNotes={setShowNotes}
+            onAddLocation={() => setLocationSearchOpen(true)}
+            onChangeLocation={() => setLocationSearchOpen(true)}
+            onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
+            onShareOrCall={() => {
+              if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; }
+              void openShareModal();
+            }}
+            reminders={reminders}
+            user={user}
+            toat={toat}
+          />
         ) : null}
 
         {isMeeting ? (
-          <>
-            <SectionCard title="Meeting details">
-              {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={`${formatDate(startDate)} · ${formatTime(startDate)}`} subtitle={endDate ? `Ends at ${formatTime(endDate)}` : null} /> : null}
-              {joinUrl ? <InfoRow icon={<VideoGlyph size={22} />} label="Link" title="Open meeting room" subtitle={joinUrl.replace(/^https?:\/\//, "")} onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} trailing={<span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span>} /> : null}
-              <InfoRow icon={<MessageGlyph size={22} />} label="People" title={`${people.length || 1} people`} subtitle={people.length ? people.join(", ") : "Just you so far"} />
-            </SectionCard>
-
-            <SectionCard title="Agenda" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
-              {agenda.length ? (
-                <ul style={styles.list}>
-                  {agenda.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p style={styles.bodyText}>No agenda yet. Add one from your next capture.</p>
-              )}
-            </SectionCard>
-
-            {joinUrl ? (
-              <SectionCard title="Attachment">
-                <button type="button" onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} style={{ ...styles.attachmentRow, ...styles.attachmentRowButton }}>
-                  <span style={{ ...styles.attachmentIcon, color: visual.accent, background: visual.soft }}><DocumentIcon size={24} /></span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={styles.attachmentTitle}>Meeting link</p>
-                    <p style={styles.attachmentSubtitle}>{joinUrl.replace(/^https?:\/\//, "")}</p>
-                  </div>
-                  <span style={{ color: visual.accent }}><ChevronRightIcon size={20} /></span>
-                </button>
-              </SectionCard>
-            ) : null}
-
-            <SectionCard title="Ping">
-              <div style={styles.pingRow}>
-                <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
-                <div>
-                  <p style={styles.toggleTitle}>10 min before</p>
-                  <p style={styles.toggleSubtitle}>You&apos;ll get a Ping before it starts.</p>
-                </div>
-              </div>
-            </SectionCard>
-          </>
+          <MeetingSection
+            startDate={startDate}
+            endDate={endDate}
+            joinUrl={joinUrl!}
+            people={people}
+            agenda={agenda}
+            visual={visual}
+            loc={loc}
+            maps={maps}
+            onAddLocation={() => setLocationSearchOpen(true)}
+            onChangeLocation={() => setLocationSearchOpen(true)}
+            onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
+          />
         ) : null}
 
         {isChecklist ? (
-          <>
-            <SectionCard
-              title="Checklist"
-              action={
-                <button
-                  type="button"
-                  style={styles.inlineGhost}
-                  onClick={() => {
-                    const newItem = { id: Date.now().toString(), text: "", done: false };
-                    const next = [...checklistLocal, newItem];
-                    setChecklistLocal(next);
-                    void saveChecklistItems(next);
-                  }}
-                >
-                  <PlusIcon size={15} /> Add item
-                </button>
-              }
-            >
-              {checklistLocal.length ? (
-                <div style={styles.checklist}>
-                  {checklistLocal.map((item, i) => (
-                    <div
-                      key={item.id}
-                      style={{ ...styles.checklistRow, opacity: item.done ? 0.55 : 1 }}
-                      draggable
-                      onDragStart={() => { checklistDragIndex.current = i; }}
-                      onDragOver={(e) => { e.preventDefault(); }}
-                      onDrop={() => {
-                        const from = checklistDragIndex.current;
-                        if (from === null || from === i) return;
-                        const next = [...checklistLocal];
-                        const [moved] = next.splice(from, 1);
-                        next.splice(i, 0, moved);
-                        checklistDragIndex.current = null;
-                        setChecklistLocal(next);
-                        void saveChecklistItems(next);
-                      }}
-                    >
-                      <span style={styles.grabHandle}><GrabHandleIcon size={15} /></span>
-                      <button
-                        type="button"
-                        style={{ ...styles.checkCircle, ...(item.done ? { background: visual.accent, borderColor: visual.accent } : {}) }}
-                        aria-label={item.done ? "Mark undone" : "Mark done"}
-                        onClick={() => {
-                          const updated = checklistLocal.map((c, j) => j === i ? { ...c, done: !c.done } : c);
-                          const undone = updated.filter((c) => !c.done);
-                          const done = updated.filter((c) => c.done);
-                          const next = [...undone, ...done];
-                          setChecklistLocal(next);
-                          void saveChecklistItems(next);
-                        }}
-                      />
-                      <input
-                        style={{ ...styles.checkLabel, ...(item.done ? { textDecoration: "line-through" } : {}), flex: 1, background: "transparent", border: "none", outline: "none", color: "inherit", fontSize: "inherit", fontFamily: "inherit", padding: 0 }}
-                        value={item.text}
-                        onChange={(e) => {
-                          setChecklistLocal(checklistLocal.map((c, j) => j === i ? { ...c, text: e.target.value } : c));
-                        }}
-                        onBlur={() => void saveChecklistItems(checklistLocal)}
-                        placeholder="Item text…"
-                      />
-                      <button
-                        type="button"
-                        style={styles.checkDeleteButton}
-                        aria-label="Remove item"
-                        onClick={() => {
-                          const next = checklistLocal.filter((_, j) => j !== i);
-                          setChecklistLocal(next);
-                          void saveChecklistItems(next);
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  style={{ ...styles.inlineGhost, width: "100%", justifyContent: "center", padding: "12px 0" }}
-                  onClick={() => {
-                    const newItem = { id: Date.now().toString(), text: "", done: false };
-                    setChecklistLocal([newItem]);
-                    void saveChecklistItems([newItem]);
-                  }}
-                >
-                  <PlusIcon size={18} /> Add your first item
-                </button>
-              )}
-            </SectionCard>
-
-            {(showNotes || notesLocal.trim() !== "") ? (
-            <SectionCard title="Notes">
-              <textarea
-                style={styles.notesTextarea}
-                value={notesLocal}
-                onChange={(e) => {
-                  setNotesLocal(e.target.value);
-                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
-                }}
-                onBlur={() => void saveNotesText(notesLocal)}
-                placeholder="Add a note…"
-                rows={3}
-              />
-            </SectionCard>
-            ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
-            )}
-
-            <SectionCard title="Ping me">
-              <div style={styles.toggleRow}>
-                <div style={styles.toggleRowText}>
-                  <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
-                  <div>
-                    <p style={styles.toggleTitle}>30 min before</p>
-                    <p style={styles.toggleSubtitle}>We&apos;ll Ping you before you head out.</p>
-                  </div>
-                </div>
-                <SwitchVisual on={true} />
-              </div>
-            </SectionCard>
-
-            {maps && loc ? (
-              <LocationBlock
-                location={loc}
-                mapsUrl={maps}
-                gradient={visual.gradient}
-                accent={visual.accent}
-                onChangeLocation={() => setLocationSearchOpen(true)}
-                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
-              />
-            ) : (
-              <div style={styles.buttonRow}>
-                <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
-                  <LocationIcon size={18} /> Add location
-                </button>
-              </div>
-            )}
-          </>
-        ) : null}
-
-        {(!isMeeting && !isEvent && !isChecklist) ? (
-          <>
-            <SectionCard title="Details">
-              {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={formatDate(startDate)} subtitle={formatTime(startDate)} /> : null}
-            </SectionCard>
-            {maps && loc ? (
-              <LocationBlock
-                location={loc}
-                mapsUrl={maps}
-                gradient={visual.gradient}
-                accent={visual.accent}
-                onChangeLocation={() => setLocationSearchOpen(true)}
-                onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
-              />
-            ) : (
-              <div style={styles.buttonRow}>
-                <button type="button" style={styles.secondaryButton} onClick={() => setLocationSearchOpen(true)}>
-                  <LocationIcon size={18} /> Add location
-                </button>
-              </div>
-            )}
-            {(showNotes || notesLocal.trim() !== "") ? (
-            <SectionCard title="Notes">
-              <textarea
-                style={styles.notesTextarea}
-                value={notesLocal}
-                onChange={(e) => {
-                  setNotesLocal(e.target.value);
-                  if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-                  notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
-                }}
-                onBlur={() => void saveNotesText(notesLocal)}
-                placeholder="Add a note…"
-                rows={3}
-              />
-            </SectionCard>
-            ) : (
-              <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
-            )}
-          </>
+          <ChecklistSection
+            checklistLocal={checklistLocal}
+            setChecklistLocal={setChecklistLocal}
+            saveChecklistItems={saveChecklistItems}
+            checklistDragIndex={checklistDragIndex}
+            visual={visual}
+            loc={loc}
+            maps={maps}
+            onAddLocation={() => setLocationSearchOpen(true)}
+            onChangeLocation={() => setLocationSearchOpen(true)}
+            onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))}
+            notesLocal={notesLocal}
+            showNotes={showNotes}
+            setNotesLocal={setNotesLocal}
+            saveNotesText={saveNotesText}
+            notesSaveTimer={notesSaveTimer}
+            setShowNotes={setShowNotes}
+            user={user}
+            toat={toat}
+          />
         ) : null}
 
         {people.length ? (
@@ -1177,6 +931,357 @@ export default function ToatDetailPage() {
         />
       ) : null}
     </div>
+  );
+}
+
+// ─── Card components ──────────────────────────────────────────────────────────
+// Each card receives exactly the data it needs; no global state access.
+
+function WhenWhereCard({
+  startDate, endDate, loc, maps, phone, visual,
+  notesLocal, showNotes, setNotesLocal, saveNotesText, notesSaveTimer, setShowNotes,
+  onAddLocation, onChangeLocation, onRemoveLocation, onShareOrCall,
+  reminders, user, toat,
+}: {
+  startDate: Date | null; endDate: Date | null; loc: string | null; maps: string | null;
+  phone: string | null; visual: DetailVisual;
+  notesLocal: string; showNotes: boolean;
+  setNotesLocal: (v: string) => void;
+  saveNotesText: (v: string) => Promise<void>;
+  notesSaveTimer: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  setShowNotes: (v: boolean) => void;
+  onAddLocation: () => void; onChangeLocation: () => void; onRemoveLocation: () => void;
+  onShareOrCall: () => void;
+  reminders: Array<{ title: string; subtitle: string }>;
+  user: { displayName: string | null } | null;
+  toat: ToatDetail;
+}) {
+  return (
+    <>
+      <SectionCard title="When & where" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
+        {startDate ? (
+          <InfoRow
+            icon={<ClockIcon size={22} />}
+            label="When"
+            title={formatDate(startDate)}
+            subtitle={endDate ? `${formatTime(startDate)} \u2013 ${formatTime(endDate)}` : formatTime(startDate)}
+          />
+        ) : null}
+        {loc ? (
+          <InfoRow
+            icon={<LocationIcon size={22} />}
+            label="Where"
+            title={loc}
+            subtitle={maps ? "Open in Maps" : null}
+            onClick={maps ? () => window.open(maps, "_blank", "noopener,noreferrer") : undefined}
+            trailing={maps ? <span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span> : undefined}
+          />
+        ) : null}
+        {phone ? (
+          <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
+        ) : null}
+        {maps && loc ? (
+          <>
+            <LocationBlock
+              location={loc}
+              mapsUrl={maps}
+              gradient={visual.gradient}
+              accent={visual.accent}
+              onChangeLocation={onChangeLocation}
+              onRemoveLocation={onRemoveLocation}
+            />
+            <div style={styles.buttonRow}>
+              <button type="button" onClick={onShareOrCall} style={styles.secondaryButton}>
+                {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={styles.buttonRow}>
+            <button type="button" onClick={onAddLocation} style={styles.secondaryButton}>
+              <LocationIcon size={18} /> Add location
+            </button>
+            <button type="button" onClick={onShareOrCall} style={styles.secondaryButton}>
+              {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />} {phone ? "Call" : "Share"}
+            </button>
+          </div>
+        )}
+      </SectionCard>
+
+      {(showNotes || notesLocal.trim() !== "") ? (
+        <SectionCard title="Notes">
+          <textarea
+            style={styles.notesTextarea}
+            value={notesLocal}
+            onChange={(e) => {
+              setNotesLocal(e.target.value);
+              if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+              notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+            }}
+            onBlur={() => void saveNotesText(notesLocal)}
+            placeholder="Add a note\u2026"
+            rows={3}
+          />
+          <div style={styles.captureLine}>
+            <span style={styles.captureAvatar}>{user?.displayName?.[0]?.toUpperCase() ?? "T"}</span>
+            <span>Captured {formatShortDate(new Date(toat.createdAt))}</span>
+            <span style={{ color: visual.accent }}><SparkleIcon size={16} /></span>
+          </div>
+        </SectionCard>
+      ) : (
+        <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
+      )}
+
+      {reminders.length ? (
+        <SectionCard title="Reminders">
+          {reminders.map((reminder) => (
+            <div key={reminder.title} style={styles.toggleRow}>
+              <div style={styles.toggleRowText}>
+                <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
+                <div>
+                  <p style={styles.toggleTitle}>{reminder.title}</p>
+                  <p style={styles.toggleSubtitle}>{reminder.subtitle}</p>
+                </div>
+              </div>
+              <SwitchVisual on={true} />
+            </div>
+          ))}
+        </SectionCard>
+      ) : null}
+    </>
+  );
+}
+
+function MeetingSection({
+  startDate, endDate, joinUrl, people, agenda, visual, loc, maps,
+  onAddLocation, onChangeLocation, onRemoveLocation,
+}: {
+  startDate: Date | null; endDate: Date | null; joinUrl: string; people: string[];
+  agenda: string[]; visual: DetailVisual; loc: string | null; maps: string | null;
+  onAddLocation: () => void; onChangeLocation: () => void; onRemoveLocation: () => void;
+}) {
+  return (
+    <>
+      <SectionCard title="Meeting details">
+        {startDate ? <InfoRow icon={<ClockIcon size={22} />} label="When" title={`${formatDate(startDate)} \u00b7 ${formatTime(startDate)}`} subtitle={endDate ? `Ends at ${formatTime(endDate)}` : null} /> : null}
+        <InfoRow icon={<VideoGlyph size={22} />} label="Link" title="Open meeting room" subtitle={joinUrl.replace(/^https?:\/\//, "")} onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} trailing={<span style={{ color: "#6B7280" }}><ChevronRightIcon size={18} /></span>} />
+        <InfoRow icon={<MessageGlyph size={22} />} label="People" title={`${people.length || 1} people`} subtitle={people.length ? people.join(", ") : "Just you so far"} />
+      </SectionCard>
+
+      <SectionCard title="Agenda" action={<button type="button" style={styles.inlineGhost}><EditIcon size={18} /> Edit</button>}>
+        {agenda.length ? (
+          <ul style={styles.list}>
+            {agenda.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p style={styles.bodyText}>No agenda yet. Add one from your next capture.</p>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Attachment">
+        <button type="button" onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")} style={{ ...styles.attachmentRow, ...styles.attachmentRowButton }}>
+          <span style={{ ...styles.attachmentIcon, color: visual.accent, background: visual.soft }}><DocumentIcon size={24} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={styles.attachmentTitle}>Meeting link</p>
+            <p style={styles.attachmentSubtitle}>{joinUrl.replace(/^https?:\/\//, "")}</p>
+          </div>
+          <span style={{ color: visual.accent }}><ChevronRightIcon size={20} /></span>
+        </button>
+      </SectionCard>
+
+      <SectionCard title="Ping">
+        <div style={styles.pingRow}>
+          <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
+          <div>
+            <p style={styles.toggleTitle}>10 min before</p>
+            <p style={styles.toggleSubtitle}>You&apos;ll get a Ping before it starts.</p>
+          </div>
+        </div>
+      </SectionCard>
+
+      {maps && loc ? (
+        <LocationBlock
+          location={loc}
+          mapsUrl={maps}
+          gradient={visual.gradient}
+          accent={visual.accent}
+          onChangeLocation={onChangeLocation}
+          onRemoveLocation={onRemoveLocation}
+        />
+      ) : (
+        <div style={styles.buttonRow}>
+          <button type="button" onClick={onAddLocation} style={styles.secondaryButton}>
+            <LocationIcon size={18} /> Add location
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ChecklistSection({
+  checklistLocal, setChecklistLocal, saveChecklistItems, checklistDragIndex,
+  visual, loc, maps, onAddLocation, onChangeLocation, onRemoveLocation,
+  notesLocal, showNotes, setNotesLocal, saveNotesText, notesSaveTimer, setShowNotes,
+  user, toat,
+}: {
+  checklistLocal: Array<{ id: string; text: string; done: boolean }>;
+  setChecklistLocal: (v: Array<{ id: string; text: string; done: boolean }>) => void;
+  saveChecklistItems: (v: Array<{ id: string; text: string; done: boolean }>) => Promise<void>;
+  checklistDragIndex: React.MutableRefObject<number | null>;
+  visual: DetailVisual; loc: string | null; maps: string | null;
+  onAddLocation: () => void; onChangeLocation: () => void; onRemoveLocation: () => void;
+  notesLocal: string; showNotes: boolean;
+  setNotesLocal: (v: string) => void;
+  saveNotesText: (v: string) => Promise<void>;
+  notesSaveTimer: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  setShowNotes: (v: boolean) => void;
+  user: { displayName: string | null } | null;
+  toat: ToatDetail;
+}) {
+  return (
+    <>
+      <SectionCard
+        title="Checklist"
+        action={
+          <button
+            type="button"
+            style={styles.inlineGhost}
+            onClick={() => {
+              const newItem = { id: Date.now().toString(), text: "", done: false };
+              const next = [...checklistLocal, newItem];
+              setChecklistLocal(next);
+              void saveChecklistItems(next);
+            }}
+          >
+            <PlusIcon size={15} /> Add item
+          </button>
+        }
+      >
+        {checklistLocal.length ? (
+          <div style={styles.checklist}>
+            {checklistLocal.map((item, i) => (
+              <div
+                key={item.id}
+                style={{ ...styles.checklistRow, opacity: item.done ? 0.55 : 1 }}
+                draggable
+                onDragStart={() => { checklistDragIndex.current = i; }}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={() => {
+                  const from = checklistDragIndex.current;
+                  if (from === null || from === i) return;
+                  const next = [...checklistLocal];
+                  const [moved] = next.splice(from, 1);
+                  next.splice(i, 0, moved);
+                  checklistDragIndex.current = null;
+                  setChecklistLocal(next);
+                  void saveChecklistItems(next);
+                }}
+              >
+                <span style={styles.grabHandle}><GrabHandleIcon size={15} /></span>
+                <button
+                  type="button"
+                  style={{ ...styles.checkCircle, ...(item.done ? { background: visual.accent, borderColor: visual.accent } : {}) }}
+                  aria-label={item.done ? "Mark undone" : "Mark done"}
+                  onClick={() => {
+                    const updated = checklistLocal.map((c, j) => j === i ? { ...c, done: !c.done } : c);
+                    const undone = updated.filter((c) => !c.done);
+                    const done = updated.filter((c) => c.done);
+                    const next = [...undone, ...done];
+                    setChecklistLocal(next);
+                    void saveChecklistItems(next);
+                  }}
+                />
+                <input
+                  style={{ ...styles.checkLabel, ...(item.done ? { textDecoration: "line-through" } : {}), flex: 1, background: "transparent", border: "none", outline: "none", color: "inherit", fontSize: "inherit", fontFamily: "inherit", padding: 0 }}
+                  value={item.text}
+                  onChange={(e) => {
+                    setChecklistLocal(checklistLocal.map((c, j) => j === i ? { ...c, text: e.target.value } : c));
+                  }}
+                  onBlur={() => void saveChecklistItems(checklistLocal)}
+                  placeholder="Item text\u2026"
+                />
+                <button
+                  type="button"
+                  style={styles.checkDeleteButton}
+                  aria-label="Remove item"
+                  onClick={() => {
+                    const next = checklistLocal.filter((_, j) => j !== i);
+                    setChecklistLocal(next);
+                    void saveChecklistItems(next);
+                  }}
+                >
+                  \u00d7
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            style={{ ...styles.inlineGhost, width: "100%", justifyContent: "center", padding: "12px 0" }}
+            onClick={() => {
+              const newItem = { id: Date.now().toString(), text: "", done: false };
+              setChecklistLocal([newItem]);
+              void saveChecklistItems([newItem]);
+            }}
+          >
+            <PlusIcon size={18} /> Add your first item
+          </button>
+        )}
+      </SectionCard>
+
+      {(showNotes || notesLocal.trim() !== "") ? (
+        <SectionCard title="Notes">
+          <textarea
+            style={styles.notesTextarea}
+            value={notesLocal}
+            onChange={(e) => {
+              setNotesLocal(e.target.value);
+              if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+              notesSaveTimer.current = setTimeout(() => { void saveNotesText(e.target.value); }, 800);
+            }}
+            onBlur={() => void saveNotesText(notesLocal)}
+            placeholder="Add a note\u2026"
+            rows={3}
+          />
+        </SectionCard>
+      ) : (
+        <button type="button" onClick={() => setShowNotes(true)} style={{ background: "transparent", border: "1.5px dashed rgba(123,92,246,0.25)", borderRadius: 14, padding: "12px 16px", width: "100%", color: "#7C3AED", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 16 }}>+ Add notes</button>
+      )}
+
+      <SectionCard title="Ping me">
+        <div style={styles.toggleRow}>
+          <div style={styles.toggleRowText}>
+            <span style={{ ...styles.toggleIcon, color: visual.accent, background: visual.soft }}><BellIcon size={20} /></span>
+            <div>
+              <p style={styles.toggleTitle}>30 min before</p>
+              <p style={styles.toggleSubtitle}>We&apos;ll Ping you before you head out.</p>
+            </div>
+          </div>
+          <SwitchVisual on={true} />
+        </div>
+      </SectionCard>
+
+      {maps && loc ? (
+        <LocationBlock
+          location={loc}
+          mapsUrl={maps}
+          gradient={visual.gradient}
+          accent={visual.accent}
+          onChangeLocation={onChangeLocation}
+          onRemoveLocation={onRemoveLocation}
+        />
+      ) : (
+        <div style={styles.buttonRow}>
+          <button type="button" style={styles.secondaryButton} onClick={onAddLocation}>
+            <LocationIcon size={18} /> Add location
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 

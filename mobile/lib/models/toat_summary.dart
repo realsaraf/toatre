@@ -60,7 +60,9 @@ class ToatSummary {
   DateTime? get datetime {
     final t = timeEnrichment;
     if (t == null) return null;
-    return _parseDate(t['at']) ?? _parseDate(t['startAt']) ?? _parseDate(t['dueAt']);
+    return _parseDate(t['at']) ??
+        _parseDate(t['startAt']) ??
+        _parseDate(t['dueAt']);
   }
 
   DateTime? get endDatetime {
@@ -68,15 +70,17 @@ class ToatSummary {
   }
 
   String? get location {
-    return placeEnrichment?['address'] as String?
-        ?? placeEnrichment?['placeName'] as String?
-        ?? eventEnrichment?['address'] as String?
-        ?? eventEnrichment?['venueName'] as String?;
+    return placeEnrichment?['address'] as String? ??
+        placeEnrichment?['placeName'] as String? ??
+        eventEnrichment?['address'] as String? ??
+        eventEnrichment?['venueName'] as String?;
   }
 
   List<String> get people {
     final p = enrichments['people'];
-    return p is List<dynamic> ? p.whereType<String>().toList() : const <String>[];
+    return p is List<dynamic>
+        ? p.whereType<String>().toList()
+        : const <String>[];
   }
 
   factory ToatSummary.fromJson(Map<String, dynamic> json) {
@@ -145,4 +149,3 @@ class ToatSummary {
     return DateTime.tryParse(value)?.toLocal();
   }
 }
-

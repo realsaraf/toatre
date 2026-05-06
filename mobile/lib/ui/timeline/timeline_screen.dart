@@ -249,28 +249,55 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _openVoiceCapture() async {
-    final permission = await Permission.microphone.request();
-    if (!mounted) {
+    PermissionStatus status = await Permission.microphone.status;
+    if (!status.isGranted && !status.isLimited) {
+      status = await Permission.microphone.request();
+    }
+    if (!mounted) return;
+
+    if (status.isGranted || status.isLimited) {
+      final capture = context.read<CaptureProvider>();
+      capture.reset();
+      capture.setMode(CaptureInputMode.voice);
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
+      );
+      if (!mounted) return;
+      await context.read<ToatsProvider>().fetchToats();
       return;
     }
 
-    if (!permission.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required.')),
+    if (status.isPermanentlyDenied) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Microphone access needed'),
+          content: const Text(
+            'Toatre needs microphone access to capture your voice. '
+            'Please enable it in Settings.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await openAppSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
       );
       return;
     }
 
-    final capture = context.read<CaptureProvider>();
-    capture.reset();
-    capture.setMode(CaptureInputMode.voice);
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const CaptureScreen()));
-    if (!mounted) {
-      return;
-    }
-    await context.read<ToatsProvider>().fetchToats();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Microphone permission is required.')),
+    );
   }
 
   Future<void> _openTextCapture() async {
@@ -1191,9 +1218,7 @@ class _UpNextCard extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: _toatColors(
-                  toat,
-                ).last.withValues(alpha: 0.18),
+                color: _toatColors(toat).last.withValues(alpha: 0.18),
               ),
             ),
             child: Row(
@@ -1204,15 +1229,9 @@ class _UpNextCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(
-                      colors: _toatColors(toat),
-                    ),
+                    gradient: LinearGradient(colors: _toatColors(toat)),
                   ),
-                  child: Icon(
-                    _toatIcon(toat),
-                    color: Colors.white,
-                    size: 21,
-                  ),
+                  child: Icon(_toatIcon(toat), color: Colors.white, size: 21),
                 ),
                 const SizedBox(width: 9),
                 Expanded(
@@ -1404,9 +1423,7 @@ class _TimelineRow extends StatelessWidget {
                           height: 38,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            gradient: LinearGradient(
-                              colors: _toatColors(toat),
-                            ),
+                            gradient: LinearGradient(colors: _toatColors(toat)),
                           ),
                           child: Icon(
                             _toatIcon(toat),
@@ -1646,9 +1663,11 @@ String _enrichmentKey(ToatSummary toat) {
   return 'task';
 }
 
-List<Color> _toatColors(ToatSummary toat) => _templateColors(_enrichmentKey(toat));
+List<Color> _toatColors(ToatSummary toat) =>
+    _templateColors(_enrichmentKey(toat));
 
-IconData _toatIcon(ToatSummary toat) => _smartIcon(_enrichmentKey(toat), toat.title);
+IconData _toatIcon(ToatSummary toat) =>
+    _smartIcon(_enrichmentKey(toat), toat.title);
 
 // Template-based color dispatch
 List<Color> _templateColors(String template) {

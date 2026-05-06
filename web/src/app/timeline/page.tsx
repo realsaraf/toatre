@@ -278,20 +278,35 @@ const TEMPLATE_VISUAL: Record<string, ToatVisual> = {
   },
 };
 
-function getToatVisualKey(enrichments: Enrichments | undefined): string {
-  if (!enrichments) return "task";
-  if (enrichments.communication?.channel === "call") return "communication_call";
-  if (enrichments.communication?.joinUrl) return "communication_meeting";
-  if (enrichments.communication) return "communication_message";
-  if (enrichments.event) return "event";
-  if (enrichments.action?.type === "checklist") return "checklist";
-  if (enrichments.action?.type === "errand") return "errand";
-  if (enrichments.thought) return "thought";
+function getToatVisualKey(title: string, enrichments: Enrichments | undefined): string {
+  // Enrichment-based dispatch — authoritative when AI populated these fields.
+  if (enrichments) {
+    // Phone number present or explicit call channel → phone icon.
+    if (enrichments.communication?.channel === "call" || enrichments.communication?.phone) return "communication_call";
+    // Join URL → video meeting icon.
+    if (enrichments.communication?.joinUrl) return "communication_meeting";
+    // Any other communication enrichment → message icon.
+    if (enrichments.communication) return "communication_message";
+    if (enrichments.event) return "event";
+    if (enrichments.action?.type === "checklist") return "checklist";
+    if (enrichments.action?.type === "errand") return "errand";
+    if (enrichments.thought) return "thought";
+  }
+  // Title keyword fallback — catches common patterns when enrichments weren't set.
+  const t = title.toLowerCase();
+  if (/\b(call|phone|ring)\b/.test(t)) return "communication_call";
+  if (/\b(zoom|google meet|teams|webex|standup|stand.?up|video.?call|video chat|sync|scrum|1.?on.?1)\b/.test(t)) return "communication_meeting";
+  if (/\b(meeting|catch.?up|check.?in)\b/.test(t)) return "communication_meeting";
+  if (/\b(email|text|message|reply|send|follow.?up|dm\b)\b/.test(t)) return "communication_message";
+  if (/\b(groceri|supermark|walmart|target|costco|aldi|trader joe)\b/.test(t)) return "checklist";
+  if (/\b(errand|pick.?up|drop.?off|pharmacy|hardware|post office)\b/.test(t)) return "errand";
+  if (/\b(dinner|lunch|brunch|breakfast|party|wedding|concert|game|match|ceremony|gala|festival|show)\b/.test(t)) return "event";
+  if (/\b(idea|brainstorm|thought|note|remember|concept|reflect|insight)\b/.test(t)) return "thought";
   return "task";
 }
 
 function getToatVisual(toat: TimelineToat): ToatVisual {
-  const key = getToatVisualKey(toat.enrichments);
+  const key = getToatVisualKey(toat.title, toat.enrichments);
   return TEMPLATE_VISUAL[key] ?? TEMPLATE_VISUAL.task;
 }
 

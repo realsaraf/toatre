@@ -216,10 +216,15 @@ class _ResultCard extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: _kindColor(_searchEnrichmentKey(toat)).withValues(alpha: 0.16),
+                color: _kindColor(
+                  _searchEnrichmentKey(toat),
+                ).withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(_kindIcon(_searchEnrichmentKey(toat)), color: _kindColor(_searchEnrichmentKey(toat))),
+              child: Icon(
+                _kindIcon(_searchEnrichmentKey(toat)),
+                color: _kindColor(_searchEnrichmentKey(toat)),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
