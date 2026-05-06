@@ -1,6 +1,5 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +17,7 @@ import 'package:toatre/ui/search/search_screen.dart';
 import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
+import 'package:toatre/utils/confetti.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
 import 'package:toatre/widgets/toat_detail/toat_detail_utils.dart'
@@ -369,15 +369,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _openToat(ToatSummary toat) async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    final result = await Navigator.of(context).push<Object?>(
+      MaterialPageRoute<Object?>(
         builder: (_) => ToatDetailScreen(initialToat: toat),
       ),
     );
-    if (!mounted || changed != true) {
-      return;
+    if (!mounted) return;
+    if (result == 'done') {
+      context.read<ToatsProvider>().removeToatLocally(toat.id);
+    } else if (result == true) {
+      await context.read<ToatsProvider>().fetchToats();
     }
-    await context.read<ToatsProvider>().fetchToats();
   }
 
   Future<void> _runPrimaryAction(ToatSummary toat) async {
@@ -405,39 +407,30 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _markDone(ToatSummary toat) async {
-    if (toat.state == 'done') {
-      return;
-    }
+    if (toat.state == 'done') return;
 
     try {
+      await HapticFeedback.heavyImpact();
       final updated = await context.read<ToatsProvider>().updateToat(
         toat.id,
         <String, Object?>{'state': 'done'},
       );
       await AnalyticsService.logToatCompleted(kind: updated.tier);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       // Start exit animation
       setState(() => _removingToatId = toat.id);
-      // Delay confetti by 800ms
-      Future<void>.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          _showConfetti(context);
-        }
+      // Fire confetti from the bottom after card fade-out
+      Future<void>.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) showConfetti(context);
       });
-      // Refresh list after animation completes (400ms)
+      // Remove card locally after animation — no server refetch
       Future<void>.delayed(const Duration(milliseconds: 400), () {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setState(() => _removingToatId = null);
-        context.read<ToatsProvider>().fetchToats();
+        context.read<ToatsProvider>().removeToatLocally(toat.id);
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
@@ -1670,148 +1663,6 @@ List<Color> _templateColors(String template) {
     default: // task
       return const [Color(0xFFF97316), Color(0xFFF59E0B)];
   }
-}
-
-// ---------------------------------------------------------------------------
-// Confetti system — throttled to once per 2 seconds
-// ---------------------------------------------------------------------------
-
-int _lastConfettiMs = 0;
-
-void _showConfetti(BuildContext context) {
-  final nowMs = DateTime.now().millisecondsSinceEpoch;
-  if (nowMs - _lastConfettiMs < 500) return;
-  _lastConfettiMs = nowMs;
-
-  final size = MediaQuery.sizeOf(context);
-  final origin = Offset(size.width / 2, size.height * 0.35);
-
-  final overlay = Overlay.of(context, rootOverlay: true);
-  late OverlayEntry entry;
-  entry = OverlayEntry(
-    builder: (_) => Positioned.fill(
-      child: IgnorePointer(
-        child: _ConfettiBurst(origin: origin, onDone: entry.remove),
-      ),
-    ),
-  );
-  overlay.insert(entry);
-}
-
-class _ConfettiBurst extends StatefulWidget {
-  const _ConfettiBurst({required this.origin, required this.onDone});
-  final Offset origin;
-  final VoidCallback onDone;
-
-  @override
-  State<_ConfettiBurst> createState() => _ConfettiBurstState();
-}
-
-class _ConfettiBurstState extends State<_ConfettiBurst>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final List<_Particle> _particles;
-
-  static const _kColors = [
-    Color(0xFFF59E0B),
-    Color(0xFF10B981),
-    Color(0xFF3B82F6),
-    Color(0xFFEC4899),
-    Color(0xFF8B5CF6),
-    Color(0xFFEF4444),
-    Color(0xFF06B6D4),
-    Color(0xFFFBBF24),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    final rnd = math.Random();
-    _particles = List.generate(32, (i) {
-      final angle = (i / 32) * 2 * math.pi + rnd.nextDouble() * 0.5;
-      final speed = 130.0 + rnd.nextDouble() * 180;
-      return _Particle(
-        dx: math.cos(angle) * speed,
-        dy: math.sin(angle) * speed - 80,
-        color: _kColors[i % _kColors.length],
-        width: 6 + rnd.nextDouble() * 6,
-        height: 4 + rnd.nextDouble() * 5,
-        rotation: rnd.nextDouble() * 2 * math.pi,
-      );
-    });
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..forward().whenComplete(widget.onDone);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) => CustomPaint(
-        painter: _ConfettiPainter(_ctrl.value, widget.origin, _particles),
-        size: Size.infinite,
-      ),
-    );
-  }
-}
-
-class _Particle {
-  const _Particle({
-    required this.dx,
-    required this.dy,
-    required this.color,
-    required this.width,
-    required this.height,
-    required this.rotation,
-  });
-  final double dx, dy;
-  final Color color;
-  final double width, height;
-  final double rotation;
-}
-
-class _ConfettiPainter extends CustomPainter {
-  _ConfettiPainter(this.progress, this.origin, this.particles);
-  final double progress;
-  final Offset origin;
-  final List<_Particle> particles;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final alpha = progress > 0.65
-        ? ((1.0 - progress) / 0.35).clamp(0.0, 1.0)
-        : 1.0;
-    final eased = Curves.easeOut.transform(progress);
-
-    for (final p in particles) {
-      final x = origin.dx + p.dx * eased;
-      final y = origin.dy + p.dy * eased + 220 * eased * eased; // gravity
-
-      final paint = Paint()
-        ..color = p.color.withValues(alpha: alpha)
-        ..style = PaintingStyle.fill;
-
-      canvas.save();
-      canvas.translate(x, y);
-      canvas.rotate(p.rotation + progress * 7);
-      canvas.drawRect(
-        Rect.fromCenter(center: Offset.zero, width: p.width, height: p.height),
-        paint,
-      );
-      canvas.restore();
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ConfettiPainter old) => old.progress != progress;
 }
 
 String _supportingText(ToatSummary toat) {

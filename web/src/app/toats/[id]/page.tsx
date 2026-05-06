@@ -47,6 +47,7 @@ import { SectionCard } from "./_components/SectionCard";
 import { ShareToatModal } from "./_components/ShareToatModal";
 import { TicketInputModal } from "./_components/TicketInputModal";
 import { WhenWhereCard } from "./_components/WhenWhereCard";
+import { fireConfetti } from "@/lib/fire-confetti";
 
 function labelForPatch(body: Record<string, unknown>) {
   if (body.status === "done") return "Marked done.";
@@ -75,6 +76,7 @@ export default function ToatDetailPage() {
 
   const [checklistLocal, setChecklistLocal] = useState<ChecklistItem[]>([]);
   const checklistDragIndex = useRef<number | null>(null);
+  const doneButtonRef = useRef<HTMLDivElement>(null);
 
   const [notesLocal, setNotesLocal] = useState<string>("");
   const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -443,7 +445,7 @@ export default function ToatDetailPage() {
         {flash ? <div style={pageStyles.flash}>{flash}</div> : null}
 
         <section style={actionStripStyles.actionStrip}>
-          <ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ state: "done" }); router.replace("/timeline"); })} />
+          <div ref={doneButtonRef}><ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => void runMutation("done", async () => { await patchToat({ state: "done" }); fireConfetti(doneButtonRef.current); await new Promise<void>((r) => setTimeout(r, 1000)); router.replace("/timeline"); })} /></div>
           <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { const t = toatTime(toat); if (!t) throw new Error("This toat has no time to move."); await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } }); })} />
           <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />

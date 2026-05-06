@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +10,7 @@ import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/ui/toat/share_toat_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
+import 'package:toatre/utils/confetti.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toat_detail/action_strip_card.dart';
 import 'package:toatre/widgets/toat_detail/checklist_card.dart';
@@ -266,18 +268,21 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
   Future<void> _markDone() async {
     await _runAction('done', () async {
+      await HapticFeedback.heavyImpact();
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
         <String, Object?>{'state': 'done'},
       );
       await AnalyticsService.logToatCompleted(kind: updated.tier);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _toat = updated;
       });
-      _showMessage('Marked done.');
+      // Show confetti then navigate back so timeline removes the card.
+      showConfetti(context);
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      Navigator.of(context).pop('done');
     });
   }
 

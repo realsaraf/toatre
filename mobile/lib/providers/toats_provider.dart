@@ -79,6 +79,11 @@ class ToatsProvider extends ChangeNotifier {
     return updated;
   }
 
+  void removeToatLocally(String id) {
+    _toats = _toats.where((t) => t.id != id).toList();
+    notifyListeners();
+  }
+
   Future<void> deleteToat(ToatSummary toat) async {
     await _api.deleteJson('/api/toats/${toat.id}', authenticated: true);
     _toats = _toats.where((entry) => entry.id != toat.id).toList();
