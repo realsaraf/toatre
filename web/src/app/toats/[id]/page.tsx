@@ -447,7 +447,6 @@ export default function ToatDetailPage() {
           <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { const t = toatTime(toat); if (!t) throw new Error("This toat has no time to move."); await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } }); })} />
           <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
-          <ActionStripButton icon={<TrashIcon size={20} />} label="Delete" tint="#DC2626" disabled={Boolean(actionState)} onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
         </section>
 
         {isMeeting ? (

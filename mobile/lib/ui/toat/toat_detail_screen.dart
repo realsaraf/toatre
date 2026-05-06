@@ -102,27 +102,40 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem<String>(
                         value: 'add_location',
-                        child: Row(children: [
-                          const Icon(Icons.add_location_outlined, size: 20),
-                          const SizedBox(width: 12),
-                          const Text('Add location'),
-                        ]),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_location_outlined, size: 20),
+                            const SizedBox(width: 12),
+                            const Text('Add location'),
+                          ],
+                        ),
                       ),
                       PopupMenuItem<String>(
                         value: 'add_notes',
-                        child: Row(children: [
-                          const Icon(Icons.edit_note_rounded, size: 20),
-                          const SizedBox(width: 12),
-                          const Text('Add notes'),
-                        ]),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_note_rounded, size: 20),
+                            const SizedBox(width: 12),
+                            const Text('Add notes'),
+                          ],
+                        ),
                       ),
                       PopupMenuItem<String>(
                         value: 'delete',
-                        child: Row(children: [
-                          const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFDC2626)),
-                          const SizedBox(width: 12),
-                          const Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
-                        ]),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: Color(0xFFDC2626),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Delete',
+                              style: TextStyle(color: Color(0xFFDC2626)),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -508,7 +521,6 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
             : null,
         onReschedule: _workingAction == null ? _reschedule : null,
         onDuplicate: _workingAction == null ? _duplicate : null,
-        onDelete: _workingAction == null ? _delete : null,
       ),
       const SizedBox(height: 16),
       if (isMeeting) ...[

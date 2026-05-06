@@ -13,7 +13,6 @@ class ActionStripCard extends StatelessWidget {
     required this.onAddOneDay,
     required this.onReschedule,
     required this.onDuplicate,
-    required this.onDelete,
   });
 
   final ToatSummary toat;
@@ -22,7 +21,6 @@ class ActionStripCard extends StatelessWidget {
   final VoidCallback? onAddOneDay;
   final VoidCallback? onReschedule;
   final VoidCallback? onDuplicate;
-  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -58,12 +56,6 @@ class ActionStripCard extends StatelessWidget {
             label: workingAction == 'duplicate' ? '…' : 'Duplicate',
             tint: AppColors.textMuted,
             onTap: onDuplicate,
-          ),
-          StripAction(
-            icon: Icons.delete_outline_rounded,
-            label: workingAction == 'delete' ? '…' : 'Delete',
-            tint: const Color(0xFFDC2626),
-            onTap: onDelete,
           ),
         ],
       ),

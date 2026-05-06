@@ -168,7 +168,10 @@ class CaptureProvider extends ChangeNotifier {
     try {
       final response = await _api.postJson(
         '/api/captures',
-        body: <String, Object?>{'transcript': trimmed, 'timezone': _deviceTimezone()},
+        body: <String, Object?>{
+          'transcript': trimmed,
+          'timezone': _deviceTimezone(),
+        },
         authenticated: true,
       );
       await _applyCaptureResponse(response, fromVoice: false);

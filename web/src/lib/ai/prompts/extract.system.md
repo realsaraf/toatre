@@ -155,6 +155,8 @@ Only include enrichment blocks that are relevant. Omit empty or irrelevant block
 
 ## Concrete examples
 
+*(Dates below assume today is 2026-05-06 and tomorrow is 2026-05-07. Always substitute the actual date from "User's current local time".)*
+
 **"Call mom at 929-990-7034 tomorrow at 3pm"**
 ```json
 { "tier": "important", "title": "Call mom", "notes": null, "enrichments": { "time": { "at": "2026-05-07T15:00:00" }, "communication": { "contact": "Mom", "phone": "929-990-7034", "channel": "call" } } }

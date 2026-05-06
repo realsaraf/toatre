@@ -92,14 +92,38 @@ export const ExtractionResultSchema = z.object({
 export type ExtractedToat = z.infer<typeof ExtractedToatSchema>;
 export type ExtractionResult = z.infer<typeof ExtractionResultSchema>;
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Convert a UTC Date to a local ISO 8601 string with offset included.
+ * Timezone is expected in "UTC+HH:MM" / "UTC-HH:MM" format.
+ * Returns a string like "2026-05-06T03:30:00+05:30" so the LLM sees
+ * the correct *local* date and never needs to do offset math itself.
+ */
+function toLocalIso(now: Date, timezone: string): string {
+  const match = timezone.match(/^UTC([+-])(\d{2}):(\d{2})$/);
+  if (!match) return now.toISOString();
+  const sign = match[1] === "+" ? 1 : -1;
+  const offsetMinutes = sign * (parseInt(match[2], 10) * 60 + parseInt(match[3], 10));
+  const localMs = now.getTime() + offsetMinutes * 60_000;
+  const local = new Date(localMs);
+  // local.toISOString() gives a UTC-offset-adjusted string ending in "Z" — strip it
+  const base = local.toISOString().replace("Z", "");
+  const absOffset = Math.abs(offsetMinutes);
+  const oh = String(Math.floor(absOffset / 60)).padStart(2, "0");
+  const om = String(absOffset % 60).padStart(2, "0");
+  const offsetStr = `${match[1]}${oh}:${om}`;
+  return `${base}${offsetStr}`;
+}
+
 // ─── Load system prompt ───────────────────────────────────────────────────────
 
-function getSystemPrompt(nowIso: string, timezone: string, connectionContext?: string): string {
+function getSystemPrompt(nowLocalIso: string, timezone: string, connectionContext?: string): string {
   const promptPath = join(process.cwd(), "src/lib/ai/prompts/extract.system.md");
   const base = readFileSync(promptPath, "utf-8");
   return [
     base,
-    `User's current time: ${nowIso}`,
+    `User's current local time: ${nowLocalIso}`,
     `User's timezone: ${timezone}`,
     connectionContext,
   ].filter(Boolean).join("\n\n");
@@ -113,7 +137,7 @@ export async function extractToats(
 ): Promise<ExtractionResult> {
   const now = options.now ?? new Date();
   const timezone = options.timezone ?? "UTC";
-  const nowIso = now.toISOString();
+  const nowIso = toLocalIso(now, timezone);
 
   const openai = getObservedOpenAI({
     traceName: "capture.extract-toats",
