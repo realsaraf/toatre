@@ -24,11 +24,7 @@ class Pill extends StatelessWidget {
 
 /// A circular icon button used in the top bar.
 class IconCircleButton extends StatelessWidget {
-  const IconCircleButton({
-    super.key,
-    required this.icon,
-    required this.onTap,
-  });
+  const IconCircleButton({super.key, required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;

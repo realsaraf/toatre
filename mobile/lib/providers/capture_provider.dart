@@ -134,6 +134,7 @@ class CaptureProvider extends ChangeNotifier {
         '/api/captures',
         fileField: 'audio',
         filePath: recordedPath,
+        fields: <String, String>{'timezone': _deviceTimezone()},
         authenticated: true,
       );
       await _applyCaptureResponse(response, fromVoice: true);
@@ -167,7 +168,7 @@ class CaptureProvider extends ChangeNotifier {
     try {
       final response = await _api.postJson(
         '/api/captures',
-        body: <String, Object?>{'transcript': trimmed},
+        body: <String, Object?>{'transcript': trimmed, 'timezone': _deviceTimezone()},
         authenticated: true,
       );
       await _applyCaptureResponse(response, fromVoice: false);
@@ -269,5 +270,14 @@ class CaptureProvider extends ChangeNotifier {
     _waveformTimer?.cancel();
     _recorder.dispose();
     super.dispose();
+  }
+
+  /// Returns a UTC-offset timezone string (e.g. "UTC+05:30") for the device.
+  String _deviceTimezone() {
+    final offset = DateTime.now().timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hours = offset.inHours.abs().toString().padLeft(2, '0');
+    final minutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    return 'UTC$sign$hours:$minutes';
   }
 }

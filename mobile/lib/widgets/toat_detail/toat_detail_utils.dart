@@ -106,6 +106,19 @@ String detailEnrichmentKey(ToatSummary toat) {
   }
   final thought = e['thought'];
   if (thought is Map<String, dynamic>) return 'idea';
+  // Keyword fallback for toats with empty/missing enrichments
+  return _keywordEnrichmentKey(toat.title);
+}
+
+/// Title-keyword-based enrichment key when no structured enrichment matched.
+String _keywordEnrichmentKey(String title) {
+  final t = title.toLowerCase();
+  bool has(List<String> kws) => kws.any(t.contains);
+  if (has(['grocery', 'groceries', 'supermarket', 'market', 'shopping', 'buy ', 'pick up', 'pickup', 'get ', 'order'])) return 'errand';
+  if (has(['call', 'phone', 'ring', 'dial'])) return 'call';
+  if (has(['email', 'message', 'text', 'send', 'follow up', 'follow-up'])) return 'follow_up';
+  if (has(['meeting', 'standup', 'sync', 'zoom', 'meet '])) return 'meeting';
+  if (has(['idea', 'thought', 'note', 'remember'])) return 'idea';
   return 'task';
 }
 

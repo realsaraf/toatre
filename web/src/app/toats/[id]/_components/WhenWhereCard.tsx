@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import { BellIcon, ClockIcon, EditIcon, LocationIcon, MessageGlyph, PhoneGlyph, SparkleIcon } from "@/components/mobile-ui";
+import { BellIcon, ClockIcon, EditIcon, LocationIcon, PhoneGlyph, SparkleIcon } from "@/components/mobile-ui";
 import { ChevronRightIcon } from "@/components/mobile-ui";
 import type { ToatDetail, DetailVisual } from "../_types";
 import { formatDate, formatTime, formatShortDate } from "../_utils";
@@ -101,22 +101,24 @@ export function WhenWhereCard({
               onChangeLocation={onChangeLocation}
               onRemoveLocation={onRemoveLocation}
             />
-            <div style={buttonStyles.buttonRow}>
-              <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
-                {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />}{" "}
-                {phone ? "Call" : "Share"}
-              </button>
-            </div>
+            {phone ? (
+              <div style={buttonStyles.buttonRow}>
+                <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
+                  <PhoneGlyph size={20} /> Call
+                </button>
+              </div>
+            ) : null}
           </>
         ) : (
           <div style={buttonStyles.buttonRow}>
             <button type="button" onClick={onAddLocation} style={buttonStyles.secondaryButton}>
               <LocationIcon size={18} /> Add location
             </button>
-            <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
-              {phone ? <PhoneGlyph size={20} /> : <MessageGlyph size={20} />}{" "}
-              {phone ? "Call" : "Share"}
-            </button>
+            {phone ? (
+              <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
+                <PhoneGlyph size={20} /> Call
+              </button>
+            ) : null}
           </div>
         )}
       </SectionCard>
