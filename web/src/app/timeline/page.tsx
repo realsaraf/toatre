@@ -437,7 +437,7 @@ export default function TimelinePage() {
         {loading ? (
           <section style={{ ...styles.loadingCard, ...(isPhoneViewport ? styles.loadingCardCompact : {}) }}>
             <div style={styles.loadingSpinner} className="animate-spin" />
-            <p style={styles.loadingText}>Loading your timelineâ€¦</p>
+            <p style={styles.loadingText}>Loading your timeline...</p>
           </section>
         ) : null}
 
