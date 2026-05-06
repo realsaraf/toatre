@@ -49,6 +49,20 @@ class HeroCard extends StatelessWidget {
     return (loc != null && loc.isNotEmpty) ? loc : null;
   }
 
+  /// Returns a relative label: "Today, 3:00 PM" / "Tomorrow, 3:00 PM" /
+  /// "Thu, May 7 · 3:00 PM".
+  static String _relativeTimeLabel(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    final diff = dtDay.difference(today).inDays;
+    final time = DateFormat.jm().format(dt);
+    if (diff == 0) return 'Today · $time';
+    if (diff == 1) return 'Tomorrow · $time';
+    if (diff == -1) return 'Yesterday · $time';
+    return '${DateFormat('EEE, MMM d').format(dt)} · $time';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = detailEnrichmentColors(toat);
@@ -117,7 +131,7 @@ class HeroCard extends StatelessWidget {
                       children: [
                         if (hasTime)
                           _TimeChip(
-                            label: DateFormat.jm().format(toat.datetime!),
+                            label: _relativeTimeLabel(toat.datetime!),
                           ),
                         if (hasTime && actionLabel != null)
                           const SizedBox(width: 8),
