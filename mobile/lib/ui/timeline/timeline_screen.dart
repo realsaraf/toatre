@@ -30,17 +30,34 @@ class TimelineScreen extends StatefulWidget {
   State<TimelineScreen> createState() => _TimelineScreenState();
 }
 
-class _TimelineScreenState extends State<TimelineScreen> {
+class _TimelineScreenState extends State<TimelineScreen>
+    with WidgetsBindingObserver {
   _TimelineRange _selectedRange = _TimelineRange.today;
   String? _removingToatId;
+  bool _retryMicOnResume = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<ToatsProvider>().fetchToats();
       await AnalyticsService.logTimelineViewed();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _retryMicOnResume) {
+      _retryMicOnResume = false;
+      _openVoiceCapture();
+    }
   }
 
   @override
@@ -281,6 +298,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.of(ctx).pop();
+                _retryMicOnResume = true;
                 await openAppSettings();
               },
               child: const Text('Open Settings'),
