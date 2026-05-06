@@ -92,7 +92,6 @@ export function WhenWhereCard({
             <LocationBlock
               location={loc}
               mapsUrl={maps}
-              gradient={visual.gradient}
               accent={visual.accent}
               onChangeLocation={onChangeLocation}
               onRemoveLocation={onRemoveLocation}

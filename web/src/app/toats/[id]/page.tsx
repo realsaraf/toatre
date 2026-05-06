@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   BackIcon,
   CircleIconButton,
-  ClockIcon,
+  DirectionsIcon,
   DoneIcon,
   DuplicateIcon,
   EditIcon,
@@ -425,12 +425,6 @@ export default function ToatDetailPage() {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={heroStyles.heroKickerRow}>
-              {loc && !isMeeting && !isEvent ? <span style={{ ...heroStyles.heroKicker, color: visual.accent }}>&bull; {visual.label.toUpperCase()}</span> : null}
-              {heroChip ? <DetailBadge text={heroChip.text} style={heroChip.style} accent={visual.accent} /> : null}
-            </div>
-            <h1 style={{ ...heroStyles.heroTitle, ...(isPhoneViewport ? heroStyles.heroTitleCompact : {}) }}>{toat.title}</h1>
-
             {isMeeting ? (
               <div style={heroStyles.heroMeetingMeta}>
                 <span style={{ ...heroStyles.heroMetaChip, ...(isPhoneViewport ? heroStyles.heroMetaChipCompact : {}) }}><VideoGlyph size={isPhoneViewport ? 16 : 20} /> {joinUrl ? "Meeting link" : "Meeting"}</span>
@@ -445,9 +439,26 @@ export default function ToatDetailPage() {
               </div>
             ) : null}
 
-            {loc ? <p style={{ ...heroStyles.heroLocation, ...(isPhoneViewport ? heroStyles.heroLocationCompact : {}) }}><LocationIcon size={isPhoneViewport ? 18 : 22} /> {loc}</p> : null}
+            <h1 style={{ ...heroStyles.heroTitle, ...(isPhoneViewport ? heroStyles.heroTitleCompact : {}) }}>{toat.title}</h1>
+
+            {(heroChip ?? maps) && !isMeeting ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: loc ? 6 : 0, flexWrap: "wrap" }}>
+                {heroChip ? <DetailBadge text={heroChip.text} style={heroChip.style} accent={visual.accent} /> : null}
+                {maps ? (
+                  <button
+                    type="button"
+                    onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}
+                    title="Directions"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", width: isPhoneViewport ? 34 : 38, height: isPhoneViewport ? 34 : 38, borderRadius: isPhoneViewport ? 10 : 12, border: "none", background: visual.gradient, color: "#fff", cursor: "pointer", flexShrink: 0 }}
+                  >
+                    <DirectionsIcon size={isPhoneViewport ? 16 : 18} />
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {loc ? <p style={{ ...heroStyles.heroLocation, ...(isPhoneViewport ? heroStyles.heroLocationCompact : {}) }}><LocationIcon size={isPhoneViewport ? 14 : 16} /> {loc}</p> : null}
             {isEvent && ticketUrl ? <p style={{ ...heroStyles.heroSecondary, ...(isPhoneViewport ? heroStyles.heroSecondaryCompact : {}) }}><TicketGlyph size={isPhoneViewport ? 16 : 20} /> Tickets ready</p> : null}
-            {!isMeeting && !isEvent && startDate ? <p style={{ ...heroStyles.heroSecondary, ...(isPhoneViewport ? heroStyles.heroSecondaryCompact : {}) }}><ClockIcon size={isPhoneViewport ? 16 : 20} /> {startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p> : null}
           </div>
         </section>
         </div>
@@ -455,7 +466,7 @@ export default function ToatDetailPage() {
         {flash ? <div style={pageStyles.flash}>{flash}</div> : null}
 
         <section style={actionStripStyles.actionStrip}>
-          <div ref={doneButtonRef}><ActionStripButton icon={<DoneIcon size={22} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => { const origin = captureOrigin(doneButtonRef.current); void runMutation("done", async () => { await patchToat({ state: "done" }); fireConfetti(origin); await new Promise<void>((r) => setTimeout(r, 1000)); router.replace("/timeline"); }); }} /></div>
+          <div ref={doneButtonRef} style={{ display: "contents" }}><ActionStripButton icon={<DoneIcon size={22} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => { const origin = captureOrigin(doneButtonRef.current); void runMutation("done", async () => { await patchToat({ state: "done" }); fireConfetti(origin); await new Promise<void>((r) => setTimeout(r, 1000)); router.replace("/timeline"); }); }} /></div>
           <ActionStripButton icon={<SnoozeIcon size={22} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { const t = toatTime(toat); if (!t) throw new Error("This toat has no time to move."); await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } }); })} />
           <ActionStripButton icon={<RescheduleIcon size={22} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={22} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />

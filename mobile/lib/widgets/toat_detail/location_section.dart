@@ -9,21 +9,13 @@ class LocationSection extends StatelessWidget {
   const LocationSection({
     super.key,
     required this.location,
-    required this.actionLabel,
-    required this.actionColors,
-    required this.actionIcon,
     required this.onChangeLocation,
     required this.onRemoveLocation,
-    required this.onPrimaryAction,
   });
 
   final String location;
-  final String actionLabel;
-  final List<Color> actionColors;
-  final IconData actionIcon;
   final VoidCallback? onChangeLocation;
   final VoidCallback? onRemoveLocation;
-  final VoidCallback? onPrimaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -103,41 +95,6 @@ class LocationSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         MapCard(location: location),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: onPrimaryAction,
-              child: Ink(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: actionColors),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(actionIcon, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        actionLabel,
-                        style: TextStyles.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }

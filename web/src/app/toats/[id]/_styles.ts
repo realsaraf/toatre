@@ -86,12 +86,12 @@ export const heroStyles = {
     borderRadius: 28,
     border: "1px solid transparent",
     padding: "22px 22px 20px",
-    marginBottom: 14,
+    marginBottom: 8,
   } as CSSProperties,
   heroCardCompact: {
     borderRadius: 22,
     padding: "14px 14px 12px",
-    marginBottom: 10,
+    marginBottom: 6,
   } as CSSProperties,
   heroSection: {
     display: "flex",
@@ -248,6 +248,7 @@ export const actionStripStyles = {
   actionStrip: {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    alignItems: "start",
     gap: 6,
     borderRadius: 22,
     background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.88))",
@@ -262,10 +263,10 @@ export const actionStripStyles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     fontSize: 10.5,
     fontWeight: 600,
-    padding: "4px 0",
+    padding: "0",
   } as CSSProperties,
   actionStripIcon: {
     width: 44,

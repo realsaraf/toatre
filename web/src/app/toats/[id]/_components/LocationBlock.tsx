@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { LocationIcon, SteeringWheelIcon } from "@/components/mobile-ui";
+import { LocationIcon } from "@/components/mobile-ui";
 
 export function LocationBlock({
   location,
   mapsUrl,
-  gradient,
   accent,
   onChangeLocation,
   onRemoveLocation,
 }: {
   location: string;
   mapsUrl: string;
-  gradient: string;
   accent: string;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
@@ -175,28 +173,6 @@ export function LocationBlock({
           Open in Maps
         </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-        style={{
-          minHeight: 46,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          border: "none",
-          borderRadius: 16,
-          background: gradient,
-          color: "#FFFFFF",
-          fontSize: 15,
-          fontWeight: 700,
-          cursor: "pointer",
-          width: "100%",
-        }}
-      >
-        <SteeringWheelIcon size={18} /> Directions
-      </button>
     </div>
   );
 }

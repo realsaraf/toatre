@@ -52,10 +52,10 @@ class HeroCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 86,
-                height: 86,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
                     colors: detailEnrichmentColors(toat),
                   ),
@@ -72,7 +72,7 @@ class HeroCard extends StatelessWidget {
                 child: Icon(
                   detailEnrichmentIcon(toat),
                   color: Colors.white,
-                  size: 42,
+                  size: 30,
                 ),
               ),
               const SizedBox(width: 18),
@@ -87,9 +87,9 @@ class HeroCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       toat.title,
-                      style: TextStyles.display.copyWith(fontSize: 34),
+                      style: TextStyles.display.copyWith(fontSize: 24),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Text(
                       detailSubtitle(toat),
                       maxLines: 2,
@@ -104,7 +104,7 @@ class HeroCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
           Row(
             children: [
               if (toat.datetime != null)

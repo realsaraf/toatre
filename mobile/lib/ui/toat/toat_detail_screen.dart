@@ -542,12 +542,8 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       if (hasLocation) ...[
         LocationSection(
           location: _toat.location!,
-          actionLabel: _primaryActionLabel(_toat),
-          actionColors: detailActionColors(_toat),
-          actionIcon: detailActionIcon(_toat),
           onChangeLocation: _workingAction == null ? _openLocationSearch : null,
           onRemoveLocation: _workingAction == null ? _removeLocation : null,
-          onPrimaryAction: _workingAction == null ? _primaryAction : null,
         ),
         const SizedBox(height: 16),
       ],
