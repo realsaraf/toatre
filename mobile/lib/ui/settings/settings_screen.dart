@@ -121,15 +121,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: SettingsTab.values
                             .where((tab) => tab != SettingsTab.sync)
                             .map((tab) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: _TabButton(
-                              label: _tabLabel(tab),
-                              active: _activeTab == tab,
-                              onTap: () => setState(() => _activeTab = tab),
-                            ),
-                          );
-                        }).toList(),
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _TabButton(
+                                  label: _tabLabel(tab),
+                                  active: _activeTab == tab,
+                                  onTap: () => setState(() => _activeTab = tab),
+                                ),
+                              );
+                            })
+                            .toList(),
                       ),
                     ),
                     if (_notice != null) ...[

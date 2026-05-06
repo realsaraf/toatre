@@ -110,7 +110,11 @@ class HeroCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(detailEnrichmentIcon(toat), color: Colors.white, size: 28),
+            child: Icon(
+              detailEnrichmentIcon(toat),
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           // Content column
@@ -124,57 +128,53 @@ class HeroCard extends StatelessWidget {
                   style: TextStyles.display.copyWith(fontSize: 22, height: 1.2),
                 ),
                 // Time + action row
-                if (hasTime || actionLabel != null) ...
-                  [
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        if (hasTime)
-                          _TimeChip(
-                            label: _relativeTimeLabel(toat.datetime!),
-                          ),
-                        if (hasTime && actionLabel != null)
-                          const SizedBox(width: 8),
-                        if (actionLabel != null)
-                          _ActionButton(
-                            icon: _actionIcon,
-                            label: _showActionLabel ? actionLabel : null,
-                            colors: detailActionColors(toat),
-                            onTap: onPrimaryAction,
-                          ),
-                      ],
-                    ),
-                  ],
+                if (hasTime || actionLabel != null) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (hasTime)
+                        _TimeChip(label: _relativeTimeLabel(toat.datetime!)),
+                      if (hasTime && actionLabel != null)
+                        const SizedBox(width: 8),
+                      if (actionLabel != null)
+                        _ActionButton(
+                          icon: _actionIcon,
+                          label: _showActionLabel ? actionLabel : null,
+                          colors: detailActionColors(toat),
+                          onTap: onPrimaryAction,
+                        ),
+                    ],
+                  ),
+                ],
                 // Address
-                if (location != null) ...
-                  [
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 1),
-                          child: Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
+                if (location != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          location,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyles.small.copyWith(
                             color: AppColors.textSecondary,
+                            height: 1.35,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            location,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyles.small.copyWith(
-                              color: AppColors.textSecondary,
-                              height: 1.35,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -201,7 +201,11 @@ class _TimeChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.schedule_rounded, size: 15, color: AppColors.textSecondary),
+          const Icon(
+            Icons.schedule_rounded,
+            size: 15,
+            color: AppColors.textSecondary,
+          ),
           const SizedBox(width: 5),
           Text(
             label,

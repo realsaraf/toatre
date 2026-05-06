@@ -3,6 +3,7 @@
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/services/api_service.dart';
+import 'package:toatre/services/widget_service.dart';
 
 enum ToatsStatus { idle, loading, loaded, error }
 
@@ -35,6 +36,8 @@ class ToatsProvider extends ChangeNotifier {
           .map(ToatSummary.fromJson)
           .toList();
       _status = ToatsStatus.loaded;
+      // Push upcoming toats to the iOS home-screen widget (fire-and-forget).
+      WidgetService.update(_toats).ignore();
     } on ApiServiceException catch (error) {
       _error = error.message;
       _status = ToatsStatus.error;
