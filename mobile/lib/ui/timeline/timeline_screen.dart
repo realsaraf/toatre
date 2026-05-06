@@ -239,11 +239,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               label: 'Inbox',
               onTap: _openInbox,
             ),
-            _BottomItem(
-              icon: Icons.settings_outlined,
-              label: 'Settings',
-              onTap: _openSettings,
-            ),
+
           ],
         ),
       ),

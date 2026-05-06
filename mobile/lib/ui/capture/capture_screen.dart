@@ -73,14 +73,32 @@ class _CaptureScreenState extends State<CaptureScreen> {
   }
 }
 
-class _ListeningState extends StatelessWidget {
+class _ListeningState extends StatefulWidget {
   const _ListeningState({required this.capture, required this.onOpenTextMode});
 
   final CaptureProvider capture;
   final VoidCallback onOpenTextMode;
 
   @override
+  State<_ListeningState> createState() => _ListeningStateState();
+}
+
+class _ListeningStateState extends State<_ListeningState> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto-start recording as soon as the voice-capture screen appears.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!widget.capture.isRecording && !widget.capture.isProcessing) {
+        widget.capture.startRecording();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final capture = widget.capture;
     final isRecording = capture.isRecording;
     final isProcessing = capture.isProcessing;
 
@@ -106,7 +124,7 @@ class _ListeningState extends StatelessWidget {
           _ModeToggle(
             activeMode: CaptureInputMode.voice,
             onVoiceTap: () => capture.setMode(CaptureInputMode.voice),
-            onTextTap: onOpenTextMode,
+            onTextTap: widget.onOpenTextMode,
           ),
           const SizedBox(height: 30),
           Center(
@@ -160,21 +178,19 @@ class _ListeningState extends StatelessWidget {
               style: TextStyles.smallMedium.copyWith(color: AppColors.error),
             ),
           ],
-          if (isRecording || isProcessing) ...[
-            const SizedBox(height: 14),
-            Center(
-              child: TextButton.icon(
-                onPressed: isProcessing
-                    ? null
-                    : () {
-                        capture.reset();
-                        Navigator.of(context).pop();
-                      },
-                icon: const Icon(Icons.close_rounded),
-                label: const Text('Cancel'),
-              ),
+          const SizedBox(height: 14),
+          Center(
+            child: TextButton.icon(
+              onPressed: isProcessing
+                  ? null
+                  : () {
+                      capture.reset();
+                      Navigator.of(context).pop();
+                    },
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('Cancel'),
             ),
-          ],
+          ),
         ],
       ),
     );

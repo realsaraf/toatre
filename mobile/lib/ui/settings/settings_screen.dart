@@ -118,7 +118,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: SettingsTab.values.map((tab) {
+                        children: SettingsTab.values
+                            .where((tab) => tab != SettingsTab.sync)
+                            .map((tab) {
                           return Padding(
                             padding: const EdgeInsets.only(right: 10),
                             child: _TabButton(
@@ -1095,7 +1097,7 @@ class _ConnectionsTab extends StatelessWidget {
               onChanged: onNameChanged,
               controller: TextEditingController(text: name)
                 ..selection = TextSelection.collapsed(offset: name.length),
-              decoration: const InputDecoration(hintText: 'Amina Rahman'),
+              decoration: const InputDecoration(hintText: 'Alex Carter'),
             ),
           ),
           const SizedBox(height: 12),
