@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,13 +15,13 @@ import 'package:toatre/utils/confetti.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toat_detail/action_strip_card.dart';
 import 'package:toatre/widgets/toat_detail/checklist_card.dart';
-import 'package:toatre/widgets/toat_detail/details_card.dart';
 import 'package:toatre/widgets/toat_detail/hero_card.dart';
 import 'package:toatre/widgets/toat_detail/location_search_content.dart';
 import 'package:toatre/widgets/toat_detail/location_section.dart';
 import 'package:toatre/widgets/toat_detail/meeting_details_card.dart';
 import 'package:toatre/widgets/toat_detail/notes_card.dart';
 import 'package:toatre/widgets/toat_detail/pill.dart';
+import 'package:toatre/widgets/toat_detail/section_card.dart';
 import 'package:toatre/widgets/toat_detail/toat_detail_utils.dart';
 import 'package:toatre/widgets/toat_detail/when_where_card.dart';
 
@@ -590,7 +591,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
               'text': '',
               'done': false,
             };
-            setState(() => _checklistItems = [..._checklistItems, newItem]);
+            setState(() => _checklistItems = [newItem, ..._checklistItems]);
             _saveChecklist(_checklistItems);
           },
         ),
@@ -606,7 +607,16 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         ),
         const SizedBox(height: 16),
       ],
-      DetailsCard(toat: _toat),
+      // Reminders — only when there is a datetime
+      if (!isMeeting && _toat.datetime != null) ...[
+        _RemindersCard(toat: _toat),
+        const SizedBox(height: 16),
+      ],
+      // Tip card
+      if (!isMeeting) ...[
+        _TipCard(accent: detailEnrichmentColors(_toat).last),
+        const SizedBox(height: 16),
+      ],
     ];
   }
 
@@ -658,5 +668,145 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         ? trimmed
         : 'https://$trimmed';
     return Uri.tryParse(withScheme);
+  }
+}
+
+// ── Private widgets ─────────────────────────────────────────────────────────
+
+/// Reminders section — two computed pings derived from the toat datetime.
+class _RemindersCard extends StatelessWidget {
+  const _RemindersCard({required this.toat});
+  final ToatSummary toat;
+
+  List<Map<String, String>> _lines() {
+    final dt = toat.datetime;
+    if (dt == null) return [];
+    final tenBefore = dt.subtract(const Duration(minutes: 10));
+    final dayBefore = dt.subtract(const Duration(days: 1));
+    final timeFmt = DateFormat.jm();
+    final dateFmt = DateFormat('EEE, MMM d');
+    return [
+      {
+        'title': 'Leave by ${timeFmt.format(tenBefore)}',
+        'sub': '10 minutes before',
+      },
+      {
+        'title': 'Day before reminder',
+        'sub': '${dateFmt.format(dayBefore)} at ${timeFmt.format(dayBefore)}',
+      },
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = _lines();
+    if (lines.isEmpty) return const SizedBox.shrink();
+    final accent = detailEnrichmentColors(toat).last;
+    return SectionCard(
+      title: 'Reminders',
+      child: Column(
+        children: lines.map((r) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+                    size: 20,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(r['title']!, style: TextStyles.bodyMedium),
+                      Text(
+                        r['sub']!,
+                        style: TextStyles.small.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _SwitchVisual(on: true, accent: accent),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+/// Toatre tip card at the bottom of the detail screen.
+class _TipCard extends StatelessWidget {
+  const _TipCard({required this.accent});
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: accent.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.auto_awesome_rounded, size: 20, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Toatre will keep this toat on track with your Pings and the timing you already set.',
+              style: TextStyles.body.copyWith(height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A simple visual toggle switch (read-only display).
+class _SwitchVisual extends StatelessWidget {
+  const _SwitchVisual({required this.on, required this.accent});
+  final bool on;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 46,
+      height: 27,
+      decoration: BoxDecoration(
+        color: on ? accent : AppColors.textMuted.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Align(
+        alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          width: 23,
+          height: 23,
+          margin: const EdgeInsets.all(2),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
   }
 }

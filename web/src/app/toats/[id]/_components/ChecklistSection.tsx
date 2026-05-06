@@ -41,7 +41,7 @@ export function ChecklistSection({
 }) {
   const addItem = () => {
     const newItem: ChecklistItem = { id: Date.now().toString(), text: "", done: false };
-    const next = [...checklistLocal, newItem];
+    const next = [newItem, ...checklistLocal];
     setChecklistLocal(next);
     void saveChecklistItems(next);
   };
