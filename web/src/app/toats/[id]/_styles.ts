@@ -82,15 +82,26 @@ export const topBarStyles = {
 // ─── Hero section ─────────────────────────────────────────────────────────────
 
 export const heroStyles = {
+  heroCard: {
+    borderRadius: 28,
+    border: "1px solid transparent",
+    padding: "22px 22px 20px",
+    marginBottom: 14,
+  } as CSSProperties,
+  heroCardCompact: {
+    borderRadius: 22,
+    padding: "14px 14px 12px",
+    marginBottom: 10,
+  } as CSSProperties,
   heroSection: {
     display: "flex",
     alignItems: "flex-start",
     gap: 26,
-    marginBottom: 24,
+    marginBottom: 0,
   } as CSSProperties,
   heroSectionCompact: {
     gap: 11,
-    marginBottom: 12,
+    marginBottom: 0,
   } as CSSProperties,
   heroIconWrap: {
     width: 138,
@@ -236,13 +247,13 @@ export const heroStyles = {
 export const actionStripStyles = {
   actionStrip: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
     gap: 6,
-    borderRadius: 18,
+    borderRadius: 22,
     background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.88))",
     border: "1px solid rgba(255,255,255,0.92)",
     boxShadow: "0 26px 80px rgba(31,41,55,0.08)",
-    padding: "10px 7px",
+    padding: "12px 8px",
     marginBottom: 14,
   } as CSSProperties,
   actionStripButton: {
@@ -251,14 +262,15 @@ export const actionStripStyles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
     fontSize: 10.5,
     fontWeight: 600,
+    padding: "4px 0",
   } as CSSProperties,
   actionStripIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: "50%",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

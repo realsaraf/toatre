@@ -410,6 +410,15 @@ export default function ToatDetailPage() {
           </div>
         </section>
 
+        <div
+          style={{
+            ...heroStyles.heroCard,
+            ...(isPhoneViewport ? heroStyles.heroCardCompact : {}),
+            background: `linear-gradient(135deg, ${visual.soft}, rgba(255,255,255,0.86))`,
+            borderColor: `${visual.tint}20`,
+            boxShadow: `0 20px 60px ${visual.soft}`,
+          }}
+        >
         <section style={{ ...heroStyles.heroSection, ...(isPhoneViewport ? heroStyles.heroSectionCompact : {}) }}>
           <div style={{ ...heroStyles.heroIconWrap, ...(isPhoneViewport ? heroStyles.heroIconWrapCompact : {}), background: visual.gradient }}>
             <Icon size={isPhoneViewport ? 34 : 46} />
@@ -441,14 +450,15 @@ export default function ToatDetailPage() {
             {!isMeeting && !isEvent && startDate ? <p style={{ ...heroStyles.heroSecondary, ...(isPhoneViewport ? heroStyles.heroSecondaryCompact : {}) }}><ClockIcon size={isPhoneViewport ? 16 : 20} /> {startDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p> : null}
           </div>
         </section>
+        </div>
 
         {flash ? <div style={pageStyles.flash}>{flash}</div> : null}
 
         <section style={actionStripStyles.actionStrip}>
-          <div ref={doneButtonRef}><ActionStripButton icon={<DoneIcon size={20} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => { const origin = captureOrigin(doneButtonRef.current); void runMutation("done", async () => { await patchToat({ state: "done" }); fireConfetti(origin); await new Promise<void>((r) => setTimeout(r, 1000)); router.replace("/timeline"); }); }} /></div>
-          <ActionStripButton icon={<SnoozeIcon size={20} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { const t = toatTime(toat); if (!t) throw new Error("This toat has no time to move."); await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } }); })} />
-          <ActionStripButton icon={<RescheduleIcon size={20} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
-          <ActionStripButton icon={<DuplicateIcon size={20} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
+          <div ref={doneButtonRef}><ActionStripButton icon={<DoneIcon size={22} />} label="Mark done" tint="#16A34A" disabled={Boolean(actionState)} onClick={() => { const origin = captureOrigin(doneButtonRef.current); void runMutation("done", async () => { await patchToat({ state: "done" }); fireConfetti(origin); await new Promise<void>((r) => setTimeout(r, 1000)); router.replace("/timeline"); }); }} /></div>
+          <ActionStripButton icon={<SnoozeIcon size={22} />} label="+1 Day" tint="#2563EB" disabled={Boolean(actionState)} onClick={() => void runMutation("add1d", async () => { const t = toatTime(toat); if (!t) throw new Error("This toat has no time to move."); await patchToat({ "enrichments.time": { ...toat.enrichments?.time, at: new Date(new Date(t).getTime() + 24 * 60 * 60000).toISOString() } }); })} />
+          <ActionStripButton icon={<RescheduleIcon size={22} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
+          <ActionStripButton icon={<DuplicateIcon size={22} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
         </section>
 
         {isMeeting ? (
