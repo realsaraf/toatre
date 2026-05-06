@@ -21,8 +21,6 @@ export function WhenWhereCard({
   setNotesLocal,
   saveNotesText,
   notesSaveTimer,
-  setShowNotes,
-  onAddLocation,
   onChangeLocation,
   onRemoveLocation,
   onShareOrCall,
@@ -41,8 +39,6 @@ export function WhenWhereCard({
   setNotesLocal: (v: string) => void;
   saveNotesText: (v: string) => Promise<void>;
   notesSaveTimer: MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  setShowNotes: (v: boolean) => void;
-  onAddLocation: () => void;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
   onShareOrCall: () => void;
@@ -109,18 +105,13 @@ export function WhenWhereCard({
               </div>
             ) : null}
           </>
-        ) : (
+        ) : phone ? (
           <div style={buttonStyles.buttonRow}>
-            <button type="button" onClick={onAddLocation} style={buttonStyles.secondaryButton}>
-              <LocationIcon size={18} /> Add location
+            <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
+              <PhoneGlyph size={20} /> Call
             </button>
-            {phone ? (
-              <button type="button" onClick={onShareOrCall} style={buttonStyles.secondaryButton}>
-                <PhoneGlyph size={20} /> Call
-              </button>
-            ) : null}
           </div>
-        )}
+        ) : null}
       </SectionCard>
 
       {showNotes || notesLocal.trim() !== "" ? (
@@ -152,27 +143,7 @@ export function WhenWhereCard({
             </span>
           </div>
         </SectionCard>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowNotes(true)}
-          style={{
-            background: "transparent",
-            border: "1.5px dashed rgba(123,92,246,0.25)",
-            borderRadius: 14,
-            padding: "12px 16px",
-            width: "100%",
-            color: "#7C3AED",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-            textAlign: "left",
-            marginBottom: 16,
-          }}
-        >
-          + Add notes
-        </button>
-      )}
+      ) : null}
 
       {reminders.length ? (
         <SectionCard title="Reminders">

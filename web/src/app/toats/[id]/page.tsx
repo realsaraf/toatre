@@ -396,9 +396,8 @@ export default function ToatDetailPage() {
               </CircleIconButton>
               {menuOpen ? (
                 <div style={menuStyles.menuCard}>
-                  <MenuAction label="Mark done" icon={<EditIcon size={20} />} tone="#111827" onClick={() => void runMutation("mark-done", async () => { await patchToat({ state: "done" }); router.replace("/timeline"); })} />
-                  <MenuAction label="Reschedule" icon={<RescheduleIcon size={20} />} tone="#111827" onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
-                  <MenuAction label="Duplicate" icon={<DuplicateIcon size={20} />} tone="#111827" onClick={() => void runMutation("duplicate", duplicateToat)} />
+                  <MenuAction label="Add location" icon={<LocationIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setLocationSearchOpen(true); }} />
+                  <MenuAction label="Add notes" icon={<EditIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setShowNotes(true); }} />
                   {isEvent ? (
                     <MenuAction label={ticketUrl ? "Update ticket link" : "Add ticket link"} icon={<TicketGlyph size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setTicketInputOpen(true); }} />
                   ) : null}
@@ -458,15 +457,15 @@ export default function ToatDetailPage() {
         ) : null}
 
         {!isMeeting && !isEvent && !isChecklist ? (
-          <WhenWhereCard startDate={startDate} endDate={endDate} loc={loc} maps={maps} phone={phone} visual={visual} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimer={notesSaveTimer} setShowNotes={setShowNotes} onAddLocation={() => setLocationSearchOpen(true)} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} onShareOrCall={() => { if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; } void openShareModal(); }} reminders={reminders} user={user} toat={toat} />
+          <WhenWhereCard startDate={startDate} endDate={endDate} loc={loc} maps={maps} phone={phone} visual={visual} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimer={notesSaveTimer} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} onShareOrCall={() => { if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; } void openShareModal(); }} reminders={reminders} user={user} toat={toat} />
         ) : null}
 
         {isMeeting ? (
-          <MeetingSection startDate={startDate} endDate={endDate} joinUrl={joinUrl!} people={people} agenda={agenda} visual={visual} loc={loc} maps={maps} onAddLocation={() => setLocationSearchOpen(true)} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} />
+          <MeetingSection startDate={startDate} endDate={endDate} joinUrl={joinUrl!} people={people} agenda={agenda} visual={visual} loc={loc} maps={maps} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} />
         ) : null}
 
         {isChecklist ? (
-          <ChecklistSection checklistLocal={checklistLocal} setChecklistLocal={setChecklistLocal} saveChecklistItems={saveChecklistItems} checklistDragIndex={checklistDragIndex} visual={visual} loc={loc} maps={maps} onAddLocation={() => setLocationSearchOpen(true)} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimer={notesSaveTimer} setShowNotes={setShowNotes} user={user} toat={toat} />
+          <ChecklistSection checklistLocal={checklistLocal} setChecklistLocal={setChecklistLocal} saveChecklistItems={saveChecklistItems} checklistDragIndex={checklistDragIndex} visual={visual} loc={loc} maps={maps} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimer={notesSaveTimer} user={user} toat={toat} />
         ) : null}
 
         {people.length ? (

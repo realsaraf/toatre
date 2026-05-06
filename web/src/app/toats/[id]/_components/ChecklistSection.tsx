@@ -1,7 +1,7 @@
 import type { MutableRefObject } from "react";
-import { BellIcon, GrabHandleIcon, LocationIcon, PlusIcon } from "@/components/mobile-ui";
+import { BellIcon, GrabHandleIcon, PlusIcon } from "@/components/mobile-ui";
 import type { ChecklistItem, DetailVisual, ToatDetail } from "../_types";
-import { buttonStyles, checklistStyles, notesStyles, sectionCardStyles, toggleStyles } from "../_styles";
+import { checklistStyles, notesStyles, sectionCardStyles, toggleStyles } from "../_styles";
 import { SectionCard } from "./SectionCard";
 import { LocationBlock } from "./LocationBlock";
 import { SwitchVisual } from "./SwitchVisual";
@@ -14,7 +14,6 @@ export function ChecklistSection({
   visual,
   loc,
   maps,
-  onAddLocation,
   onChangeLocation,
   onRemoveLocation,
   notesLocal,
@@ -22,7 +21,6 @@ export function ChecklistSection({
   setNotesLocal,
   saveNotesText,
   notesSaveTimer,
-  setShowNotes,
 }: {
   checklistLocal: ChecklistItem[];
   setChecklistLocal: (v: ChecklistItem[]) => void;
@@ -31,7 +29,6 @@ export function ChecklistSection({
   visual: DetailVisual;
   loc: string | null;
   maps: string | null;
-  onAddLocation: () => void;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
   notesLocal: string;
@@ -39,7 +36,6 @@ export function ChecklistSection({
   setNotesLocal: (v: string) => void;
   saveNotesText: (v: string) => Promise<void>;
   notesSaveTimer: MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  setShowNotes: (v: boolean) => void;
   user: { displayName: string | null } | null;
   toat: ToatDetail;
 }) {
@@ -182,27 +178,7 @@ export function ChecklistSection({
             rows={3}
           />
         </SectionCard>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowNotes(true)}
-          style={{
-            background: "transparent",
-            border: "1.5px dashed rgba(123,92,246,0.25)",
-            borderRadius: 14,
-            padding: "12px 16px",
-            width: "100%",
-            color: "#7C3AED",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-            textAlign: "left",
-            marginBottom: 16,
-          }}
-        >
-          + Add notes
-        </button>
-      )}
+      ) : null}
 
       <SectionCard title="Ping me">
         <div style={toggleStyles.toggleRow}>
@@ -236,13 +212,7 @@ export function ChecklistSection({
           onChangeLocation={onChangeLocation}
           onRemoveLocation={onRemoveLocation}
         />
-      ) : (
-        <div style={buttonStyles.buttonRow}>
-          <button type="button" style={buttonStyles.secondaryButton} onClick={onAddLocation}>
-            <LocationIcon size={18} /> Add location
-          </button>
-        </div>
-      )}
+      ) : null}
     </>
   );
 }

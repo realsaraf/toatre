@@ -4,13 +4,12 @@ import {
   ClockIcon,
   DocumentIcon,
   EditIcon,
-  LocationIcon,
   MessageGlyph,
   VideoGlyph,
 } from "@/components/mobile-ui";
 import type { DetailVisual } from "../_types";
 import { formatDate, formatTime } from "../_utils";
-import { sectionCardStyles, buttonStyles, toggleStyles, attachmentStyles, notesStyles } from "../_styles";
+import { sectionCardStyles, toggleStyles, attachmentStyles, notesStyles } from "../_styles";
 import { SectionCard } from "./SectionCard";
 import { InfoRow } from "./InfoRow";
 import { LocationBlock } from "./LocationBlock";
@@ -24,7 +23,6 @@ export function MeetingSection({
   visual,
   loc,
   maps,
-  onAddLocation,
   onChangeLocation,
   onRemoveLocation,
 }: {
@@ -36,7 +34,6 @@ export function MeetingSection({
   visual: DetailVisual;
   loc: string | null;
   maps: string | null;
-  onAddLocation: () => void;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
 }) {
@@ -146,13 +143,7 @@ export function MeetingSection({
           onChangeLocation={onChangeLocation}
           onRemoveLocation={onRemoveLocation}
         />
-      ) : (
-        <div style={buttonStyles.buttonRow}>
-          <button type="button" onClick={onAddLocation} style={buttonStyles.secondaryButton}>
-            <LocationIcon size={18} /> Add location
-          </button>
-        </div>
-      )}
+      ) : null}
     </>
   );
 }
