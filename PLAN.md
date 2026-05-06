@@ -15,12 +15,22 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-04-28
-**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest mobile parity build #9 finished in Codemagic; remaining: Playwright account steps)
+**Last updated:** 2026-04-29
+**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest build pushed ce6f5ed; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-04-29 (hook-based detail view, card components, maps, mic fix) — completed
+- Rewrote web toat detail to use a `useToatLayout` hook for all derived state (isMeeting, isEvent, isChecklist, loc, maps, people, reminders, agenda, visual, primaryAction, heroChip)
+- Extracted three card-component functions (`WhenWhereCard`, `MeetingSection`, `ChecklistSection`) before `TicketInputModal` so the JSX render path passes only the data each card needs
+- Rewrote Flutter mobile toat detail: `_buildCards()` helper returns per-kind card widgets; renamed `_HeroSection`→`_HeroCard`, `_ChecklistSection`→`_ChecklistCard`; new `_ActionStripCard`, `_WhenWhereCard`, `_MeetingDetailsCard`, `_MapCard`, `_LocationSection`, `_AddLocationButton`, `_NotesCard`, `_AddNotesButton`, `_DetailsCard`
+- Added real map image on mobile via backend proxy (`/api/places/staticmap`); Google Places autocomplete now goes through `AppConfig.apiUri('/api/places/autocomplete')` instead of direct Google API
+- Fixed mobile mic permission banner: checks `.status` before calling `.request()` so granted users never see the banner; added `isPermanentlyDenied` path that opens app Settings dialog
+- Removed duplicate `_formatWhen` dead code from `toat_detail_screen.dart`
+- Validation: `npx tsc --noEmit` (exit 0), `flutter analyze --no-fatal-infos --no-fatal-warnings` (exit 0, 26 style-only infos in unrelated files)
+- Committed ce6f5ed, pushed main + dev → Codemagic `ios-release` workflow pending trigger
 
 ### Session 2026-04-28 (server-owned Google Calendar sync) — completed
 - Replaced the earlier client-owned Google Calendar permission flow with server-owned OAuth start/callback/disconnect/manual-sync API routes

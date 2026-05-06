@@ -259,9 +259,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
       final capture = context.read<CaptureProvider>();
       capture.reset();
       capture.setMode(CaptureInputMode.voice);
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const CaptureScreen()));
       if (!mounted) return;
       await context.read<ToatsProvider>().fetchToats();
       return;
