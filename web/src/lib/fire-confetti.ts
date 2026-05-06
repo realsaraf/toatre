@@ -1,4 +1,4 @@
-// Confetti burst — fires DOM particles from an optional anchor element.
+// Confetti burst — fires DOM particles from a pre-captured screen position.
 // Throttled to once per 2 seconds globally via module-level ref.
 let lastConfettiTime = 0;
 const CONFETTI_COLORS = [
@@ -11,16 +11,44 @@ const CONFETTI_COLORS = [
   "#FB923C",
 ];
 
-export function fireConfetti(anchorEl?: HTMLElement | null) {
+export type ConfettiOrigin = HTMLElement | { x: number; y: number } | null | undefined;
+
+/** Capture the center of an element synchronously. Call this at click time,
+ *  before any async work, so the element is still in the DOM and laid out. */
+export function captureOrigin(el: HTMLElement | null | undefined): { x: number; y: number } | undefined {
+  if (!el) return undefined;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return undefined;
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+export function fireConfetti(origin?: ConfettiOrigin) {
   const now = Date.now();
   if (now - lastConfettiTime < 2000) return;
   lastConfettiTime = now;
 
   const count = 28;
-  const rect = anchorEl?.getBoundingClientRect();
-  const originX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-  // Default origin near the bottom of the screen where the Done button lives.
-  const originY = rect ? rect.top + rect.height / 2 : window.innerHeight * 0.82;
+  let originX: number;
+  let originY: number;
+
+  if (origin && "x" in origin) {
+    // Pre-captured position — most reliable, use directly.
+    originX = origin.x;
+    originY = origin.y;
+  } else if (origin) {
+    const rect = (origin as HTMLElement).getBoundingClientRect();
+    if (rect.width > 0 || rect.height > 0) {
+      originX = rect.left + rect.width / 2;
+      originY = rect.top + rect.height / 2;
+    } else {
+      // Element removed from DOM — fall back to screen bottom.
+      originX = window.innerWidth / 2;
+      originY = window.innerHeight * 0.82;
+    }
+  } else {
+    originX = window.innerWidth / 2;
+    originY = window.innerHeight * 0.82;
+  }
 
   for (let i = 0; i < count; i++) {
     const el = document.createElement("div");

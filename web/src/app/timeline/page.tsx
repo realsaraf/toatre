@@ -22,7 +22,7 @@ import {
   UserAvatar,
 } from "@/components/mobile-ui";
 import { getToatVisual, type ToatVisual } from "@/components/toat-visual";
-import { fireConfetti } from "@/lib/fire-confetti";
+import { fireConfetti, captureOrigin } from "@/lib/fire-confetti";
 import type { SerializedToat as TimelineToat } from "@/types";
 
 interface DayGroup {
@@ -343,6 +343,10 @@ export default function TimelinePage() {
   const markDone = async (toat: TimelineToat, anchorEl?: HTMLElement | null) => {
     if (!user || finishingToatId) return;
 
+    // Capture position synchronously NOW — before the API call and before the
+    // element might be removed or animated away.
+    const confettiOrigin = captureOrigin(anchorEl);
+
     setFinishingToatId(toat.id);
     try {
       const token = await user.getIdToken();
@@ -360,11 +364,11 @@ export default function TimelinePage() {
         throw new Error(data?.error ?? "Could not mark this toat done.");
       }
 
-      // Start exit animation immediately
+      // Fire confetti FIRST — button is still in the DOM at its correct position.
+      fireConfetti(confettiOrigin);
+      // Then start exit animation.
       setRemovingToatId(toat.id);
-      // Fire confetti after 800ms delay
-      setTimeout(() => fireConfetti(anchorEl), 800);
-      // Remove from list after animation (400ms)
+      // Remove from list after animation completes (400ms).
       setTimeout(() => {
         setToats((current) => current.filter((item) => item.id !== toat.id));
         setRemovingToatId(null);
