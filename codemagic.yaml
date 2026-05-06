@@ -48,6 +48,7 @@ workflows:
       ios_signing:
         provisioning_profiles:
           - toatre-appstore-profile
+          - toatre-widget-appstore-profile
         certificates:
           - toatre-ios-distribution
       vars:
