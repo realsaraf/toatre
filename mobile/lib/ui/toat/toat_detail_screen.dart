@@ -82,6 +82,50 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                     icon: Icons.ios_share_rounded,
                     onTap: _shareToat,
                   ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    color: AppColors.bgElevated,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'add_location':
+                          _openLocationSearch();
+                        case 'add_notes':
+                          setState(() => _showNotesField = true);
+                        case 'delete':
+                          _delete();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'add_location',
+                        child: Row(children: [
+                          const Icon(Icons.add_location_outlined, size: 20),
+                          const SizedBox(width: 12),
+                          const Text('Add location'),
+                        ]),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'add_notes',
+                        child: Row(children: [
+                          const Icon(Icons.edit_note_rounded, size: 20),
+                          const SizedBox(width: 12),
+                          const Text('Add notes'),
+                        ]),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(children: [
+                          const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFDC2626)),
+                          const SizedBox(width: 12),
+                          const Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
+                        ]),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -489,11 +533,6 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
           onPrimaryAction: _workingAction == null ? _primaryAction : null,
         ),
         const SizedBox(height: 16),
-      ] else ...[
-        AddLocationButton(
-          onTap: _workingAction == null ? _openLocationSearch : null,
-        ),
-        const SizedBox(height: 16),
       ],
       if (hasChecklist) ...[
         ChecklistCard(
@@ -552,9 +591,6 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
             _notesSaveTimer = Timer(const Duration(seconds: 2), _saveNotes);
           },
         ),
-        const SizedBox(height: 16),
-      ] else ...[
-        AddNotesButton(onTap: () => setState(() => _showNotesField = true)),
         const SizedBox(height: 16),
       ],
       DetailsCard(toat: _toat),
