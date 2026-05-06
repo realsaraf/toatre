@@ -367,7 +367,6 @@ export default function ToatDetailPage() {
     ticketUrl,
     visual,
     heroChip,
-    primaryAction,
     reminders,
     agenda,
   } = layout;
@@ -425,26 +424,20 @@ export default function ToatDetailPage() {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            {isMeeting ? (
-              <div style={heroStyles.heroMeetingMeta}>
-                <span style={{ ...heroStyles.heroMetaChip, ...(isPhoneViewport ? heroStyles.heroMetaChipCompact : {}) }}><VideoGlyph size={isPhoneViewport ? 16 : 20} /> {joinUrl ? "Meeting link" : "Meeting"}</span>
-                {people.length ? (
-                  <div style={heroStyles.peopleRow}>
-                    {people.slice(0, 4).map((person) => (
-                      <span key={person} style={{ ...heroStyles.personBadge, ...(isPhoneViewport ? heroStyles.personBadgeCompact : {}) }}>{initials(person)}</span>
-                    ))}
-                    {people.length > 4 ? <span style={{ ...heroStyles.personOverflow, ...(isPhoneViewport ? heroStyles.personBadgeCompact : {}) }}>+{people.length - 4}</span> : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
             <h1 style={{ ...heroStyles.heroTitle, ...(isPhoneViewport ? heroStyles.heroTitleCompact : {}) }}>{toat.title}</h1>
 
-            {(heroChip ?? maps) && !isMeeting ? (
+            {(heroChip ?? maps ?? (isMeeting && joinUrl)) ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: loc ? 6 : 0, flexWrap: "wrap" }}>
                 {heroChip ? <DetailBadge text={heroChip.text} style={heroChip.style} accent={visual.accent} /> : null}
-                {maps ? (
+                {isMeeting && joinUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => window.open(joinUrl, "_blank", "noopener,noreferrer")}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, height: isPhoneViewport ? 34 : 38, padding: "0 14px", borderRadius: 999, border: "none", background: visual.gradient, color: "#fff", fontSize: isPhoneViewport ? 13 : 14, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    <VideoGlyph size={isPhoneViewport ? 14 : 16} /> Join
+                  </button>
+                ) : maps ? (
                   <button
                     type="button"
                     onClick={() => window.open(maps, "_blank", "noopener,noreferrer")}
@@ -471,12 +464,6 @@ export default function ToatDetailPage() {
           <ActionStripButton icon={<RescheduleIcon size={22} />} label="Reschedule" tint="#7C3AED" disabled={Boolean(actionState)} onClick={() => { const t = toatTime(toat); setRescheduleValue(t ? new Date(t).toISOString().slice(0, 16) : ""); setRescheduleOpen(true); }} />
           <ActionStripButton icon={<DuplicateIcon size={22} />} label="Duplicate" tint="#6B7280" disabled={Boolean(actionState)} onClick={() => void runMutation("duplicate", duplicateToat)} />
         </section>
-
-        {isMeeting ? (
-          <button type="button" onClick={() => { if (primaryAction.external) { window.open(primaryAction.href, "_blank", "noopener,noreferrer"); } else { router.push(primaryAction.href); } }} style={{ ...actionStripStyles.fullWidthPrimary, ...(isPhoneViewport ? actionStripStyles.fullWidthPrimaryCompact : {}), background: visual.gradient }}>
-            <VideoGlyph size={isPhoneViewport ? 20 : 24} /> {primaryAction.label}
-          </button>
-        ) : null}
 
         {!isMeeting && !isEvent && !isChecklist ? (
           <WhenWhereCard startDate={startDate} endDate={endDate} loc={loc} maps={maps} phone={phone} visual={visual} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimer={notesSaveTimer} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} onShareOrCall={() => { if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; } void openShareModal(); }} reminders={reminders} user={user} toat={toat} />
