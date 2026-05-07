@@ -27,20 +27,60 @@ class WidgetService {
   /// "Upcoming" = open, has a datetime, datetime >= now.
   /// If none today, uses tomorrow's, then the day after — i.e. just
   /// chronologically the soonest ones.
-  static Future<void> update(List<ToatSummary> toats, {int maxItems = 8}) async {
+  static Future<void> update(
+    List<ToatSummary> toats, {
+    int maxItems = 8,
+  }) async {
     await init();
 
     final now = DateTime.now();
 
-    final upcoming = toats
-        .where((t) =>
-            t.state == 'open' &&
-            t.datetime != null &&
-            t.datetime!.isAfter(now.subtract(const Duration(minutes: 1))))
-        .toList()
-      ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
+    final upcoming =
+        toats
+            .where(
+              (t) =>
+                  t.state == 'open' &&
+                  t.datetime != null &&
+                  t.datetime!.isAfter(now.subtract(const Duration(minutes: 1))),
+            )
+            .toList()
+          ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
 
-    final payload = upcoming.take(maxItems).map((t) {
+    final unscheduled =
+        toats.where((t) => t.state == 'open' && t.datetime == null).toList()
+          ..sort((a, b) => _sortByRecency(b).compareTo(_sortByRecency(a)));
+
+    final overdue =
+        toats
+            .where(
+              (t) =>
+                  t.state == 'open' &&
+                  t.datetime != null &&
+                  t.datetime!.isBefore(
+                    now.subtract(const Duration(minutes: 1)),
+                  ),
+            )
+            .toList()
+          ..sort((a, b) => b.datetime!.compareTo(a.datetime!));
+
+    final ranked = <ToatSummary>[];
+
+    void appendUnique(List<ToatSummary> batch) {
+      for (final toat in batch) {
+        final title = toat.title.trim();
+        if (title.isEmpty) continue;
+        final alreadyAdded = ranked.any((entry) => entry.id == toat.id);
+        if (alreadyAdded) continue;
+        ranked.add(toat);
+        if (ranked.length >= maxItems) return;
+      }
+    }
+
+    appendUnique(upcoming);
+    if (ranked.length < maxItems) appendUnique(unscheduled);
+    if (ranked.length < maxItems) appendUnique(overdue);
+
+    final payload = ranked.take(maxItems).map((t) {
       return <String, Object?>{
         'id': t.id,
         'title': t.title,
@@ -52,7 +92,13 @@ class WidgetService {
     }).toList();
 
     await HomeWidget.saveWidgetData<String>(_dataKey, jsonEncode(payload));
-    await HomeWidget.updateWidget(name: _widgetKind);
+    await HomeWidget.updateWidget(name: _widgetKind, iOSName: _widgetKind);
+  }
+
+  static DateTime _sortByRecency(ToatSummary toat) {
+    return toat.updatedAt ??
+        toat.createdAt ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   static String _kind(ToatSummary t) {

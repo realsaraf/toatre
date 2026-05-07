@@ -18,6 +18,10 @@ class ToatsProvider extends ChangeNotifier {
   List<ToatSummary> get toats => _toats;
   String? get error => _error;
 
+  void _syncWidget() {
+    WidgetService.update(_toats).ignore();
+  }
+
   Future<void> fetchToats() async {
     _status = ToatsStatus.loading;
     _error = null;
@@ -36,8 +40,8 @@ class ToatsProvider extends ChangeNotifier {
           .map(ToatSummary.fromJson)
           .toList();
       _status = ToatsStatus.loaded;
-      // Push upcoming toats to the iOS home-screen widget (fire-and-forget).
-      WidgetService.update(_toats).ignore();
+      // Push the live timeline slice to the iOS home-screen widget.
+      _syncWidget();
     } on ApiServiceException catch (error) {
       _error = error.message;
       _status = ToatsStatus.error;
@@ -78,18 +82,21 @@ class ToatsProvider extends ChangeNotifier {
 
     final updated = ToatSummary.fromJson(toatJson);
     _replaceToat(updated);
+    _syncWidget();
     notifyListeners();
     return updated;
   }
 
   void removeToatLocally(String id) {
     _toats = _toats.where((t) => t.id != id).toList();
+    _syncWidget();
     notifyListeners();
   }
 
   Future<void> deleteToat(ToatSummary toat) async {
     await _api.deleteJson('/api/toats/${toat.id}', authenticated: true);
     _toats = _toats.where((entry) => entry.id != toat.id).toList();
+    _syncWidget();
     notifyListeners();
     await AnalyticsService.logToatDeleted(kind: toat.tier);
   }
@@ -122,6 +129,7 @@ class ToatsProvider extends ChangeNotifier {
               right.datetime ?? DateTime.fromMillisecondsSinceEpoch(0),
             ),
       );
+    _syncWidget();
     notifyListeners();
     return duplicated;
   }

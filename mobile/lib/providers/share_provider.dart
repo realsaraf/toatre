@@ -118,24 +118,34 @@ class ShareProvider extends ChangeNotifier {
     required String permission,
     required bool linkOnly,
   }) async {
-    final response = await _api.postJson(
-      '/api/toats/$toatId/share',
-      body: <String, Object?>{
-        'connectionIds': connectionIds,
-        'permission': permission,
-        'linkOnly': linkOnly,
-      },
-      authenticated: true,
-    );
+    _error = null;
 
-    final result = ShareToatResult.fromJson(response);
-    if (result.shareUrl.isEmpty) {
-      throw const ApiServiceException(
-        statusCode: 500,
-        message: 'Could not create that share link.',
+    try {
+      final response = await _api.postJson(
+        '/api/toats/$toatId/share',
+        body: <String, Object?>{
+          'connectionIds': connectionIds,
+          'permission': permission,
+          'linkOnly': linkOnly,
+        },
+        authenticated: true,
       );
+
+      final result = ShareToatResult.fromJson(response);
+      if (result.shareUrl.isEmpty) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Could not create that share link.',
+        );
+      }
+      return result;
+    } on ApiServiceException catch (error) {
+      _error = error.message;
+      rethrow;
+    } catch (_) {
+      _error = 'Could not create that share link.';
+      rethrow;
     }
-    return result;
   }
 }
 

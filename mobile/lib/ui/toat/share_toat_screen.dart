@@ -24,6 +24,14 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
   _SharePermission _permission = _SharePermission.view;
   bool _busy = false;
 
+  Rect? _sharePositionOrigin() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) {
+      return null;
+    }
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -208,13 +216,18 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
     setState(() => _busy = true);
 
     try {
-      final result = await context.read<ShareProvider>().shareToat(
+      final shareProvider = context.read<ShareProvider>();
+      final result = await shareProvider.shareToat(
         toatId: widget.toat.id,
         connectionIds: linkOnly ? const <String>[] : _selectedPeople.toList(),
         permission: _permission.name,
         linkOnly: linkOnly,
       );
-      await Share.share(result.shareUrl, subject: widget.toat.title);
+      await Share.share(
+        result.shareUrl,
+        subject: widget.toat.title,
+        sharePositionOrigin: _sharePositionOrigin(),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

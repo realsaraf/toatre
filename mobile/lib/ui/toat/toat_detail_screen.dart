@@ -269,8 +269,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
   Future<void> _markDone() async {
     await _runAction('done', () async {
+      final toatsProvider = context.read<ToatsProvider>();
       await HapticFeedback.heavyImpact();
-      final updated = await context.read<ToatsProvider>().updateToat(
+      final updated = await toatsProvider.updateToat(
         _toat.id,
         <String, Object?>{'state': 'done'},
       );
@@ -438,7 +439,11 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
               await _runAction('location', () async {
                 final updated = await context.read<ToatsProvider>().updateToat(
                   _toat.id,
-                  <String, Object?>{'location': description},
+                  <String, Object?>{
+                    'enrichments.place': <String, Object?>{
+                      'address': description,
+                    },
+                  },
                 );
                 if (!mounted) return;
                 setState(() => _toat = updated);
@@ -455,7 +460,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     await _runAction('rm-location', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
-        <String, Object?>{'location': null},
+        <String, Object?>{'enrichments.place': null},
       );
       if (!mounted) return;
       setState(() => _toat = updated);
