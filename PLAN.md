@@ -35,7 +35,7 @@
 
 ### Session 2026-05-06 (verified universal/app links) — completed
 - Added Apple App Site Association and Android Digital Asset Links responses on `toatre.com` so `https://toatre.com/j/...` can resolve directly into Toatre without the browser handoff when the domain trust checks pass.
-- Switched the Android `https://toatre.com/j/...` intent filter to verified app-link mode; kept iOS on the existing custom-scheme/browser handoff path until the Apple provisioning profile is regenerated with the Associated Domains capability.
+- Switched the Android `https://toatre.com/j/...` intent filter to verified app-link mode and re-enabled iOS Associated Domains once the refreshed provisioning profile was uploaded.
 - Validation: `npm run typecheck`, `npx eslint "src/app/.well-known/apple-app-site-association/route.ts" "src/app/apple-app-site-association/route.ts" "src/app/.well-known/assetlinks.json/route.ts" "src/lib/app_link_association.ts"`.
 
 ### Session 2026-04-29 (hook-based detail view, card components, maps, mic fix) — completed
