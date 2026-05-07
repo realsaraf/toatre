@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart' show User;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -30,34 +29,17 @@ class TimelineScreen extends StatefulWidget {
   State<TimelineScreen> createState() => _TimelineScreenState();
 }
 
-class _TimelineScreenState extends State<TimelineScreen>
-    with WidgetsBindingObserver {
+class _TimelineScreenState extends State<TimelineScreen> {
   _TimelineRange _selectedRange = _TimelineRange.today;
   String? _removingToatId;
-  bool _retryMicOnResume = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<ToatsProvider>().fetchToats();
       await AnalyticsService.logTimelineViewed();
     });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _retryMicOnResume) {
-      _retryMicOnResume = false;
-      _openVoiceCapture();
-    }
   }
 
   @override
@@ -263,56 +245,14 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   Future<void> _openVoiceCapture() async {
-    PermissionStatus status = await Permission.microphone.status;
-    if (!status.isGranted && !status.isLimited) {
-      status = await Permission.microphone.request();
-    }
+    final capture = context.read<CaptureProvider>();
+    capture.reset();
+    capture.setMode(CaptureInputMode.voice);
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const CaptureScreen()));
     if (!mounted) return;
-
-    if (status.isGranted || status.isLimited) {
-      final capture = context.read<CaptureProvider>();
-      capture.reset();
-      capture.setMode(CaptureInputMode.voice);
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const CaptureScreen()));
-      if (!mounted) return;
-      await context.read<ToatsProvider>().fetchToats();
-      return;
-    }
-
-    if (status.isPermanentlyDenied) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Microphone access needed'),
-          content: const Text(
-            'Toatre needs microphone access to capture your voice. '
-            'Please enable it in Settings.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                _retryMicOnResume = true;
-                await openAppSettings();
-              },
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Microphone permission is required.')),
-    );
+    await context.read<ToatsProvider>().fetchToats();
   }
 
   Future<void> _openTextCapture() async {

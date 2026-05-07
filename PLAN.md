@@ -15,12 +15,17 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-04-29
-**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest build pushed ce6f5ed; remaining: Playwright account steps)
+**Last updated:** 2026-05-06
+**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest dogfood fixes pushed to `main`; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-06 (home mic flow + widget mockup alignment) — completed
+- Rebuilt the iOS home-screen widget away from the dark card experiment and toward the approved light mockup: white surface, brand-purple headers, timeline rows, icon tiles, hero next-toat card, and footer stats.
+- Removed the duplicate home-screen microphone permission gate from `timeline_screen.dart`; the Timeline mic button now routes straight into `CaptureScreen`, which uses the recorder's own permission path that already works on-device.
+- Validation: VS Code Problems clean for touched files; `flutter analyze --no-fatal-infos --no-fatal-warnings` reported no errors, with 22 existing info-level lints elsewhere in mobile plus one pre-existing async-context info in `timeline_screen.dart`.
 
 ### Session 2026-04-29 (hook-based detail view, card components, maps, mic fix) — completed
 - Rewrote web toat detail to use a `useToatLayout` hook for all derived state (isMeeting, isEvent, isChecklist, loc, maps, people, reminders, agenda, visual, primaryAction, heroChip)
