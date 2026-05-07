@@ -27,6 +27,17 @@
 - Removed the duplicate home-screen microphone permission gate from `timeline_screen.dart`; the Timeline mic button now routes straight into `CaptureScreen`, which uses the recorder's own permission path that already works on-device.
 - Validation: VS Code Problems clean for touched files; `flutter analyze --no-fatal-infos --no-fatal-warnings` reported no errors, with 22 existing info-level lints elsewhere in mobile plus one pre-existing async-context info in `timeline_screen.dart`.
 
+### Session 2026-05-06 (shared toat app handoff) — completed
+- Added browser-to-app handoff on shared `/j/[token]` pages via `toatre://j/<token>` so phones with Toatre installed can jump into the app instead of staying on the web preview.
+- Added a public `/api/shares/[token]` payload route plus a new mobile `SharedToatScreen` so incoming shared links resolve to real shared-toat data inside the Flutter app.
+- Registered shared-link handling in Android and iOS and wired a Flutter app-level listener with `app_links`.
+- Validation: `flutter analyze lib/app.dart lib/ui/toat/shared_toat_screen.dart`, `npm run typecheck`, `npx eslint "src/app/j/[token]/page.tsx" "src/app/j/[token]/OpenInAppHandoff.tsx" "src/app/api/shares/[token]/route.ts"`.
+
+### Session 2026-05-06 (verified universal/app links) — completed
+- Added Apple App Site Association and Android Digital Asset Links responses on `toatre.com` so `https://toatre.com/j/...` can resolve directly into Toatre without the browser handoff when the domain trust checks pass.
+- Enabled iOS Associated Domains for `applinks:toatre.com` and switched the Android `https://toatre.com/j/...` intent filter to verified app-link mode.
+- Validation: `npm run typecheck`, `npx eslint "src/app/.well-known/apple-app-site-association/route.ts" "src/app/apple-app-site-association/route.ts" "src/app/.well-known/assetlinks.json/route.ts" "src/lib/app_link_association.ts"`.
+
 ### Session 2026-04-29 (hook-based detail view, card components, maps, mic fix) — completed
 - Rewrote web toat detail to use a `useToatLayout` hook for all derived state (isMeeting, isEvent, isChecklist, loc, maps, people, reminders, agenda, visual, primaryAction, heroChip)
 - Extracted three card-component functions (`WhenWhereCard`, `MeetingSection`, `ChecklistSection`) before `TicketInputModal` so the JSX render path passes only the data each card needs
@@ -506,8 +517,10 @@ empty TestFlight build is queued.
 ## 5. Phase 5 — Sharing + People
 
 - [ ] People CRUD (add manually, auto-extract from captures, link to Toatre user by handle/email)
-- [ ] Share UI on toat detail
-- [ ] Public preview at `/j/[token]`
+- [x] Share UI on toat detail (2026-04-28)
+- [x] Public preview at `/j/[token]` (2026-04-28)
+- [x] Shared links hand off into installed mobile app (2026-05-06)
+- [x] Verified universal/app links hosted for `https://toatre.com/j/...` (2026-05-06)
 - [ ] Recipient timelines show shared toats with owner badge
 - [ ] Email invite via Resend
 - [ ] Revoke share
