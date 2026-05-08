@@ -50,7 +50,9 @@ class _SplashScreenState extends State<SplashScreen>
     final Widget dest;
     switch (auth.status) {
       case AuthStatus.authenticated:
-        await settingsProvider.loadSettings();
+        try {
+          await settingsProvider.loadSettings();
+        } catch (_) {}
         if (!mounted) return;
         dest = const TimelineScreen();
         break;
