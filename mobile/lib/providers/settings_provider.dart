@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/user_settings.dart';
 import 'package:toatre/services/api_service.dart';
+import 'package:toatre/services/local_ping_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
   final ApiService _api = ApiService.instance;
@@ -25,7 +26,11 @@ class SettingsProvider extends ChangeNotifier {
 
     try {
       final response = await _api.getJson('/api/settings', authenticated: true);
-      _payload = SettingsPayload.fromJson(response);
+      final payload = SettingsPayload.fromJson(response);
+      _payload = payload;
+      await LocalPingService.instance.updateNotificationPreferences(
+        payload.settings.notificationPreferences,
+      );
     } on ApiServiceException catch (error) {
       _error = error.message;
     } catch (_) {
@@ -208,6 +213,9 @@ class SettingsProvider extends ChangeNotifier {
     try {
       final next = await action();
       _payload = next;
+      await LocalPingService.instance.updateNotificationPreferences(
+        next.settings.notificationPreferences,
+      );
       return next;
     } on ApiServiceException catch (error) {
       _error = error.message;

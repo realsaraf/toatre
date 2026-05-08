@@ -15,12 +15,18 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-07
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest dogfood fixes pushed to `main`; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-07 (reminder Ping delivery) — completed
+- Added mobile reminder delivery through both local scheduling and FCM registration: local Pings now respect the saved per-kind push settings, auth startup loads those settings before timeline fetches, and sign-out clears scheduled local Pings.
+- Added a server reminder pipeline on the web side: push reminder rows are generated from toat timing, resynced on toat/settings/capture/google-sync mutations, and dispatched from `GET /api/cron/fire-pings` through Firebase Admin using registered device tokens.
+- Added mobile FCM token registration, foreground push presentation, and push tap deep-linking into the related toat detail screen.
+- Validation: `flutter analyze lib/app.dart lib/providers/auth_provider.dart lib/providers/settings_provider.dart lib/services/api_service.dart lib/services/local_ping_service.dart lib/services/push_ping_service.dart lib/ui/splash/splash_screen.dart`, `npm run typecheck`, `npx eslint src/lib/pings/compute.ts src/lib/pings/dispatch.ts src/app/api/device-tokens/route.ts src/app/api/cron/fire-pings/route.ts src/app/api/toats/route.ts src/app/api/toats/[id]/route.ts src/app/api/captures/route.ts src/app/api/captures/[id]/commit/route.ts src/lib/sync/google-calendar.ts src/app/api/settings/route.ts src/lib/firebase/admin.ts src/lib/mongo/collections.ts src/lib/mongo/indexes.ts src/types/index.ts`.
 
 ### Session 2026-05-06 (home mic flow + widget mockup alignment) — completed
 - Rebuilt the iOS home-screen widget away from the dark card experiment and toward the approved light mockup: white surface, brand-purple headers, timeline rows, icon tiles, hero next-toat card, and footer stats.
@@ -489,19 +495,20 @@ empty TestFlight build is queued.
 
 ### 4.1 — Server
 - [ ] `web/src/lib/pings/policies.ts` — policy lookup
-- [ ] `web/src/lib/pings/compute.ts` — generate `pings` rows for a toat (called on toat create/update)
-- [ ] `web/src/lib/pings/dispatch.ts` — fetch due, send, mark fired (idempotent via `findOneAndUpdate`)
-- [ ] `GET /api/cron/fire-pings` (gated by `CRON_SECRET`)
-- [ ] FCM payload builder (regular + critical alert)
+- [x] `web/src/lib/pings/compute.ts` — generate push reminder rows for a toat (called on toat/settings/capture/google-sync mutations) (2026-05-07)
+- [x] `web/src/lib/pings/dispatch.ts` — fetch due push reminders, send them, and claim rows via `findOneAndUpdate` (2026-05-07)
+- [x] `GET /api/cron/fire-pings` (gated by `CRON_SECRET`) (2026-05-07)
+- [x] FCM payload builder (regular push alert) (2026-05-07)
 - [ ] Resend reminder template
 - [ ] Twilio SMS dispatch (gated: opt-in + free-tier flag — Phase 10 will gate on subscription)
 
 ### 4.2 — Mobile
-- [ ] `mobile/lib/services/notifications_service.dart` — `flutter_local_notifications` + FCM
-- [ ] Schedule local pings on toat create/update (next 72h window)
+- [x] `mobile/lib/services/local_ping_service.dart` — local Ping scheduling with `flutter_local_notifications` and settings-aware gating (2026-05-07)
+- [x] `mobile/lib/services/push_ping_service.dart` — FCM token registration, foreground push presentation, and push tap handoff (2026-05-07)
+- [x] Schedule local pings on toat fetch/update/duplicate/delete sync paths (2026-05-07)
 - [ ] Re-schedule on app foreground
 - [ ] Handle FCM background messages
-- [ ] Tap → deep-link to toat detail
+- [x] Tap → deep-link to toat detail (local + push) (2026-05-07)
 
 ### 4.3 — DO scheduled job
 - [ ] DO App Platform: schedule `* * * * * GET /api/cron/fire-pings` with `CRON_SECRET` header

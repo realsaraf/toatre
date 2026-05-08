@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { getCollections } from "@/lib/mongo/collections";
+import { syncToatPushReminders } from "@/lib/pings/compute";
 import { MODELS } from "@/lib/ai/openai";
 import { extractToats } from "@/lib/ai/extract";
 import { flushObservedOpenAI, getObservedOpenAI } from "@/lib/ai/langfuse";
@@ -152,6 +153,9 @@ export async function POST(request: NextRequest) {
   if (toatDocs.length > 0) {
     const toatsResult = await toats.insertMany(toatDocs);
     insertedIds = Object.values(toatsResult.insertedIds) as ObjectId[];
+    for (const [index, insertedId] of insertedIds.entries()) {
+      await syncToatPushReminders({ ...toatDocs[index], _id: insertedId });
+    }
   }
 
   const savedToats = toatDocs.map((t, i) => ({

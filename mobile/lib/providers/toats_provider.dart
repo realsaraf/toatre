@@ -1,8 +1,11 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/services/api_service.dart';
+import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/services/widget_service.dart';
 
 enum ToatsStatus { idle, loading, loaded, error }
@@ -20,6 +23,11 @@ class ToatsProvider extends ChangeNotifier {
 
   void _syncWidget() {
     WidgetService.update(_toats).ignore();
+  }
+
+  void _syncTimelineSurfaces() {
+    _syncWidget();
+    unawaited(LocalPingService.instance.syncToats(_toats));
   }
 
   Future<void> fetchToats() async {
@@ -40,8 +48,8 @@ class ToatsProvider extends ChangeNotifier {
           .map(ToatSummary.fromJson)
           .toList();
       _status = ToatsStatus.loaded;
-      // Push the live timeline slice to the iOS home-screen widget.
-      _syncWidget();
+      // Keep the widget and local Ping schedule aligned with the timeline.
+      _syncTimelineSurfaces();
     } on ApiServiceException catch (error) {
       _error = error.message;
       _status = ToatsStatus.error;
@@ -82,21 +90,21 @@ class ToatsProvider extends ChangeNotifier {
 
     final updated = ToatSummary.fromJson(toatJson);
     _replaceToat(updated);
-    _syncWidget();
+    _syncTimelineSurfaces();
     notifyListeners();
     return updated;
   }
 
   void removeToatLocally(String id) {
     _toats = _toats.where((t) => t.id != id).toList();
-    _syncWidget();
+    _syncTimelineSurfaces();
     notifyListeners();
   }
 
   Future<void> deleteToat(ToatSummary toat) async {
     await _api.deleteJson('/api/toats/${toat.id}', authenticated: true);
     _toats = _toats.where((entry) => entry.id != toat.id).toList();
-    _syncWidget();
+    _syncTimelineSurfaces();
     notifyListeners();
     await AnalyticsService.logToatDeleted(kind: toat.tier);
   }
@@ -129,7 +137,7 @@ class ToatsProvider extends ChangeNotifier {
               right.datetime ?? DateTime.fromMillisecondsSinceEpoch(0),
             ),
       );
-    _syncWidget();
+    _syncTimelineSurfaces();
     notifyListeners();
     return duplicated;
   }

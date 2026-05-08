@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:toatre/providers/auth_provider.dart';
+import 'package:toatre/providers/settings_provider.dart';
 import 'package:toatre/ui/auth/handle_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
@@ -38,6 +39,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final auth = context.read<AuthProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
 
     while (mounted && auth.status == AuthStatus.unknown) {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -48,6 +50,8 @@ class _SplashScreenState extends State<SplashScreen>
     final Widget dest;
     switch (auth.status) {
       case AuthStatus.authenticated:
+        await settingsProvider.loadSettings();
+        if (!mounted) return;
         dest = const TimelineScreen();
         break;
       case AuthStatus.needsHandle:

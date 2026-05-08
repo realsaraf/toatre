@@ -5,6 +5,10 @@ import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { migrateTemplateData, migrateStatus, type Enrichments } from "@/types";
 import { EnrichmentsSchema } from "@/lib/ai/extract";
+import {
+  deleteToatPushReminders,
+  syncToatPushReminders,
+} from "@/lib/pings/compute";
 
 // â”€â”€â”€ GET /api/toats/[id] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(
@@ -98,6 +102,7 @@ export async function PATCH(
   );
 
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await syncToatPushReminders(result);
   return NextResponse.json({ toat: serializeToat(result) });
 }
 
@@ -121,6 +126,7 @@ export async function DELETE(
   });
 
   if (result.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await deleteToatPushReminders({ userId: user.mongoId, toatId: id });
   return NextResponse.json({ ok: true });
 }
 

@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
+import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/ui/toat/share_toat_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/confetti.dart';
@@ -678,28 +678,20 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
 // ── Private widgets ─────────────────────────────────────────────────────────
 
-/// Reminders section — two computed pings derived from the toat datetime.
+/// Reminders section — mirrors the local Ping schedule for this toat.
 class _RemindersCard extends StatelessWidget {
   const _RemindersCard({required this.toat});
   final ToatSummary toat;
 
   List<Map<String, String>> _lines() {
-    final dt = toat.datetime;
-    if (dt == null) return [];
-    final tenBefore = dt.subtract(const Duration(minutes: 10));
-    final dayBefore = dt.subtract(const Duration(days: 1));
-    final timeFmt = DateFormat.jm();
-    final dateFmt = DateFormat('EEE, MMM d');
-    return [
-      {
-        'title': 'Leave by ${timeFmt.format(tenBefore)}',
-        'sub': '10 minutes before',
-      },
-      {
-        'title': 'Day before reminder',
-        'sub': '${dateFmt.format(dayBefore)} at ${timeFmt.format(dayBefore)}',
-      },
-    ];
+    return buildToatPingMoments(toat, includePast: true)
+        .map(
+          (moment) => <String, String>{
+            'title': moment.title,
+            'sub': moment.subtitle,
+          },
+        )
+        .toList();
   }
 
   @override

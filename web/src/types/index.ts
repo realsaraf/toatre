@@ -165,9 +165,27 @@ export interface ReminderDoc {
   userId: string;
   toatId: string;
   channel: PingChannel;
+  kind?: string;
+  momentKey?: string;
+  title?: string;
+  body?: string;
+  payload?: string;
   dueAt: Date;
+  lockedAt?: Date | null;
+  lastAttemptAt?: Date | null;
+  lastError?: string | null;
   sentAt: Date | null;
   createdAt: Date;
+  updatedAt?: Date;
+}
+
+export interface DeviceTokenDoc {
+  _id: ObjectId;
+  userId: string;
+  token: string;
+  platform: "ios" | "android" | "web";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface UserSettingsDoc {

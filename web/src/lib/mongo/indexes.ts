@@ -11,7 +11,7 @@ export async function ensureIndexes(): Promise<void> {
   if (ensured) return;
   ensured = true;
 
-  const { users, toats, captures, people, connections, acl, settings, reminders, calendarSyncTokens, calendarSyncStates } =
+  const { users, toats, captures, people, connections, acl, settings, reminders, deviceTokens, calendarSyncTokens, calendarSyncStates } =
     await getCollections();
 
   // users
@@ -62,4 +62,8 @@ export async function ensureIndexes(): Promise<void> {
   await reminders.createIndex({ userId: 1, toatId: 1 });
   await reminders.createIndex({ dueAt: 1, sentAt: 1 }); // cron query
   await reminders.createIndex({ toatId: 1 });
+
+  // device tokens
+  await deviceTokens.createIndex({ token: 1 }, { unique: true });
+  await deviceTokens.createIndex({ userId: 1, updatedAt: -1 });
 }

@@ -14,8 +14,11 @@ import 'package:toatre/providers/share_provider.dart';
 import 'package:toatre/providers/settings_provider.dart';
 import 'package:toatre/providers/connectivity_provider.dart';
 import 'package:toatre/providers/revenue_cat_provider.dart';
+import 'package:toatre/services/local_ping_service.dart';
+import 'package:toatre/services/push_ping_service.dart';
 import 'package:toatre/ui/splash/splash_screen.dart';
 import 'package:toatre/ui/toat/shared_toat_screen.dart';
+import 'package:toatre/ui/toat/toat_detail_screen.dart';
 
 class ToatreApp extends StatefulWidget {
   const ToatreApp({super.key});
@@ -29,13 +32,19 @@ class _ToatreAppState extends State<ToatreApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   StreamSubscription<Uri>? _deepLinkSubscription;
+  StreamSubscription<String>? _pingTapSubscription;
+  StreamSubscription<String>? _pushPingTapSubscription;
   String? _lastHandledSharedToken;
   String? _pendingSharedToken;
+  String? _lastHandledPingPayload;
+  String? _pendingPingPayload;
 
   @override
   void initState() {
     super.initState();
     unawaited(_configureDeepLinks());
+    unawaited(_configureLocalPings());
+    unawaited(_configurePushPings());
   }
 
   Future<void> _configureDeepLinks() async {
@@ -78,6 +87,69 @@ class _ToatreAppState extends State<ToatreApp> {
     );
   }
 
+  Future<void> _configureLocalPings() async {
+    await LocalPingService.instance.init();
+    _queuePing(LocalPingService.instance.takeInitialPayload());
+    _pingTapSubscription = LocalPingService.instance.tappedPayloads.listen(
+      _queuePing,
+      onError: (_) {},
+    );
+  }
+
+  Future<void> _configurePushPings() async {
+    await PushPingService.instance.init();
+    _queuePing(PushPingService.instance.takeInitialPayload());
+    _pushPingTapSubscription = PushPingService.instance.tappedPayloads.listen(
+      _queuePing,
+      onError: (_) {},
+    );
+  }
+
+  void _queuePing(String? payload) {
+    if (payload == null ||
+        payload == _lastHandledPingPayload ||
+        payload == _pendingPingPayload) {
+      return;
+    }
+
+    _pendingPingPayload = payload;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPendingPingToat());
+  }
+
+  Future<void> _showPendingPingToat() async {
+    final payload = _pendingPingPayload;
+    final toatId = LocalPingService.toatIdFromPayload(payload);
+    final navigator = _navigatorKey.currentState;
+    final navigatorContext = _navigatorKey.currentContext;
+
+    if (payload == null ||
+        toatId == null ||
+        navigator == null ||
+        navigatorContext == null) {
+      return;
+    }
+
+    _pendingPingPayload = null;
+
+    try {
+      final toatsProvider = Provider.of<ToatsProvider>(
+        navigatorContext,
+        listen: false,
+      );
+      final toat = await toatsProvider.fetchToat(toatId);
+      if (!mounted) {
+        return;
+      }
+
+      _lastHandledPingPayload = payload;
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => ToatDetailScreen(initialToat: toat),
+        ),
+      );
+    } catch (_) {}
+  }
+
   String? _sharedTokenFromUri(Uri? uri) {
     if (uri == null) {
       return null;
@@ -105,6 +177,9 @@ class _ToatreAppState extends State<ToatreApp> {
   @override
   void dispose() {
     _deepLinkSubscription?.cancel();
+    _pingTapSubscription?.cancel();
+    _pushPingTapSubscription?.cancel();
+    PushPingService.instance.dispose();
     super.dispose();
   }
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { dispatchDuePings } from "@/lib/pings/dispatch";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -15,10 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // TODO Phase 4: import and call dispatchDuePings()
-    // const { fired, errors } = await dispatchDuePings();
-    const fired = 0;
-    const errors = 0;
+    const { fired, errors } = await dispatchDuePings();
 
     return NextResponse.json({
       ok: true,

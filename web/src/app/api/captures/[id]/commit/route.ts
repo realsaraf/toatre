@@ -4,6 +4,10 @@ import { getCollections } from "@/lib/mongo/collections";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { serializeToat } from "@/app/api/toats/route";
+import {
+  deleteToatPushReminders,
+  syncToatPushReminders,
+} from "@/lib/pings/compute";
 
 /**
  * POST /api/captures/[id]/commit
@@ -75,6 +79,12 @@ export async function POST(
 
   if (unselectedIds.length > 0) {
     await toats.deleteMany({ _id: { $in: unselectedIds }, ownerId });
+    for (const unselectedId of unselectedIds) {
+      await deleteToatPushReminders({
+        userId: user.mongoId,
+        toatId: unselectedId.toString(),
+      });
+    }
   }
 
   // Apply any edits to selected toats
@@ -102,6 +112,9 @@ export async function POST(
     .map((t) => t._id);
 
   const savedToats = await toats.find({ _id: { $in: keptOids }, ownerId }).toArray();
+  for (const toat of savedToats) {
+    await syncToatPushReminders(toat);
+  }
 
   return NextResponse.json({
     toats: savedToats.map(serializeToat),

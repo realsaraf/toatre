@@ -7,6 +7,7 @@ import {
   normalizeNotificationPreferences,
   normalizeSyncConnections,
 } from "@/lib/settings/defaults";
+import { syncUserPushReminders } from "@/lib/pings/compute";
 
 function isTimeValue(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -255,6 +256,12 @@ export async function PATCH(request: NextRequest) {
 
   const updatedUserDoc = await users.findOne({ _id: new ObjectId(user.mongoId) });
   const updatedSettings = await settings.findOne({ userId: user.mongoId });
+  if ("notificationPreferences" in updates) {
+    await syncUserPushReminders(
+      user.mongoId,
+      updatedSettings as Record<string, unknown> | null,
+    );
+  }
 
   if (!updatedUserDoc) {
     return NextResponse.json({ error: "Account profile not found." }, { status: 404 });

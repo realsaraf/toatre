@@ -74,12 +74,18 @@ class ApiService {
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
+    Map<String, Object?>? body,
     bool authenticated = false,
   }) async {
     final headers = await _headers(authenticated: authenticated);
+    if (body != null) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     final response = await _client.delete(
       AppConfig.apiUri(path),
       headers: headers,
+      body: body == null ? null : jsonEncode(body),
     );
 
     return _decodeMap(response);

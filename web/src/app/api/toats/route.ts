@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { migrateTemplateData, migrateStatus, type Enrichments } from "@/types";
 import { EnrichmentsSchema } from "@/lib/ai/extract";
+import { syncToatPushReminders } from "@/lib/pings/compute";
 
 const ToatQuerySchema = z.object({
   range: z.enum(["today", "week", "upcoming", "past", "all"]).optional().default("all"),
@@ -83,6 +84,9 @@ export async function POST(request: NextRequest) {
 
   const result = await toats.insertOne(doc);
   const saved = await toats.findOne({ _id: result.insertedId });
+  if (saved) {
+    await syncToatPushReminders(saved);
+  }
   return NextResponse.json({ toat: serializeToat(saved!) }, { status: 201 });
 }
 

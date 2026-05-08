@@ -1,6 +1,7 @@
 import { google, calendar_v3 } from "googleapis";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/mongo/collections";
+import { syncToatPushReminders } from "@/lib/pings/compute";
 import { decryptSecret, encryptSecret } from "@/lib/security/token-crypto";
 import type { SyncDirection } from "@/lib/settings/defaults";
 
@@ -220,8 +221,22 @@ async function importGoogleEvents(calendar: calendar_v3.Calendar, tokenDoc: Toke
           },
         },
       );
+      await syncToatPushReminders({
+        ...existing,
+        kind: doc.kind,
+        title: doc.title,
+        datetime: doc.datetime,
+        endDatetime: doc.endDatetime,
+        location: doc.location,
+        link: doc.link,
+        people: doc.people,
+        notes: doc.notes,
+        lastSyncedAt: now,
+        updatedAt: now,
+      });
     } else {
-      await toats.insertOne(doc);
+      const inserted = await toats.insertOne(doc);
+      await syncToatPushReminders({ ...doc, _id: inserted.insertedId });
     }
     stats.imported += 1;
   }

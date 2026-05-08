@@ -3,8 +3,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/services/auth_service.dart';
+import 'package:toatre/services/local_ping_service.dart';
+import 'package:toatre/services/push_ping_service.dart';
 
 enum AuthStatus {
   unknown,
@@ -102,6 +105,7 @@ class AuthProvider extends ChangeNotifier {
           handle: _handle,
         );
         await AnalyticsService.logSignUp(method: 'handle');
+        await PushPingService.instance.ensureRegistered();
       }
     } on AuthServiceException catch (error) {
       _status = AuthStatus.needsHandle;
@@ -115,6 +119,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await PushPingService.instance.unregisterDevice();
+    await LocalPingService.instance.syncToats(const <ToatSummary>[]);
+    await LocalPingService.instance.resetNotificationPreferences();
     await _authService.signOut();
     await AnalyticsService.resetUser();
     _user = null;
@@ -132,6 +139,8 @@ class AuthProvider extends ChangeNotifier {
     _user = user;
 
     if (user == null) {
+      await LocalPingService.instance.syncToats(const <ToatSummary>[]);
+      await LocalPingService.instance.resetNotificationPreferences();
       _status = AuthStatus.unauthenticated;
       _handle = null;
       _errorMessage = null;
@@ -154,6 +163,9 @@ class AuthProvider extends ChangeNotifier {
         email: user.email,
         handle: _handle,
       );
+      if (profile.hasHandle) {
+        await PushPingService.instance.ensureRegistered();
+      }
     } on AuthServiceException catch (error) {
       _status = AuthStatus.error;
       _errorMessage = error.message;
