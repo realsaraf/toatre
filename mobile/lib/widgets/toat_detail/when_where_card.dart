@@ -15,12 +15,14 @@ class WhenWhereCard extends StatelessWidget {
     required this.onChangeLocation,
     required this.onRemoveLocation,
     this.onChangeDuration,
+    this.onChangeReminder,
   });
 
   final ToatSummary toat;
   final VoidCallback? onChangeLocation;
   final VoidCallback? onRemoveLocation;
   final VoidCallback? onChangeDuration;
+  final VoidCallback? onChangeReminder;
 
   String _formatWhen(ToatSummary t) {
     if (t.datetime == null) return 'Any time';
@@ -34,6 +36,14 @@ class WhenWhereCard extends StatelessWidget {
     final h = minutes ~/ 60;
     final m = minutes % 60;
     return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+
+  String _formatReminderOffset(int? offsetMinutes) {
+    final m = offsetMinutes ?? 10;
+    if (m < 60) return '$m min before';
+    final h = m ~/ 60;
+    final rem = m % 60;
+    return rem == 0 ? '${h}h before' : '${h}h ${rem}m before';
   }
 
   @override
@@ -133,6 +143,38 @@ class WhenWhereCard extends StatelessWidget {
                         fontSize: 20,
                         color: AppColors.textMuted,
                         height: 1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (hasTime)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 84,
+                    child: Text(
+                      'Remind',
+                      style: TextStyles.smallMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatReminderOffset(toat.reminderOffset),
+                    style: TextStyles.body,
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: onChangeReminder,
+                    child: Text(
+                      'Edit',
+                      style: TextStyles.small.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

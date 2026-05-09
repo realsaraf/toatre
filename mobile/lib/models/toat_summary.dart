@@ -76,6 +76,13 @@ class ToatSummary {
     return d is int ? d : null;
   }
 
+  /// Reminder offset in minutes before the primary datetime.
+  /// Returns null when not explicitly set (server defaults to 10 min).
+  int? get reminderOffset {
+    final r = timeEnrichment?['reminderOffset'];
+    return r is int ? r : null;
+  }
+
   String? get location {
     return placeEnrichment?['address'] as String? ??
         placeEnrichment?['placeName'] as String? ??

@@ -12,6 +12,7 @@ const TimeSchema = z.object({
   endAt: z.string().nullable().optional(),
   dueAt: z.string().nullable().optional(),
   reminderAt: z.string().nullable().optional(),
+  reminderOffset: z.number().int().min(0).nullable().optional(),
   recurrence: z.string().nullable().optional(),
   duration: z.number().int().positive().nullable().optional(),
 });

@@ -219,20 +219,31 @@ function buildReminderMoments(
   }
 
   if (primaryDateTime) {
-    const tenMinutesBefore = new Date(primaryDateTime.getTime() - 10 * 60 * 1000);
+    const offset = typeof toatTimeRecord(toat)?.reminderOffset === 'number'
+      ? (toatTimeRecord(toat)!.reminderOffset as number)
+      : 10; // default: 10 min before
+    const offsetMs = offset * 60 * 1000;
+    const offsetBefore = new Date(primaryDateTime.getTime() - offsetMs);
     const dayBefore = new Date(primaryDateTime.getTime() - 24 * 60 * 60 * 1000);
     candidates.push({
       key: "leave-by",
-      dueAt: tenMinutesBefore,
-      title: `Leave by ${timeFormatter.format(tenMinutesBefore)}`,
-      subtitle: "10 minutes before",
+      dueAt: offsetBefore,
+      title: offset < 60
+        ? `${offset} min before`
+        : offset === 60
+          ? `1 hour before`
+          : `${Math.floor(offset / 60)}h ${offset % 60 > 0 ? `${offset % 60}m ` : ''}before`,
+      subtitle: `Reminder for ${timeFormatter.format(primaryDateTime)}`,
     });
-    candidates.push({
-      key: "day-before",
-      dueAt: dayBefore,
-      title: "Day before reminder",
-      subtitle: `${dateFormatter.format(dayBefore)} at ${timeFormatter.format(dayBefore)}`,
-    });
+    // Day-before reminder (skip if offset is already >= 18 hours to avoid near-duplicate)
+    if (offset < 18 * 60) {
+      candidates.push({
+        key: "day-before",
+        dueAt: dayBefore,
+        title: "Day before reminder",
+        subtitle: `${dateFormatter.format(dayBefore)} at ${timeFormatter.format(dayBefore)}`,
+      });
+    }
   }
 
   const seenMinutes = new Set<number>();

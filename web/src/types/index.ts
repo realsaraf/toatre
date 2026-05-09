@@ -33,7 +33,8 @@ export interface TimeEnrichment {
   startAt?: string | null;      // ISO 8601 â€” start of a range
   endAt?: string | null;        // ISO 8601 — end of a range
   dueAt?: string | null;        // ISO 8601 — deadline
-  reminderAt?: string | null;   // ISO 8601 — when to Ping
+  reminderAt?: string | null;   // ISO 8601 — when to Ping (absolute)
+  reminderOffset?: number | null; // minutes before primaryDateTime to Ping (positive = before)
   recurrence?: string | null;   // RRULE or plain description
   duration?: number | null;     // minutes; default 60 when time is set
 }

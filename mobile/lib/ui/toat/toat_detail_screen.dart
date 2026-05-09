@@ -471,6 +471,97 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     });
   }
 
+  Future<void> _editReminder() async {
+    // Offset options in minutes before the event
+    final options = [5, 10, 15, 30, 60, 120, 1440]; // 5m, 10m, 15m, 30m, 1h, 2h, 1d
+    final labels = ['5 min before', '10 min before', '15 min before',
+      '30 min before', '1 hour before', '2 hours before', '1 day before'];
+
+    final current = _toat.reminderOffset ?? 10;
+    int selected = options.contains(current) ? current : 10;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx2, setSheetState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Remind me',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx2).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(ctx2).pop();
+                            _saveReminderOffset(selected);
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 160,
+                    child: CupertinoPicker(
+                      scrollController: FixedExtentScrollController(
+                        initialItem: options.contains(selected)
+                            ? options.indexOf(selected)
+                            : 1,
+                      ),
+                      itemExtent: 38,
+                      onSelectedItemChanged: (i) =>
+                          setSheetState(() => selected = options[i]),
+                      children: labels.map((l) => Text(l)).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveReminderOffset(int offsetMinutes) async {
+    final existing = Map<String, dynamic>.from(
+      _toat.timeEnrichment ?? const <String, dynamic>{},
+    );
+    existing['reminderOffset'] = offsetMinutes;
+
+    await _runAction('reminder', () async {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        {'enrichments.time': existing},
+      );
+      if (!mounted) return;
+      setState(() => _toat = updated);
+    });
+  }
+
   Future<void> _delete() async {
     final shouldDelete =
         await showDialog<bool>(
@@ -643,6 +734,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
           onChangeLocation: _workingAction == null ? _openLocationSearch : null,
           onRemoveLocation: _workingAction == null ? _removeLocation : null,
           onChangeDuration: _workingAction == null ? _editDuration : null,
+          onChangeReminder: _workingAction == null ? _editReminder : null,
         ),
         const SizedBox(height: 16),
       ],
