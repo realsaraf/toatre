@@ -14,6 +14,7 @@ import 'package:toatre/providers/share_provider.dart';
 import 'package:toatre/providers/settings_provider.dart';
 import 'package:toatre/providers/connectivity_provider.dart';
 import 'package:toatre/providers/revenue_cat_provider.dart';
+import 'package:toatre/providers/schedule_provider.dart';
 import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/services/push_ping_service.dart';
 import 'package:toatre/ui/splash/splash_screen.dart';
@@ -47,9 +48,7 @@ class _ToatreAppState extends State<ToatreApp> {
     unawaited(_configureDeepLinks());
     unawaited(_configureLocalPings());
     unawaited(_configurePushPings());
-    _lifecycleListener = AppLifecycleListener(
-      onResume: _onAppResumed,
-    );
+    _lifecycleListener = AppLifecycleListener(onResume: _onAppResumed);
   }
 
   Future<void> _configureDeepLinks() async {
@@ -215,6 +214,7 @@ class _ToatreAppState extends State<ToatreApp> {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => RevenueCatProvider()),
+        ChangeNotifierProvider(create: (_) => ScheduleProvider()),
       ],
       child: MaterialApp(
         title: 'Toatre',

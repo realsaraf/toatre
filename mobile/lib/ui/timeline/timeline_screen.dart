@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/providers/capture_provider.dart';
+import 'package:toatre/providers/schedule_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/ui/capture/capture_screen.dart';
@@ -85,6 +86,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       children: [
                         const _AppBrand(),
                         const Spacer(),
+                        _FindSlotButton(onTap: _openScheduleSuggest),
+                        const SizedBox(width: 10),
                         _ProfileButton(user: auth.user, onTap: _openSettings),
                       ],
                     ),
@@ -278,8 +281,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
     await context.read<ToatsProvider>().fetchToats();
   }
 
-  Future<void> _openSearch() async {
-    final changed = await Navigator.of(
+  Future<void> _openScheduleSuggest() async {
+    final scheduleProvider = context.read<ScheduleProvider>();
+    scheduleProvider.reset();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: scheduleProvider,
+        child: const _ScheduleSuggestSheet(),
+      ),
+    );
+  }
+
+  Future<void> _openSearch() async {    final changed = await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const SearchScreen()));
     if (!mounted || changed != true) {
@@ -1736,3 +1752,273 @@ class _TimelineAction {
 }
 
 enum _TimelineActionType { meeting, call, directions }
+
+// ─── Find a slot button ───────────────────────────────────────────────────────
+
+class _FindSlotButton extends StatelessWidget {
+  const _FindSlotButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.auto_awesome_rounded,
+              size: 15,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Find a slot',
+              style: TextStyles.smallMedium.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Schedule suggest bottom sheet ───────────────────────────────────────────
+
+class _ScheduleSuggestSheet extends StatefulWidget {
+  const _ScheduleSuggestSheet();
+
+  @override
+  State<_ScheduleSuggestSheet> createState() => _ScheduleSuggestSheetState();
+}
+
+class _ScheduleSuggestSheetState extends State<_ScheduleSuggestSheet> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+    _focus.unfocus();
+    await context.read<ScheduleProvider>().suggest(query);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ScheduleProvider>();
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 32,
+            offset: Offset(0, -8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Find a free slot', style: TextStyles.heading2),
+          const SizedBox(height: 4),
+          Text(
+            'Describe what you need — Toatre checks for clashes.',
+            style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          // Input row
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focus,
+                  style: TextStyles.bodyMedium,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. 1 hour Monday evening after 6',
+                    hintStyle: TextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.bg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: provider.status == ScheduleSuggestStatus.loading
+                    ? null
+                    : _submit,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: provider.status == ScheduleSuggestStatus.loading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                ),
+              ),
+            ],
+          ),
+          // Results
+          if (provider.status == ScheduleSuggestStatus.error) ...[
+            const SizedBox(height: 16),
+            Text(
+              provider.error ?? 'Something went wrong.',
+              style: TextStyles.small.copyWith(color: AppColors.error),
+            ),
+          ] else if (provider.status == ScheduleSuggestStatus.success) ...[
+            const SizedBox(height: 16),
+            if (provider.slots.isEmpty)
+              Text(
+                'No free slots found in that window. '
+                '${provider.busyCount > 0 ? 'You have ${provider.busyCount} clash${provider.busyCount == 1 ? '' : 'es'}.' : ''}',
+                style: TextStyles.small.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              )
+            else ...[
+              if (provider.busyCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    '${provider.busyCount} existing ${provider.busyCount == 1 ? 'toat' : 'toats'} checked — all slots below are clash-free.',
+                    style: TextStyles.small.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ...provider.slots.map(
+                (slot) => _SlotTile(
+                  slot: slot,
+                  durationMinutes: provider.durationMinutes,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SlotTile extends StatelessWidget {
+  const _SlotTile({required this.slot, required this.durationMinutes});
+
+  final SuggestedSlot slot;
+  final int durationMinutes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.schedule_rounded,
+              size: 18,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(slot.label, style: TextStyles.bodyMedium),
+                const SizedBox(height: 2),
+                Text(
+                  '$durationMinutes min · clash-free',
+                  style: TextStyles.small.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
