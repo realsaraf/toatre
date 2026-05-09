@@ -206,6 +206,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               onVerify: () => _verifyPhone(settingsProvider),
                               onSave: () => _savePhone(settingsProvider),
                             ),
+                            const SizedBox(height: 16),
+                            _DangerZoneCard(
+                              onDeleteAccount: () =>
+                                  _deleteAccount(context, settingsProvider),
+                            ),
                           ],
                         ),
                       if (_activeTab == SettingsTab.pings)
@@ -443,6 +448,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
       MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
       (_) => false,
     );
+  }
+
+  Future<void> _deleteAccount(
+    BuildContext context,
+    SettingsProvider provider,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1F2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Delete your account?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'This permanently deletes all your toats, pings, and account data. '
+          'There is no undo.',
+          style: TextStyle(color: Color(0xFF94A3B8)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Delete account',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await provider.deleteAccount();
+      if (!context.mounted) return;
+      await context.read<AuthProvider>().signOut();
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            provider.error ?? 'Could not delete your account. Try again.',
+          ),
+        ),
+      );
+    }
   }
 
   void _toggleChannel(String kind, String channel) {
@@ -1980,6 +2042,60 @@ class _IconCircleButton extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Icon(icon, color: AppColors.text),
+      ),
+    );
+  }
+}
+
+class _DangerZoneCard extends StatelessWidget {
+  const _DangerZoneCard({required this.onDeleteAccount});
+
+  final VoidCallback onDeleteAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      title: 'Danger zone',
+      eyebrow: 'Account',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Deleting your account permanently removes all toats, pings, and data. '
+            'This cannot be undone.',
+            style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: onDeleteAccount,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0x44EF4444)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.delete_forever_rounded,
+                    size: 20,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Delete my account',
+                    style: TextStyles.bodyMedium.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

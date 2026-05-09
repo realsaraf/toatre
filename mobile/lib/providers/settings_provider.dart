@@ -204,6 +204,25 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteAccount() async {
+    _savingKey = 'delete-account';
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _api.deleteJson('/api/users/me', authenticated: true);
+    } on ApiServiceException catch (error) {
+      _error = error.message;
+      rethrow;
+    } catch (_) {
+      _error = 'Could not delete your account.';
+      rethrow;
+    } finally {
+      _savingKey = null;
+      notifyListeners();
+    }
+  }
+
   Future<SettingsPayload> _runSave(
     String key,
     Future<SettingsPayload> Function() action,
