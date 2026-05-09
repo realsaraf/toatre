@@ -41,10 +41,16 @@ class _SplashScreenState extends State<SplashScreen>
     final auth = context.read<AuthProvider>();
     final settingsProvider = context.read<SettingsProvider>();
 
-    while (mounted && auth.status == AuthStatus.unknown) {
+    // Wait for auth to fully resolve — not just unknown, but also while
+    // Firebase is restoring a cached session (authenticating).
+    var waited = 0;
+    while (mounted &&
+        (auth.status == AuthStatus.unknown ||
+            auth.status == AuthStatus.authenticating) &&
+        waited < 8000) {
       await Future.delayed(const Duration(milliseconds: 100));
+      waited += 100;
     }
-
     if (!mounted) return;
 
     final Widget dest;

@@ -317,36 +317,92 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
   Future<void> _reschedule() async {
     final initial = _toat.datetime ?? DateTime.now();
-    final date = await showDatePicker(
+    DateTime? picked;
+
+    await showModalBottomSheet<void>(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        var tempDate = initial;
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            return SafeArea(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.bgElevated,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1D5DB),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Reschedule', style: TextStyles.heading3),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 200,
+                      child: CupertinoDatePicker(
+                        mode: CupertinoDatePickerMode.dateAndTime,
+                        initialDateTime: initial,
+                        minimumDate: DateTime.now().subtract(
+                          const Duration(days: 1),
+                        ),
+                        maximumDate: DateTime.now().add(
+                          const Duration(days: 365 * 2),
+                        ),
+                        minuteInterval: 5,
+                        onDateTimeChanged: (dt) => setSheet(() {
+                          tempDate = dt;
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        onPressed: () {
+                          picked = tempDate;
+                          Navigator.of(ctx).pop();
+                        },
+                        child: const Text('Confirm'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
-    if (date == null || !mounted) {
-      return;
-    }
-    final time = await _showFiveMinTimePicker(
-      context,
-      TimeOfDay.fromDateTime(initial),
-    );
-    if (time == null || !mounted) {
-      return;
-    }
-    final combined = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
+
+    if (picked == null || !mounted) return;
+
     await _runAction('reschedule', () async {
       final updated = await context.read<ToatsProvider>().updateToat(
         _toat.id,
         <String, Object?>{
           'enrichments.time': <String, Object?>{
             ..._toat.timeEnrichment ?? {},
-            'at': combined.toIso8601String(),
+            'at': picked!.toIso8601String(),
           },
         },
       );
@@ -378,7 +434,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     final options = [15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 480];
     final initialIndex = () {
       final i = options.indexOf(currentDuration);
-      return i == -1 ? 3 : i;  // 3 = index of 60 min
+      return i == -1 ? 3 : i; // 3 = index of 60 min
     }();
 
     int selected = options[initialIndex < 0 ? 3 : initialIndex];
@@ -462,10 +518,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     existing['duration'] = minutes;
 
     await _runAction('duration', () async {
-      final updated = await context.read<ToatsProvider>().updateToat(
-        _toat.id,
-        {'enrichments.time': existing},
-      );
+      final updated = await context.read<ToatsProvider>().updateToat(_toat.id, {
+        'enrichments.time': existing,
+      });
       if (!mounted) return;
       setState(() => _toat = updated);
     });
@@ -473,9 +528,24 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
   Future<void> _editReminder() async {
     // Offset options in minutes before the event
-    final options = [5, 10, 15, 30, 60, 120, 1440]; // 5m, 10m, 15m, 30m, 1h, 2h, 1d
-    final labels = ['5 min before', '10 min before', '15 min before',
-      '30 min before', '1 hour before', '2 hours before', '1 day before'];
+    final options = [
+      5,
+      10,
+      15,
+      30,
+      60,
+      120,
+      1440,
+    ]; // 5m, 10m, 15m, 30m, 1h, 2h, 1d
+    final labels = [
+      '5 min before',
+      '10 min before',
+      '15 min before',
+      '30 min before',
+      '1 hour before',
+      '2 hours before',
+      '1 day before',
+    ];
 
     final current = _toat.reminderOffset ?? 10;
     int selected = options.contains(current) ? current : 10;
@@ -553,10 +623,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     existing['reminderOffset'] = offsetMinutes;
 
     await _runAction('reminder', () async {
-      final updated = await context.read<ToatsProvider>().updateToat(
-        _toat.id,
-        {'enrichments.time': existing},
-      );
+      final updated = await context.read<ToatsProvider>().updateToat(_toat.id, {
+        'enrichments.time': existing,
+      });
       if (!mounted) return;
       setState(() => _toat = updated);
     });
@@ -967,138 +1036,6 @@ class _TipCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── File-scope helpers ─────────────────────────────────────────────────────
-
-/// Shows a bottom-sheet time picker restricted to 5-minute intervals.
-/// Returns the selected [TimeOfDay], or null if dismissed.
-Future<TimeOfDay?> _showFiveMinTimePicker(
-  BuildContext context,
-  TimeOfDay initial,
-) {
-  final initialHour = initial.hour;
-  final initialMinuteIndex = (initial.minute / 5).round().clamp(0, 11);
-
-  var selectedHour = initialHour;
-  var selectedMinuteIndex = initialMinuteIndex;
-
-  return showModalBottomSheet<TimeOfDay>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (ctx) {
-      return StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return SafeArea(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.bgElevated,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD1D5DB),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text('Pick a time', style: TextStyles.heading3),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 180,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoPicker(
-                            scrollController: FixedExtentScrollController(
-                              initialItem: initialHour,
-                            ),
-                            itemExtent: 46,
-                            looping: true,
-                            onSelectedItemChanged: (i) =>
-                                setSheetState(() => selectedHour = i),
-                            children: List.generate(
-                              24,
-                              (i) => Center(
-                                child: Text(
-                                  i.toString().padLeft(2, '0'),
-                                  style: TextStyles.bodyMedium.copyWith(
-                                    fontSize: 22,
-                                    color: AppColors.text,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          ':',
-                          style: TextStyles.heading2.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Expanded(
-                          child: CupertinoPicker(
-                            scrollController: FixedExtentScrollController(
-                              initialItem: initialMinuteIndex,
-                            ),
-                            itemExtent: 46,
-                            looping: true,
-                            onSelectedItemChanged: (i) =>
-                                setSheetState(() => selectedMinuteIndex = i),
-                            children: List.generate(
-                              12,
-                              (i) => Center(
-                                child: Text(
-                                  (i * 5).toString().padLeft(2, '0'),
-                                  style: TextStyles.bodyMedium.copyWith(
-                                    fontSize: 22,
-                                    color: AppColors.text,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(
-                        TimeOfDay(
-                          hour: selectedHour,
-                          minute: selectedMinuteIndex * 5,
-                        ),
-                      ),
-                      child: const Text('Confirm'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
 }
 
 /// A simple visual toggle switch (read-only display).

@@ -31,7 +31,7 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  _TimelineRange _selectedRange = _TimelineRange.today;
+  _TimelineRange _selectedRange = _TimelineRange.week;
   String? _removingToatId;
 
   @override
@@ -50,7 +50,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final toats = toatsProvider.toats;
     final rangeCounts = _rangeCounts(toats);
     final visibleToats = _filterToats(toats, _selectedRange);
-    final grouped = _groupToats(visibleToats);
+    final grouped = _groupToats(visibleToats, _selectedRange);
     final upNext = _findUpNext(visibleToats);
 
     return Scaffold(
@@ -164,15 +164,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         const SizedBox(height: 18),
                       ],
                       for (final entry in grouped.entries) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(left: 50, bottom: 10),
-                          child: Text(
-                            entry.key,
-                            style: TextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
+                        if (entry.key.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 50,
+                              bottom: 10,
+                            ),
+                            child: Text(
+                              entry.key,
+                              style: TextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                         ...entry.value.map(
                           (toat) => _TimelineRow(
                             toat: toat,
@@ -185,11 +190,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         const SizedBox(height: 14),
                       ],
                       _TimelineMessage(
-                        title:
-                            'You\'re all clear after ${_latestTime(visibleToats)}',
-                        subtitle: _selectedRange == _TimelineRange.today
-                            ? 'Enjoy your evening.'
-                            : 'Nothing else in this range.',
+                        title: visibleToats.any((t) => t.datetime != null)
+                            ? 'You\'re all clear after ${_latestTime(visibleToats)}'
+                            : 'You\'re all clear.',
+                        subtitle: _selectedRange == _TimelineRange.week
+                            ? 'Nothing else in the next 7 days.'
+                            : 'Nothing else in someday.',
                       ),
                     ],
                   ],
@@ -410,12 +416,29 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
-  Map<String, List<ToatSummary>> _groupToats(List<ToatSummary> toats) {
+  Map<String, List<ToatSummary>> _groupToats(
+    List<ToatSummary> toats,
+    _TimelineRange range,
+  ) {
     final groups = <String, List<ToatSummary>>{};
 
-    for (final toat in toats) {
-      final label = _timeBucket(toat.datetime);
-      groups.putIfAbsent(label, () => <ToatSummary>[]).add(toat);
+    if (range == _TimelineRange.week) {
+      // Sort by datetime (overdue first, then chronological).
+      final sorted = List<ToatSummary>.from(toats)
+        ..sort((a, b) {
+          final aMs = a.datetime?.millisecondsSinceEpoch ?? 0;
+          final bMs = b.datetime?.millisecondsSinceEpoch ?? 0;
+          return aMs.compareTo(bMs);
+        });
+      for (final toat in sorted) {
+        final label = _dateBucket(toat.datetime);
+        groups.putIfAbsent(label, () => <ToatSummary>[]).add(toat);
+      }
+    } else {
+      // Someday: flat list, no group headers.
+      if (toats.isNotEmpty) {
+        groups[''] = toats;
+      }
     }
 
     return groups;
@@ -423,11 +446,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   Map<_TimelineRange, int> _rangeCounts(List<ToatSummary> toats) {
     return <_TimelineRange, int>{
-      _TimelineRange.today: _filterToats(toats, _TimelineRange.today).length,
-      _TimelineRange.tomorrow: _filterToats(
-        toats,
-        _TimelineRange.tomorrow,
-      ).length,
+      _TimelineRange.week: _filterToats(toats, _TimelineRange.week).length,
       _TimelineRange.someday: _filterToats(
         toats,
         _TimelineRange.someday,
@@ -444,30 +463,19 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   _TimelineRange _rangeForToat(ToatSummary toat) {
     final dateTime = toat.datetime;
-    if (dateTime == null) {
-      return _TimelineRange.someday;
-    }
-
+    if (dateTime == null) return _TimelineRange.someday;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final toatDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    final tomorrow = today.add(const Duration(days: 1));
-
-    if (toatDay == today) {
-      return _TimelineRange.today;
-    }
-    if (toatDay == tomorrow) {
-      return _TimelineRange.tomorrow;
-    }
+    // Overdue (past) + today through today+6 → week.
+    if (toatDay.difference(today).inDays < 7) return _TimelineRange.week;
     return _TimelineRange.someday;
   }
 
   String _rangeTitle(_TimelineRange range) {
     switch (range) {
-      case _TimelineRange.today:
-        return 'Today';
-      case _TimelineRange.tomorrow:
-        return 'Tomorrow';
+      case _TimelineRange.week:
+        return 'Next 7 days';
       case _TimelineRange.someday:
         return 'Someday';
     }
@@ -476,10 +484,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
   String _rangeSubtitle(_TimelineRange range) {
     final now = DateTime.now();
     switch (range) {
-      case _TimelineRange.today:
-        return _formatDateLabel(now);
-      case _TimelineRange.tomorrow:
-        return _formatDateLabel(now.add(const Duration(days: 1)));
+      case _TimelineRange.week:
+        final end = now.add(const Duration(days: 6));
+        return '${_formatDateLabel(now)} – ${_formatDateLabel(end)}';
       case _TimelineRange.someday:
         return 'Whenever you get to it';
     }
@@ -529,11 +536,24 @@ class _TimelineScreenState extends State<TimelineScreen> {
     return '${weekdays[dateTime.weekday - 1]}, ${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
-  String _timeBucket(DateTime? dateTime) {
-    if (dateTime == null) return 'Later';
-    if (dateTime.hour < 12) return 'Morning';
-    if (dateTime.hour < 17) return 'Afternoon';
-    return 'Evening';
+  String _dateBucket(DateTime? dateTime) {
+    if (dateTime == null) return 'No date';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final toatDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final diff = toatDay.difference(today).inDays;
+    if (diff < 0) return 'Overdue';
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    const weekdays = [
+      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+    ];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${weekdays[dateTime.weekday - 1]}, '
+        '${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
   String _latestTime(List<ToatSummary> toats) {
@@ -584,7 +604,7 @@ class _BackgroundHalo extends StatelessWidget {
   }
 }
 
-enum _TimelineRange { today, tomorrow, someday }
+enum _TimelineRange { week, someday }
 
 class _TimelineRangeDialog extends StatelessWidget {
   const _TimelineRangeDialog({
@@ -622,21 +642,12 @@ class _TimelineRangeDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _TimelineRangeOption(
-                    range: _TimelineRange.today,
-                    title: 'Today',
-                    subtitle: _dateLabel(DateTime.now()),
-                    count: counts[_TimelineRange.today] ?? 0,
-                    selected: selectedRange == _TimelineRange.today,
-                  ),
-                  const SizedBox(height: 8),
-                  _TimelineRangeOption(
-                    range: _TimelineRange.tomorrow,
-                    title: 'Tomorrow',
-                    subtitle: _dateLabel(
-                      DateTime.now().add(const Duration(days: 1)),
-                    ),
-                    count: counts[_TimelineRange.tomorrow] ?? 0,
-                    selected: selectedRange == _TimelineRange.tomorrow,
+                    range: _TimelineRange.week,
+                    title: 'Next 7 days',
+                    subtitle: '${_dateLabel(DateTime.now())} – '
+                        '${_dateLabel(DateTime.now().add(const Duration(days: 6)))}',
+                    count: counts[_TimelineRange.week] ?? 0,
+                    selected: selectedRange == _TimelineRange.week,
                   ),
                   const SizedBox(height: 8),
                   _TimelineRangeOption(
