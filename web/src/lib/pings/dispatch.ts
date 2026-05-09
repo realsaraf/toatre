@@ -1,5 +1,6 @@
 import { getAdminMessaging } from "@/lib/firebase/admin";
 import { getCollections } from "@/lib/mongo/collections";
+import { sendReminderEmail } from "@/lib/email/reminder";
 
 type GenericDoc = Record<string, unknown>;
 
@@ -176,6 +177,78 @@ export async function dispatchDuePings(now: Date = new Date()) {
             lastError: failureMessage(error),
             updatedAt: new Date(),
           },
+        },
+      );
+    }
+  }
+
+  // ── Email channel ──────────────────────────────────────────────────
+  const dueEmailReminders = await reminders
+    .find({
+      channel: "email",
+      dueAt: { $lte: now },
+      sentAt: null,
+    })
+    .sort({ dueAt: 1 })
+    .limit(100)
+    .toArray();
+
+  for (const reminder of dueEmailReminders as GenericDoc[]) {
+    const reminderId = reminder._id;
+    if (!reminderId) continue;
+
+    const claimed = await reminders.findOneAndUpdate(
+      { _id: reminderId, sentAt: null, lockedAt: { $exists: false } } as Record<string, unknown>,
+      {
+        $set: { lockedAt: now, lastAttemptAt: now, updatedAt: now },
+        $unset: { lastError: "" },
+      },
+      { returnDocument: "after" },
+    );
+
+    if (!claimed) continue;
+
+    try {
+      const { users } = await getCollections();
+      const userDoc = await users.findOne(
+        { _id: new (await import("mongodb")).ObjectId(claimed.userId as string) },
+        { projection: { email: 1 } },
+      );
+      const toEmail = typeof userDoc?.email === "string" ? userDoc.email : null;
+
+      if (!toEmail) {
+        await reminders.updateOne(
+          { _id: claimed._id },
+          {
+            $unset: { lockedAt: "" },
+            $set: { lastError: "No email on user record.", updatedAt: new Date() },
+          },
+        );
+        continue;
+      }
+
+      await sendReminderEmail({
+        toEmail,
+        toatTitle: typeof claimed.title === "string" ? claimed.title : "Toatre Ping",
+        reminderLabel: typeof claimed.body === "string" ? claimed.body : "Reminder",
+        subtitle: typeof claimed.subtitle === "string" ? claimed.subtitle : "",
+      });
+
+      fired += 1;
+      await reminders.updateOne(
+        { _id: claimed._id },
+        {
+          $set: { sentAt: new Date(), updatedAt: new Date() },
+          $unset: { lockedAt: "", lastError: "" },
+        },
+      );
+    } catch (error) {
+      errors += 1;
+      await reminders.updateOne(
+        { _id: claimed._id },
+        {
+          $unset: { lockedAt: "" },
+          $set: { lastError: failureMessage(error), updatedAt: new Date() },
         },
       );
     }

@@ -277,7 +277,10 @@ function buildReminderDocs(
   }
 
   const kind = notificationKindForToat(toat);
-  if (!preferences[kind]?.push) {
+  const wantsPush = Boolean(preferences[kind]?.push);
+  const wantsEmail = Boolean(preferences[kind]?.email);
+
+  if (!wantsPush && !wantsEmail) {
     return [];
   }
 
@@ -285,21 +288,36 @@ function buildReminderDocs(
     ? toat.title
     : "Toatre Ping";
 
-  return buildReminderMoments(toat, now).map((moment) => ({
-    userId,
-    toatId,
-    channel: "push",
-    kind,
-    momentKey: moment.key,
-    title: heading,
-    body: moment.title,
-    subtitle: moment.subtitle,
-    payload: `toat:${toatId}:${moment.key}`,
-    dueAt: moment.dueAt,
-    sentAt: null,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const moments = buildReminderMoments(toat, now);
+  const docs: GenericDoc[] = [];
+
+  for (const moment of moments) {
+    const base = {
+      userId,
+      toatId,
+      kind,
+      momentKey: moment.key,
+      title: heading,
+      body: moment.title,
+      subtitle: moment.subtitle,
+      payload: `toat:${toatId}:${moment.key}`,
+      dueAt: moment.dueAt,
+      sentAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (wantsPush) {
+      docs.push({ ...base, channel: "push" });
+    }
+
+    // Email only for the primary "leave-by" moment to avoid inbox noise.
+    if (wantsEmail && moment.key === "leave-by") {
+      docs.push({ ...base, channel: "email" });
+    }
+  }
+
+  return docs;
 }
 
 async function loadNotificationPreferences(
@@ -325,7 +343,7 @@ export async function deleteToatPushReminders(input: {
   await reminders.deleteMany({
     userId: input.userId,
     toatId: input.toatId,
-    channel: "push",
+    channel: { $in: ["push", "email"] },
   });
 }
 
@@ -347,7 +365,7 @@ export async function syncToatPushReminders(
   await reminders.deleteMany({
     userId,
     toatId,
-    channel: "push",
+    channel: { $in: ["push", "email"] },
     sentAt: null,
   });
 
@@ -364,7 +382,7 @@ export async function syncUserPushReminders(
   const preferences = await loadNotificationPreferences(userId, settingsDoc);
   const { reminders, toats } = await getCollections();
 
-  await reminders.deleteMany({ userId, channel: "push", sentAt: null });
+  await reminders.deleteMany({ userId, channel: { $in: ["push", "email"] }, sentAt: null });
 
   const docs = await toats.find({ ownerId }).toArray();
   const nextReminderDocs = docs.flatMap((toat) => buildReminderDocs(toat, preferences));
