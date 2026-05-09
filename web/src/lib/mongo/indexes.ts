@@ -11,7 +11,7 @@ export async function ensureIndexes(): Promise<void> {
   if (ensured) return;
   ensured = true;
 
-  const { users, toats, captures, people, connections, acl, settings, reminders, deviceTokens, calendarSyncTokens, calendarSyncStates } =
+  const { users, toats, captures, people, connections, acl, settings, reminders, deviceTokens, calendarSyncTokens, calendarSyncStates, bookingSettings, bookingRequests } =
     await getCollections();
 
   // users
@@ -66,4 +66,11 @@ export async function ensureIndexes(): Promise<void> {
   // device tokens
   await deviceTokens.createIndex({ token: 1 }, { unique: true });
   await deviceTokens.createIndex({ userId: 1, updatedAt: -1 });
+
+  // booking
+  await bookingSettings.createIndex({ userId: 1 }, { unique: true });
+  await bookingRequests.createIndex({ ownerId: 1, slotStart: 1 });
+  await bookingRequests.createIndex({ ownerId: 1, state: 1 });
+  await bookingRequests.createIndex({ bookerUserId: 1, state: 1 }, { sparse: true });
+  await bookingRequests.createIndex({ slotStart: 1, slotEnd: 1 });
 }

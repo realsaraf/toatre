@@ -9,6 +9,8 @@ class ToatSummary {
     required this.captureId,
     required this.createdAt,
     required this.updatedAt,
+    this.source,
+    this.bookingRequestId,
   });
 
   final String id;
@@ -28,6 +30,8 @@ class ToatSummary {
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? source;
+  final String? bookingRequestId;
 
   // ── Convenience accessors ────────────────────────────────────────────────
 
@@ -112,6 +116,8 @@ class ToatSummary {
       captureId: json['captureId'] as String?,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
+      source: json['source'] as String?,
+      bookingRequestId: json['bookingRequestId'] as String?,
     );
   }
 
@@ -127,6 +133,8 @@ class ToatSummary {
     bool clearCaptureId = false,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? source,
+    String? bookingRequestId,
   }) {
     return ToatSummary(
       id: id ?? this.id,
@@ -138,6 +146,8 @@ class ToatSummary {
       captureId: clearCaptureId ? null : captureId ?? this.captureId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      source: source ?? this.source,
+      bookingRequestId: bookingRequestId ?? this.bookingRequestId,
     );
   }
 
@@ -152,6 +162,8 @@ class ToatSummary {
       'captureId': captureId,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'source': source,
+      'bookingRequestId': bookingRequestId,
     };
   }
 

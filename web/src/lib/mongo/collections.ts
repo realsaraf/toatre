@@ -27,5 +27,7 @@ export async function getCollections() {
     calendarSyncStates: db.collection("calendar_sync_states"),
     reminder_policies: db.collection("reminder_policies"),
     audit: db.collection("audit"),
+    bookingSettings: db.collection("booking_settings"),
+    bookingRequests: db.collection("booking_requests"),
   };
 }

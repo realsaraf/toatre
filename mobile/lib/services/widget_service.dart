@@ -42,7 +42,9 @@ class WidgetService {
               (t) =>
                   t.state == 'open' &&
                   t.datetime != null &&
-                  t.datetime!.isBefore(now.subtract(const Duration(minutes: 1))),
+                  t.datetime!.isBefore(
+                    now.subtract(const Duration(minutes: 1)),
+                  ),
             )
             .toList()
           ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
@@ -54,7 +56,9 @@ class WidgetService {
               (t) =>
                   t.state == 'open' &&
                   t.datetime != null &&
-                  !t.datetime!.isBefore(now.subtract(const Duration(minutes: 1))),
+                  !t.datetime!.isBefore(
+                    now.subtract(const Duration(minutes: 1)),
+                  ),
             )
             .toList()
           ..sort((a, b) => a.datetime!.compareTo(b.datetime!));

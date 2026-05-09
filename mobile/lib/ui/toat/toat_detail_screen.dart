@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
+import 'package:toatre/services/api_service.dart';
 import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/ui/toat/share_toat_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
@@ -286,6 +287,34 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       await Future<void>.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
       Navigator.of(context).pop('done');
+    });
+  }
+
+  Future<void> _acceptBookingRequest() async {
+    final requestId = _toat.bookingRequestId;
+    if (requestId == null) return;
+    await _runAction('accept_booking', () async {
+      await ApiService.instance.patchJson(
+        '/api/booking/requests/$requestId',
+        body: <String, String>{'state': 'accepted'},
+        authenticated: true,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop('accepted');
+    });
+  }
+
+  Future<void> _denyBookingRequest() async {
+    final requestId = _toat.bookingRequestId;
+    if (requestId == null) return;
+    await _runAction('deny_booking', () async {
+      await ApiService.instance.patchJson(
+        '/api/booking/requests/$requestId',
+        body: <String, String>{'state': 'denied'},
+        authenticated: true,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop('denied');
     });
   }
 
@@ -782,6 +811,17 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         onPrimaryAction: _primaryAction,
       ),
       const SizedBox(height: 16),
+      if (_toat.source == 'booking_request' &&
+          _toat.bookingRequestId != null &&
+          _toat.state == 'open') ...[
+        _BookingRequestCard(
+          toat: _toat,
+          working: _workingAction != null,
+          onAccept: _workingAction == null ? _acceptBookingRequest : null,
+          onDeny: _workingAction == null ? _denyBookingRequest : null,
+        ),
+        const SizedBox(height: 16),
+      ],
       ActionStripCard(
         toat: _toat,
         workingAction: _workingAction,
@@ -1062,6 +1102,118 @@ class _SwitchVisual extends StatelessWidget {
           decoration: const BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -- Booking Request Card ----------------------------------------------------
+
+class _BookingRequestCard extends StatelessWidget {
+  const _BookingRequestCard({
+    required this.toat,
+    required this.working,
+    required this.onAccept,
+    required this.onDeny,
+  });
+
+  final ToatSummary toat;
+  final bool working;
+  final VoidCallback? onAccept;
+  final VoidCallback? onDeny;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withAlpha(60)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Booking Request',
+                  style: TextStyles.label.copyWith(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Someone requested this slot. Accept to confirm, or decline to free it up.',
+            style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  label: working ? '...' : 'Decline',
+                  onTap: onDeny,
+                  isDestructive: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  label: working ? '...' : 'Accept',
+                  onTap: onAccept,
+                  isDestructive: false,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.onTap,
+    required this.isDestructive,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive ? AppColors.error : AppColors.primary;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: onTap != null
+              ? color.withAlpha(isDestructive ? 20 : 255)
+              : color.withAlpha(40),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyles.bodyMedium.copyWith(
+            color: isDestructive ? color : Colors.white,
           ),
         ),
       ),

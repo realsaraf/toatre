@@ -16,12 +16,12 @@ import { TOAT_KINDS, type NotificationPreferences } from "@/lib/settings/default
 import { useAuth } from "@/lib/auth/auth-context";
 
 
-type SettingsTab = "profile" | "connections" | "pings" | "sync";
+type SettingsTab = "profile" | "connections" | "pings" | "sync" | "toatlink";
 type NoticeTone = "idle" | "success" | "error";
 type SyncDirection = "sourceToToatre" | "toatreToSource" | "twoWay";
 
 interface SyncConnection {
-  provider: "googleCalendar";
+  provider: string;
   direction: SyncDirection;
   connected: boolean;
   connectedAt: string | null;
@@ -78,6 +78,7 @@ const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "connections", label: "Connections" },
   { id: "pings", label: "Pings" },
   { id: "sync", label: "Sync" },
+  { id: "toatlink", label: "Toat Link" },
 ];
 
 const EMPTY_CONNECTION_DRAFT: ConnectionDraft = {
@@ -179,9 +180,24 @@ export default function SettingsPage() {
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences | null>(null);
   const [syncConnections, setSyncConnections] = useState<Record<string, SyncConnection>>({});
   const [googleCalendarDirection, setGoogleCalendarDirection] = useState<SyncDirection>("sourceToToatre");
+  const [microsoftDirection, setMicrosoftDirection] = useState<SyncDirection>("sourceToToatre");
+  const [calendlyDirection, setCalendlyDirection] = useState<SyncDirection>("sourceToToatre");
+  const [zoomDirection, setZoomDirection] = useState<SyncDirection>("sourceToToatre");
   const [connections, setConnections] = useState<SavedConnection[]>([]);
   const [connectionDraft, setConnectionDraft] = useState<ConnectionDraft>(EMPTY_CONNECTION_DRAFT);
   const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
+
+  // ── Toat Link state ──────────────────────────────────────────────
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [bookingWindowDays, setBookingWindowDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [bookingWindowStart, setBookingWindowStart] = useState("09:00");
+  const [bookingWindowEnd, setBookingWindowEnd] = useState("17:00");
+  const [bookingSlotLength, setBookingSlotLength] = useState<30 | 60>(30);
+  const [bookingBuffer, setBookingBuffer] = useState(0);
+  const [bookingAdvance, setBookingAdvance] = useState(60);
+  const [bookingMaxDays, setBookingMaxDays] = useState(14);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+  const [savingBooking, setSavingBooking] = useState(false);
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(timezone || Intl.DateTimeFormat().resolvedOptions().timeZone), [timezone]);
 
@@ -293,6 +309,55 @@ export default function SettingsPage() {
 
   const setSuccess = (message: string) => setNotice({ tone: "success", message });
   const setError = (message: string) => setNotice({ tone: "error", message });
+
+  const loadBookingSettings = useCallback(async () => {
+    if (!user) return;
+    setLoadingBooking(true);
+    try {
+      const response = await authorizedFetch("/api/booking/settings", { method: "GET" });
+      const data = await readJsonResponse<{ enabled?: boolean; windowDays?: number[]; windowStart?: string; windowEnd?: string; slotLength?: number; bufferMinutes?: number; advanceNoticeMinutes?: number; maxDaysAhead?: number }>(response);
+      if (!response.ok || !data) return;
+      setBookingEnabled(data.enabled ?? false);
+      setBookingWindowDays(data.windowDays ?? [1, 2, 3, 4, 5]);
+      setBookingWindowStart(data.windowStart ?? "09:00");
+      setBookingWindowEnd(data.windowEnd ?? "17:00");
+      setBookingSlotLength((data.slotLength === 60 ? 60 : 30) as 30 | 60);
+      setBookingBuffer(data.bufferMinutes ?? 0);
+      setBookingAdvance(data.advanceNoticeMinutes ?? 60);
+      setBookingMaxDays(data.maxDaysAhead ?? 14);
+    } catch { /* best effort */ }
+    finally { setLoadingBooking(false); }
+  }, [authorizedFetch, user]);
+
+  const saveBookingSettings = useCallback(async () => {
+    setSavingBooking(true);
+    try {
+      const response = await authorizedFetch("/api/booking/settings", {
+        method: "PATCH",
+        body: JSON.stringify({
+          enabled: bookingEnabled,
+          windowDays: bookingWindowDays,
+          windowStart: bookingWindowStart,
+          windowEnd: bookingWindowEnd,
+          slotLength: bookingSlotLength,
+          bufferMinutes: bookingBuffer,
+          advanceNoticeMinutes: bookingAdvance,
+          maxDaysAhead: bookingMaxDays,
+        }),
+      });
+      if (!response.ok) { const d = await readJsonResponse<{ error?: string }>(response); throw new Error(d?.error ?? "Couldn't save Toat Link settings."); }
+      setSuccess("Toat Link settings saved.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Couldn't save Toat Link settings.");
+    } finally { setSavingBooking(false); }
+  }, [authorizedFetch, bookingAdvance, bookingBuffer, bookingEnabled, bookingMaxDays, bookingSlotLength, bookingWindowDays, bookingWindowEnd, bookingWindowStart]);
+
+  useEffect(() => {
+    if (activeTab === "toatlink" && user && !loadingBooking) {
+      void loadBookingSettings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user]);
 
   const saveProfile = useCallback(async () => {
     setSavingKey("profile");
@@ -565,14 +630,169 @@ export default function SettingsPage() {
     }
   }, [authorizedFetch, loadSettings]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
+  const connectMicrosoft = useCallback(async () => {
+    if (!user) return;
+    setSavingKey("sync-microsoft");
+    try {
+      const response = await authorizedFetch("/api/sync/microsoft/start", {
+        method: "POST",
+        body: JSON.stringify({ direction: microsoftDirection, returnTo: "/settings?sync=microsoft" }),
+      });
+      const data = await readJsonResponse<{ authUrl?: string; error?: string }>(response);
+      if (!response.ok || !data?.authUrl) throw new Error(data?.error ?? "Couldn't start Microsoft connection.");
+      window.location.assign(data.authUrl);
+    } catch (error) {
+      console.error("[settings/sync/microsoft/connect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't connect Microsoft Calendar sync.");
+      setSavingKey(null);
     }
+  }, [authorizedFetch, microsoftDirection, user]);
 
+  const disconnectMicrosoft = useCallback(async () => {
+    setSavingKey("sync-microsoft");
+    try {
+      const response = await authorizedFetch("/api/sync/microsoft/disconnect", { method: "POST", body: JSON.stringify({}) });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't pause Microsoft sync.");
+      await loadSettings();
+      setSuccess("Microsoft Calendar sync paused.");
+    } catch (error) {
+      console.error("[settings/sync/microsoft/disconnect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't pause Microsoft Calendar sync.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  const runMicrosoftSync = useCallback(async () => {
+    setSavingKey("sync-microsoft-run");
+    try {
+      const response = await authorizedFetch("/api/sync/microsoft/run", { method: "POST" });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't sync Microsoft Calendar.");
+      await loadSettings();
+      setSuccess("Microsoft Calendar sync finished.");
+    } catch (error) {
+      console.error("[settings/sync/microsoft/run]", error);
+      setError(error instanceof Error ? error.message : "Couldn't sync Microsoft Calendar.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  const connectCalendly = useCallback(async () => {
+    if (!user) return;
+    setSavingKey("sync-calendly");
+    try {
+      const response = await authorizedFetch("/api/sync/calendly/start", {
+        method: "POST",
+        body: JSON.stringify({ direction: calendlyDirection, returnTo: "/settings?sync=calendly" }),
+      });
+      const data = await readJsonResponse<{ authUrl?: string; error?: string }>(response);
+      if (!response.ok || !data?.authUrl) throw new Error(data?.error ?? "Couldn't start Calendly connection.");
+      window.location.assign(data.authUrl);
+    } catch (error) {
+      console.error("[settings/sync/calendly/connect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't connect Calendly sync.");
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, calendlyDirection, user]);
+
+  const disconnectCalendly = useCallback(async () => {
+    setSavingKey("sync-calendly");
+    try {
+      const response = await authorizedFetch("/api/sync/calendly/disconnect", { method: "POST", body: JSON.stringify({}) });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't pause Calendly sync.");
+      await loadSettings();
+      setSuccess("Calendly sync paused.");
+    } catch (error) {
+      console.error("[settings/sync/calendly/disconnect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't pause Calendly sync.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  const runCalendlySync = useCallback(async () => {
+    setSavingKey("sync-calendly-run");
+    try {
+      const response = await authorizedFetch("/api/sync/calendly/run", { method: "POST" });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't sync Calendly.");
+      await loadSettings();
+      setSuccess("Calendly sync finished.");
+    } catch (error) {
+      console.error("[settings/sync/calendly/run]", error);
+      setError(error instanceof Error ? error.message : "Couldn't sync Calendly.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  const connectZoom = useCallback(async () => {
+    if (!user) return;
+    setSavingKey("sync-zoom");
+    try {
+      const response = await authorizedFetch("/api/sync/zoom/start", {
+        method: "POST",
+        body: JSON.stringify({ direction: zoomDirection, returnTo: "/settings?sync=zoom" }),
+      });
+      const data = await readJsonResponse<{ authUrl?: string; error?: string }>(response);
+      if (!response.ok || !data?.authUrl) throw new Error(data?.error ?? "Couldn't start Zoom connection.");
+      window.location.assign(data.authUrl);
+    } catch (error) {
+      console.error("[settings/sync/zoom/connect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't connect Zoom sync.");
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, zoomDirection, user]);
+
+  const disconnectZoom = useCallback(async () => {
+    setSavingKey("sync-zoom");
+    try {
+      const response = await authorizedFetch("/api/sync/zoom/disconnect", { method: "POST", body: JSON.stringify({}) });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't pause Zoom sync.");
+      await loadSettings();
+      setSuccess("Zoom sync paused.");
+    } catch (error) {
+      console.error("[settings/sync/zoom/disconnect]", error);
+      setError(error instanceof Error ? error.message : "Couldn't pause Zoom sync.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  const runZoomSync = useCallback(async () => {
+    setSavingKey("sync-zoom-run");
+    try {
+      const response = await authorizedFetch("/api/sync/zoom/run", { method: "POST" });
+      const data = await readJsonResponse<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data?.error ?? "Couldn't sync Zoom.");
+      await loadSettings();
+      setSuccess("Zoom sync finished.");
+    } catch (error) {
+      console.error("[settings/sync/zoom/run]", error);
+      setError(error instanceof Error ? error.message : "Couldn't sync Zoom.");
+    } finally {
+      setSavingKey(null);
+    }
+  }, [authorizedFetch, loadSettings]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("sync") === "google" && user) {
-      void loadSettings().then(() => setSuccess("Google Calendar connection updated."));
+    const syncParam = params.get("sync");
+    if (syncParam && user) {
+      const labels: Record<string, string> = {
+        google: "Google Calendar",
+        microsoft: "Microsoft Calendar",
+        calendly: "Calendly",
+        zoom: "Zoom",
+      };
+      const label = labels[syncParam] ?? syncParam;
+      void loadSettings().then(() => setSuccess(`${label} connection updated.`));
       window.history.replaceState(null, "", "/settings");
     }
   }, [loadSettings, user]);
@@ -958,19 +1178,32 @@ export default function SettingsPage() {
             </p>
 
             <div style={styles.syncProviderRow}>
-              <button type="button" style={{ ...styles.syncProviderButton, ...styles.syncProviderButtonActive }}>
+              <button type="button" style={{ ...styles.syncProviderButton, ...(syncConnections.googleCalendar?.connected ? styles.syncProviderButtonActive : {}) }}>
                 <span style={styles.googleProviderMark}>G</span>
                 Google Calendar
-                {syncConnections.googleCalendar?.connected ? <span style={styles.connectedDot}>Connected</span> : null}
+                {syncConnections.googleCalendar?.connected ? <span style={styles.connectedDot}>●</span> : null}
               </button>
-              <button type="button" style={styles.syncProviderButton} disabled>
-                <span style={styles.providerIcon}>iOS</span>
-                iOS Calendar
-              </button>
-              <button type="button" style={styles.syncProviderButton} disabled>
-                <span style={styles.providerIcon}>365</span>
-                Office 365
-              </button>
+              {process.env.NEXT_PUBLIC_SYNC_MICROSOFT_ENABLED === "true" ? (
+                <button type="button" style={{ ...styles.syncProviderButton, ...(syncConnections.microsoft?.connected ? styles.syncProviderButtonActive : {}) }}>
+                  <span style={{ ...styles.providerIcon, background: "rgba(0,120,215,0.12)", color: "#0078D7" }}>⊞</span>
+                  Microsoft 365
+                  {syncConnections.microsoft?.connected ? <span style={styles.connectedDot}>●</span> : null}
+                </button>
+              ) : null}
+              {process.env.NEXT_PUBLIC_SYNC_CALENDLY_ENABLED === "true" ? (
+                <button type="button" style={{ ...styles.syncProviderButton, ...(syncConnections.calendly?.connected ? styles.syncProviderButtonActive : {}) }}>
+                  <span style={{ ...styles.providerIcon, background: "rgba(0,110,255,0.10)", color: "#006BFF" }}>📅</span>
+                  Calendly
+                  {syncConnections.calendly?.connected ? <span style={styles.connectedDot}>●</span> : null}
+                </button>
+              ) : null}
+              {process.env.NEXT_PUBLIC_SYNC_ZOOM_ENABLED === "true" ? (
+                <button type="button" style={{ ...styles.syncProviderButton, ...(syncConnections.zoom?.connected ? styles.syncProviderButtonActive : {}) }}>
+                  <span style={{ ...styles.providerIcon, background: "rgba(43,133,255,0.10)", color: "#2D8CFF" }}>Z</span>
+                  Zoom
+                  {syncConnections.zoom?.connected ? <span style={styles.connectedDot}>●</span> : null}
+                </button>
+              ) : null}
             </div>
 
             <div style={styles.syncCard}>
@@ -1052,6 +1285,306 @@ export default function SettingsPage() {
                 </button>
               ) : null}
             </div>
+
+            {process.env.NEXT_PUBLIC_SYNC_MICROSOFT_ENABLED === "true" ? (
+              <div style={styles.syncCard}>
+                <div style={styles.syncCardHead}>
+                  <div style={styles.syncTitleRow}>
+                    <span style={{ ...styles.googleProviderMarkLarge, color: "#0078D7" }}>⊞</span>
+                    <div>
+                      <h3 style={styles.syncCardTitle}>Microsoft 365 Calendar</h3>
+                      <p style={styles.helperText}>
+                        {syncConnections.microsoft?.connected
+                          ? `Connected ${formatSyncDate(syncConnections.microsoft.connectedAt)}`
+                          : "Syncs events and Teams meetings from your Microsoft 365 calendar."}
+                      </p>
+                    </div>
+                  </div>
+                  <span style={syncConnections.microsoft?.connected ? styles.statusChip : styles.statusChipMuted}>
+                    {syncConnections.microsoft?.connected ? "Connected" : "Ready"}
+                  </span>
+                </div>
+
+                <div style={styles.syncDiagram}>
+                  <span style={{ ...styles.googleProviderMarkLarge, color: "#0078D7" }}>⊞</span>
+                  <span style={{ ...styles.syncArrow, color: microsoftDirection !== "sourceToToatre" ? "#5B3DF5" : "#9CA3AF" }}>←</span>
+                  <span style={styles.syncLine} />
+                  <span style={{ ...styles.syncArrow, color: microsoftDirection !== "toatreToSource" ? "#5B3DF5" : "#9CA3AF" }}>→</span>
+                  <span style={styles.toatreSyncMark}>to</span>
+                </div>
+
+                <div style={styles.directionList}>
+                  {([
+                    { id: "sourceToToatre" as SyncDirection, title: "Microsoft to Toatre", body: "New Microsoft 365 calendar entries become Toatre toats." },
+                    { id: "toatreToSource" as SyncDirection, title: "Toatre to Microsoft", body: "New scheduled Toatre toats appear in your Microsoft 365 calendar." },
+                    { id: "twoWay" as SyncDirection, title: "Two-way", body: "New items move both ways from now on." },
+                  ] as const).map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setMicrosoftDirection(opt.id)}
+                      style={{ ...styles.directionOption, ...(microsoftDirection === opt.id ? styles.directionOptionActive : {}) }}>
+                      <span style={styles.radioMark}>{microsoftDirection === opt.id ? "●" : "○"}</span>
+                      <span>
+                        <strong style={styles.directionTitle}>{opt.title}</strong>
+                        <span style={styles.directionBody}>{opt.body}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {syncConnections.microsoft?.connected && syncConnections.microsoft.lastSyncedAt ? (
+                  <p style={styles.helperText}>Last synced {formatSyncDate(syncConnections.microsoft.lastSyncedAt)}</p>
+                ) : null}
+
+                <button type="button"
+                  onClick={() => syncConnections.microsoft?.connected ? void disconnectMicrosoft() : void connectMicrosoft()}
+                  style={styles.primaryButton}
+                  disabled={savingKey === "sync-microsoft" || savingKey === "sync-microsoft-run"}>
+                  {savingKey === "sync-microsoft" ? "Opening Microsoft…"
+                    : syncConnections.microsoft?.connected ? "Pause Microsoft sync" : "Connect Microsoft 365"}
+                </button>
+                {syncConnections.microsoft?.connected ? (
+                  <button type="button" onClick={() => void runMicrosoftSync()} style={styles.secondaryButton}
+                    disabled={savingKey === "sync-microsoft" || savingKey === "sync-microsoft-run"}>
+                    {savingKey === "sync-microsoft-run" ? "Syncing…" : "Sync now"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {process.env.NEXT_PUBLIC_SYNC_CALENDLY_ENABLED === "true" ? (
+              <div style={styles.syncCard}>
+                <div style={styles.syncCardHead}>
+                  <div style={styles.syncTitleRow}>
+                    <span style={{ ...styles.googleProviderMarkLarge, color: "#006BFF", fontSize: 20 }}>📅</span>
+                    <div>
+                      <h3 style={styles.syncCardTitle}>Calendly</h3>
+                      <p style={styles.helperText}>
+                        {syncConnections.calendly?.connected
+                          ? `Connected ${formatSyncDate(syncConnections.calendly.connectedAt)}`
+                          : "Pull your upcoming Calendly meetings into Toatre automatically."}
+                      </p>
+                    </div>
+                  </div>
+                  <span style={syncConnections.calendly?.connected ? styles.statusChip : styles.statusChipMuted}>
+                    {syncConnections.calendly?.connected ? "Connected" : "Ready"}
+                  </span>
+                </div>
+
+                <div style={styles.syncDiagram}>
+                  <span style={{ ...styles.googleProviderMarkLarge, color: "#006BFF", fontSize: 20 }}>📅</span>
+                  <span style={{ ...styles.syncArrow, color: "#5B3DF5" }}>←</span>
+                  <span style={styles.syncLine} />
+                  <span style={{ ...styles.syncArrow, color: "#9CA3AF" }}>→</span>
+                  <span style={styles.toatreSyncMark}>to</span>
+                </div>
+
+                <div style={styles.directionList}>
+                  {([
+                    { id: "sourceToToatre" as SyncDirection, title: "Calendly to Toatre", body: "New confirmed Calendly bookings appear as toats in your timeline." },
+                  ] as const).map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setCalendlyDirection(opt.id)}
+                      style={{ ...styles.directionOption, ...(calendlyDirection === opt.id ? styles.directionOptionActive : {}) }}>
+                      <span style={styles.radioMark}>{calendlyDirection === opt.id ? "●" : "○"}</span>
+                      <span>
+                        <strong style={styles.directionTitle}>{opt.title}</strong>
+                        <span style={styles.directionBody}>{opt.body}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {syncConnections.calendly?.connected && syncConnections.calendly.lastSyncedAt ? (
+                  <p style={styles.helperText}>Last synced {formatSyncDate(syncConnections.calendly.lastSyncedAt)}</p>
+                ) : null}
+
+                <button type="button"
+                  onClick={() => syncConnections.calendly?.connected ? void disconnectCalendly() : void connectCalendly()}
+                  style={styles.primaryButton}
+                  disabled={savingKey === "sync-calendly" || savingKey === "sync-calendly-run"}>
+                  {savingKey === "sync-calendly" ? "Opening Calendly…"
+                    : syncConnections.calendly?.connected ? "Pause Calendly sync" : "Connect Calendly"}
+                </button>
+                {syncConnections.calendly?.connected ? (
+                  <button type="button" onClick={() => void runCalendlySync()} style={styles.secondaryButton}
+                    disabled={savingKey === "sync-calendly" || savingKey === "sync-calendly-run"}>
+                    {savingKey === "sync-calendly-run" ? "Syncing…" : "Sync now"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {process.env.NEXT_PUBLIC_SYNC_ZOOM_ENABLED === "true" ? (
+              <div style={styles.syncCard}>
+                <div style={styles.syncCardHead}>
+                  <div style={styles.syncTitleRow}>
+                    <span style={{ ...styles.googleProviderMarkLarge, color: "#2D8CFF", fontWeight: 900 }}>Z</span>
+                    <div>
+                      <h3 style={styles.syncCardTitle}>Zoom</h3>
+                      <p style={styles.helperText}>
+                        {syncConnections.zoom?.connected
+                          ? `Connected ${formatSyncDate(syncConnections.zoom.connectedAt)}`
+                          : "Import upcoming Zoom meetings straight into your Toatre timeline."}
+                      </p>
+                    </div>
+                  </div>
+                  <span style={syncConnections.zoom?.connected ? styles.statusChip : styles.statusChipMuted}>
+                    {syncConnections.zoom?.connected ? "Connected" : "Ready"}
+                  </span>
+                </div>
+
+                <div style={styles.syncDiagram}>
+                  <span style={{ ...styles.googleProviderMarkLarge, color: "#2D8CFF", fontWeight: 900 }}>Z</span>
+                  <span style={{ ...styles.syncArrow, color: "#5B3DF5" }}>←</span>
+                  <span style={styles.syncLine} />
+                  <span style={{ ...styles.syncArrow, color: "#9CA3AF" }}>→</span>
+                  <span style={styles.toatreSyncMark}>to</span>
+                </div>
+
+                <div style={styles.directionList}>
+                  {([
+                    { id: "sourceToToatre" as SyncDirection, title: "Zoom to Toatre", body: "Upcoming Zoom meetings appear as toats in your timeline." },
+                  ] as const).map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setZoomDirection(opt.id)}
+                      style={{ ...styles.directionOption, ...(zoomDirection === opt.id ? styles.directionOptionActive : {}) }}>
+                      <span style={styles.radioMark}>{zoomDirection === opt.id ? "●" : "○"}</span>
+                      <span>
+                        <strong style={styles.directionTitle}>{opt.title}</strong>
+                        <span style={styles.directionBody}>{opt.body}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {syncConnections.zoom?.connected && syncConnections.zoom.lastSyncedAt ? (
+                  <p style={styles.helperText}>Last synced {formatSyncDate(syncConnections.zoom.lastSyncedAt)}</p>
+                ) : null}
+
+                <button type="button"
+                  onClick={() => syncConnections.zoom?.connected ? void disconnectZoom() : void connectZoom()}
+                  style={styles.primaryButton}
+                  disabled={savingKey === "sync-zoom" || savingKey === "sync-zoom-run"}>
+                  {savingKey === "sync-zoom" ? "Opening Zoom…"
+                    : syncConnections.zoom?.connected ? "Pause Zoom sync" : "Connect Zoom"}
+                </button>
+                {syncConnections.zoom?.connected ? (
+                  <button type="button" onClick={() => void runZoomSync()} style={styles.secondaryButton}
+                    disabled={savingKey === "sync-zoom" || savingKey === "sync-zoom-run"}>
+                    {savingKey === "sync-zoom-run" ? "Syncing…" : "Sync now"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {!loadingState && settingsData && activeTab === "toatlink" ? (
+          <section style={styles.panelCard}>
+            <div style={styles.sectionHead}>
+              <div>
+                <p style={styles.sectionEyebrow}>Toat Link</p>
+                <h2 style={styles.sectionTitle}>Your personal booking page</h2>
+              </div>
+            </div>
+
+            <p style={styles.helperText}>
+              Share your link so others can request a time to meet. Blocked slots hide your content — visitors only see availability.
+            </p>
+
+            {settingsData.profile.handle && (
+              <div style={{ marginBottom: 20, padding: "10px 14px", background: "rgba(91,61,245,0.07)", borderRadius: 10, border: "1px solid rgba(91,61,245,0.15)", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 13, color: "#7C3AED", fontFamily: "monospace", fontWeight: 600 }}>
+                  toatre.com/{settingsData.profile.handle}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { void navigator.clipboard.writeText(`https://toatre.com/${settingsData.profile.handle}`); setSuccess("Link copied!"); }}
+                  style={{ marginLeft: "auto", fontSize: 12, color: "#7C3AED", background: "transparent", border: "1px solid rgba(91,61,245,0.3)", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Copy
+                </button>
+              </div>
+            )}
+
+            <label style={{ ...styles.fieldLabel, display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <input
+                type="checkbox"
+                checked={bookingEnabled}
+                onChange={(e) => setBookingEnabled(e.target.checked)}
+                style={styles.checkbox}
+              />
+              Enable Toat Link (let others book time with you)
+            </label>
+
+            {bookingEnabled && !loadingBooking && (
+              <>
+                <p style={styles.fieldLabel}>Available days</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                  {[
+                    { n: 1, label: "Mon" }, { n: 2, label: "Tue" }, { n: 3, label: "Wed" },
+                    { n: 4, label: "Thu" }, { n: 5, label: "Fri" }, { n: 6, label: "Sat" }, { n: 0, label: "Sun" },
+                  ].map(({ n, label }) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setBookingWindowDays((d) => d.includes(n) ? d.filter((x) => x !== n) : [...d, n].sort())}
+                      style={{
+                        fontSize: 13, fontWeight: 600, padding: "7px 12px", borderRadius: 10, fontFamily: "inherit", cursor: "pointer",
+                        background: bookingWindowDays.includes(n) ? "rgba(91,61,245,0.15)" : "rgba(0,0,0,0.04)",
+                        color: bookingWindowDays.includes(n) ? "#5B3DF5" : "#6B7280",
+                        border: bookingWindowDays.includes(n) ? "1.5px solid rgba(91,61,245,0.35)" : "1.5px solid rgba(0,0,0,0.08)",
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+
+                <div style={styles.formGrid}>
+                  <label style={styles.fieldLabel}>
+                    Window start
+                    <input type="time" value={bookingWindowStart} onChange={(e) => setBookingWindowStart(e.target.value)} style={styles.textInput} />
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    Window end
+                    <input type="time" value={bookingWindowEnd} onChange={(e) => setBookingWindowEnd(e.target.value)} style={styles.textInput} />
+                  </label>
+                </div>
+
+                <p style={styles.fieldLabel}>Slot length</p>
+                <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                  {([30, 60] as const).map((len) => (
+                    <button
+                      key={len}
+                      type="button"
+                      onClick={() => setBookingSlotLength(len)}
+                      style={{
+                        fontSize: 14, fontWeight: 600, padding: "9px 22px", borderRadius: 10, fontFamily: "inherit", cursor: "pointer",
+                        background: bookingSlotLength === len ? "rgba(91,61,245,0.15)" : "rgba(0,0,0,0.04)",
+                        color: bookingSlotLength === len ? "#5B3DF5" : "#6B7280",
+                        border: bookingSlotLength === len ? "1.5px solid rgba(91,61,245,0.35)" : "1.5px solid rgba(0,0,0,0.08)",
+                      }}
+                    >{len === 30 ? "30 min" : "1 hour"}</button>
+                  ))}
+                </div>
+
+                <div style={styles.formGrid}>
+                  <label style={styles.fieldLabel}>
+                    Buffer between slots (min)
+                    <input type="number" min={0} max={120} step={5} value={bookingBuffer} onChange={(e) => setBookingBuffer(Number(e.target.value))} style={styles.textInput} />
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    Min notice (min)
+                    <input type="number" min={0} max={1440} step={15} value={bookingAdvance} onChange={(e) => setBookingAdvance(Number(e.target.value))} style={styles.textInput} />
+                  </label>
+                </div>
+
+                <label style={styles.fieldLabel}>
+                  Max days ahead
+                  <input type="number" min={1} max={90} step={1} value={bookingMaxDays} onChange={(e) => setBookingMaxDays(Number(e.target.value))} style={{ ...styles.textInput, maxWidth: 180 }} />
+                </label>
+              </>
+            )}
+
+            <button type="button" onClick={() => void saveBookingSettings()} style={styles.primaryButton} disabled={savingBooking}>
+              {savingBooking ? "Saving…" : "Save Toat Link settings"}
+            </button>
           </section>
         ) : null}
 

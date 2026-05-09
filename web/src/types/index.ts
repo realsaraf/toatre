@@ -211,6 +211,56 @@ export interface UserSettingsDoc {
 
 // â”€â”€â”€ API response types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+// Booking (Toat Link)
+
+export type BookingSlotLength = 30 | 60;
+export type BookingRequestState = "pending" | "accepted" | "denied";
+
+export interface BookingSettingsDoc {
+  _id: ObjectId;
+  userId: string;
+  enabled: boolean;
+  windowDays: number[];        // 0=Sun, 6=Sat
+  windowStart: string;         // "HH:mm"
+  windowEnd: string;           // "HH:mm"
+  slotLength: BookingSlotLength;
+  bufferMinutes: number;
+  advanceNoticeMinutes: number;
+  maxDaysAhead: number;
+  timezone: string;
+  updatedAt: Date;
+}
+
+export interface BookingRequestDoc {
+  _id: ObjectId;
+  ownerId: ObjectId;
+  toatId: string | null;
+  slotStart: Date;
+  slotEnd: Date;
+  name: string;
+  email: string;
+  phone: string | null;
+  bookerHandle: string | null;
+  bookerUserId: string | null;
+  message: string | null;
+  state: BookingRequestState;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SerializedBookingRequest {
+  id: string;
+  slotStart: string;
+  slotEnd: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  bookerHandle: string | null;
+  message: string | null;
+  state: BookingRequestState;
+  createdAt: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

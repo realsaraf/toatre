@@ -10,6 +10,8 @@ import { notifyUserDevices } from "@/lib/pings/notify-devices";
 
 const ToatQuerySchema = z.object({
   range: z.enum(["today", "week", "upcoming", "past", "all"]).optional().default("all"),
+  source: z.string().optional(),
+  state: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -17,8 +19,14 @@ export async function GET(request: NextRequest) {
   if (errorResponse) return errorResponse;
 
   const { searchParams } = new URL(request.url);
-  const parsed = ToatQuerySchema.safeParse({ range: searchParams.get("range") ?? undefined });
+  const parsed = ToatQuerySchema.safeParse({
+    range: searchParams.get("range") ?? undefined,
+    source: searchParams.get("source") ?? undefined,
+    state: searchParams.get("state") ?? undefined,
+  });
   const range = parsed.success ? parsed.data.range : "all";
+  const sourceFilter = parsed.success ? parsed.data.source : undefined;
+  const stateFilter = parsed.success ? parsed.data.state : undefined;
 
   const { toats } = await getCollections();
   const ownerId = new ObjectId(user.mongoId);
@@ -31,12 +39,19 @@ export async function GET(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const filter: Record<string, any> = {
     ownerId,
-    // Support both old status field and new state field
-    $nor: [
+  };
+
+  // If filtering by a specific state, match it directly; otherwise exclude done/archived
+  if (stateFilter) {
+    filter.state = stateFilter;
+  } else {
+    filter.$nor = [
       { state: { $in: ["done", "archived"] } },
       { status: { $in: ["cancelled", "done"] } },
-    ],
-  };
+    ];
+  }
+
+  if (sourceFilter) filter.source = sourceFilter;
 
   if (range === "today") filter["enrichments.time.at"] = { $gte: startOfToday.toISOString(), $lt: endOfToday.toISOString() };
   else if (range === "week") filter["enrichments.time.at"] = { $gte: endOfToday.toISOString(), $lt: endOfWeek.toISOString() };
@@ -107,6 +122,8 @@ export function serializeToat(doc: any) {
     notes: doc.notes ?? null,
     enrichments,
     captureId: doc.captureId?.toString() ?? null,
+    source: doc.source ?? null,
+    bookingRequestId: doc.bookingRequestId?.toString() ?? null,
     createdAt: (doc.createdAt as Date).toISOString(),
     updatedAt: (doc.updatedAt as Date).toISOString(),
   };

@@ -9,11 +9,12 @@ import 'package:toatre/models/user_settings.dart';
 import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/providers/settings_provider.dart';
 import 'package:toatre/providers/share_provider.dart';
+import 'package:toatre/services/api_service.dart';
 import 'package:toatre/ui/auth/login_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
-enum SettingsTab { general, connections, pings, sync }
+enum SettingsTab { general, connections, pings, sync, toatlink }
 
 enum _NoticeTone { success, error }
 
@@ -53,6 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       createDefaultNotificationPreferences();
   SyncConnections _syncConnections = <String, SyncConnection>{};
   SyncDirection _googleCalendarDirection = SyncDirection.sourceToToatre;
+  SyncDirection _microsoftDirection = SyncDirection.sourceToToatre;
+  SyncDirection _calendlyDirection = SyncDirection.sourceToToatre;
+  SyncDirection _zoomDirection = SyncDirection.sourceToToatre;
   String? _editingConnectionId;
   String _connectionName = '';
   String _connectionRelationship = '';
@@ -60,6 +64,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _connectionEmail = '';
   String _connectionHandle = '';
   String _connectionNotes = '';
+
+  bool _bookingEnabled = false;
+  List<int> _bookingWindowDays = <int>[1, 2, 3, 4, 5];
+  String _bookingWindowStart = '09:00';
+  String _bookingWindowEnd = '17:00';
+  int _bookingSlotLength = 30;
+  int _bookingBuffer = 0;
+  int _bookingAdvance = 60;
+  int _bookingMaxDays = 14;
+  bool _loadingBooking = false;
+  bool _savingBooking = false;
 
   @override
   void initState() {
@@ -127,7 +142,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 child: _TabButton(
                                   label: _tabLabel(tab),
                                   active: _activeTab == tab,
-                                  onTap: () => setState(() => _activeTab = tab),
+                                  onTap: () {
+                                    setState(() => _activeTab = tab);
+                                    if (tab == SettingsTab.toatlink &&
+                                        !_loadingBooking) {
+                                      _loadBookingSettings();
+                                    }
+                                  },
                                 ),
                               );
                             })
@@ -255,12 +276,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           googleConnection:
                               _syncConnections[googleCalendarProviderKey],
                           googleDirection: _googleCalendarDirection,
-                          busy: settingsProvider.savingKey == 'sync-google',
-                          syncing:
-                              settingsProvider.savingKey == 'sync-google-run',
+                          microsoftConnection: _syncConnections['microsoft'],
+                          microsoftDirection: _microsoftDirection,
+                          calendlyConnection: _syncConnections['calendly'],
+                          calendlyDirection: _calendlyDirection,
+                          zoomConnection: _syncConnections['zoom'],
+                          zoomDirection: _zoomDirection,
+                          savingKey: settingsProvider.savingKey,
                           showIosCalendar: Platform.isIOS,
-                          onDirectionChanged: (direction) => setState(
+                          onGoogleDirectionChanged: (direction) => setState(
                             () => _googleCalendarDirection = direction,
+                          ),
+                          onMicrosoftDirectionChanged: (direction) => setState(
+                            () => _microsoftDirection = direction,
+                          ),
+                          onCalendlyDirectionChanged: (direction) => setState(
+                            () => _calendlyDirection = direction,
+                          ),
+                          onZoomDirectionChanged: (direction) => setState(
+                            () => _zoomDirection = direction,
                           ),
                           onConnectGoogle: () =>
                               _connectGoogleCalendar(settingsProvider),
@@ -268,6 +302,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _disconnectGoogleCalendar(settingsProvider),
                           onSyncGoogle: () =>
                               _syncGoogleCalendarNow(settingsProvider),
+                          onConnectMicrosoft: () =>
+                              _connectMicrosoft(settingsProvider),
+                          onDisconnectMicrosoft: () =>
+                              _disconnectMicrosoft(settingsProvider),
+                          onSyncMicrosoft: () =>
+                              _syncMicrosoftNow(settingsProvider),
+                          onConnectCalendly: () =>
+                              _connectCalendly(settingsProvider),
+                          onDisconnectCalendly: () =>
+                              _disconnectCalendly(settingsProvider),
+                          onSyncCalendly: () =>
+                              _syncCalendlyNow(settingsProvider),
+                          onConnectZoom: () => _connectZoom(settingsProvider),
+                          onDisconnectZoom: () =>
+                              _disconnectZoom(settingsProvider),
+                          onSyncZoom: () => _syncZoomNow(settingsProvider),
+                        ),
+                      if (_activeTab == SettingsTab.toatlink)
+                        _ToatLinkTab(
+                          handle: payload.profile.handle,
+                          enabled: _bookingEnabled,
+                          windowDays: _bookingWindowDays,
+                          windowStart: _bookingWindowStart,
+                          windowEnd: _bookingWindowEnd,
+                          slotLength: _bookingSlotLength,
+                          buffer: _bookingBuffer,
+                          advance: _bookingAdvance,
+                          maxDays: _bookingMaxDays,
+                          loading: _loadingBooking,
+                          saving: _savingBooking,
+                          onEnabledChanged: (v) =>
+                              setState(() => _bookingEnabled = v),
+                          onWindowDaysChanged: (v) =>
+                              setState(() => _bookingWindowDays = v),
+                          onWindowStartChanged: (v) =>
+                              setState(() => _bookingWindowStart = v),
+                          onWindowEndChanged: (v) =>
+                              setState(() => _bookingWindowEnd = v),
+                          onSlotLengthChanged: (v) =>
+                              setState(() => _bookingSlotLength = v),
+                          onBufferChanged: (v) =>
+                              setState(() => _bookingBuffer = v),
+                          onAdvanceChanged: (v) =>
+                              setState(() => _bookingAdvance = v),
+                          onMaxDaysChanged: (v) =>
+                              setState(() => _bookingMaxDays = v),
+                          onSave: _saveBookingSettings,
                         ),
                     ],
                   ],
@@ -302,6 +383,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _googleCalendarDirection =
         _syncConnections[googleCalendarProviderKey]?.direction ??
         SyncDirection.sourceToToatre;
+    _microsoftDirection =
+        _syncConnections['microsoft']?.direction ??
+        SyncDirection.sourceToToatre;
+    _calendlyDirection =
+        _syncConnections['calendly']?.direction ??
+        SyncDirection.sourceToToatre;
+    _zoomDirection =
+        _syncConnections['zoom']?.direction ?? SyncDirection.sourceToToatre;
   }
 
   void _showNotice(String message, _NoticeTone tone) {
@@ -436,6 +525,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _connectMicrosoft(SettingsProvider provider) async {
+    try {
+      await provider.connectMicrosoftCalendar(direction: _microsoftDirection);
+      _showNotice('Finish Microsoft approval in the browser.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not connect Microsoft Calendar sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _disconnectMicrosoft(SettingsProvider provider) async {
+    try {
+      await provider.disconnectMicrosoftCalendar();
+      _showNotice('Microsoft Calendar sync paused.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not pause Microsoft Calendar sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _syncMicrosoftNow(SettingsProvider provider) async {
+    try {
+      await provider.syncMicrosoftNow();
+      _showNotice('Microsoft Calendar sync finished.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not sync Microsoft Calendar.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _connectCalendly(SettingsProvider provider) async {
+    try {
+      await provider.connectCalendly(direction: _calendlyDirection);
+      _showNotice('Finish Calendly approval in the browser.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not connect Calendly sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _disconnectCalendly(SettingsProvider provider) async {
+    try {
+      await provider.disconnectCalendly();
+      _showNotice('Calendly sync paused.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not pause Calendly sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _syncCalendlyNow(SettingsProvider provider) async {
+    try {
+      await provider.syncCalendlyNow();
+      _showNotice('Calendly sync finished.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not sync Calendly.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _connectZoom(SettingsProvider provider) async {
+    try {
+      await provider.connectZoom(direction: _zoomDirection);
+      _showNotice('Finish Zoom approval in the browser.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not connect Zoom sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _disconnectZoom(SettingsProvider provider) async {
+    try {
+      await provider.disconnectZoom();
+      _showNotice('Zoom sync paused.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not pause Zoom sync.', _NoticeTone.error);
+    }
+  }
+
+  Future<void> _syncZoomNow(SettingsProvider provider) async {
+    try {
+      await provider.syncZoomNow();
+      _showNotice('Zoom sync finished.', _NoticeTone.success);
+    } catch (_) {
+      _showNotice(provider.error ?? 'Could not sync Zoom.', _NoticeTone.error);
+    }
+  }
+
   Future<void> _signOut(BuildContext context) async {
     if (_signingOut) {
       return;
@@ -533,8 +703,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Connections';
       case SettingsTab.pings:
         return 'Pings';
+      case SettingsTab.toatlink:
+        return 'Toat Link';
       case SettingsTab.sync:
         return 'Sync';
+    }
+  }
+
+  Future<void> _loadBookingSettings() async {
+    if (!mounted) return;
+    setState(() => _loadingBooking = true);
+    try {
+      final data = await ApiService.instance.getJson(
+        '/api/booking/settings',
+        authenticated: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _bookingEnabled = data['enabled'] == true;
+        _bookingWindowDays =
+            (data['windowDays'] as List<dynamic>?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            <int>[1, 2, 3, 4, 5];
+        _bookingWindowStart = (data['windowStart'] as String?) ?? '09:00';
+        _bookingWindowEnd = (data['windowEnd'] as String?) ?? '17:00';
+        _bookingSlotLength = (data['slotLength'] as num?)?.toInt() ?? 30;
+        _bookingBuffer = (data['bufferMinutes'] as num?)?.toInt() ?? 0;
+        _bookingAdvance = (data['advanceNoticeMinutes'] as num?)?.toInt() ?? 60;
+        _bookingMaxDays = (data['maxDaysAhead'] as num?)?.toInt() ?? 14;
+      });
+    } catch (_) {
+      // best effort
+    } finally {
+      if (mounted) setState(() => _loadingBooking = false);
+    }
+  }
+
+  Future<void> _saveBookingSettings() async {
+    if (!mounted) return;
+    setState(() => _savingBooking = true);
+    try {
+      await ApiService.instance.patchJson(
+        '/api/booking/settings',
+        authenticated: true,
+        body: <String, Object?>{
+          'enabled': _bookingEnabled,
+          'windowDays': _bookingWindowDays,
+          'windowStart': _bookingWindowStart,
+          'windowEnd': _bookingWindowEnd,
+          'slotLength': _bookingSlotLength,
+          'bufferMinutes': _bookingBuffer,
+          'advanceNoticeMinutes': _bookingAdvance,
+          'maxDaysAhead': _bookingMaxDays,
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _notice = 'Toat Link settings saved.';
+        _noticeTone = _NoticeTone.success;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _notice = 'Could not save Toat Link settings.';
+        _noticeTone = _NoticeTone.error;
+      });
+    } finally {
+      if (mounted) setState(() => _savingBooking = false);
     }
   }
 
@@ -1443,29 +1679,68 @@ class _SyncTab extends StatelessWidget {
   const _SyncTab({
     required this.googleConnection,
     required this.googleDirection,
-    required this.busy,
-    required this.syncing,
+    required this.microsoftConnection,
+    required this.microsoftDirection,
+    required this.calendlyConnection,
+    required this.calendlyDirection,
+    required this.zoomConnection,
+    required this.zoomDirection,
+    required this.savingKey,
     required this.showIosCalendar,
-    required this.onDirectionChanged,
+    required this.onGoogleDirectionChanged,
+    required this.onMicrosoftDirectionChanged,
+    required this.onCalendlyDirectionChanged,
+    required this.onZoomDirectionChanged,
     required this.onConnectGoogle,
     required this.onDisconnectGoogle,
     required this.onSyncGoogle,
+    required this.onConnectMicrosoft,
+    required this.onDisconnectMicrosoft,
+    required this.onSyncMicrosoft,
+    required this.onConnectCalendly,
+    required this.onDisconnectCalendly,
+    required this.onSyncCalendly,
+    required this.onConnectZoom,
+    required this.onDisconnectZoom,
+    required this.onSyncZoom,
   });
 
   final SyncConnection? googleConnection;
   final SyncDirection googleDirection;
-  final bool busy;
-  final bool syncing;
+  final SyncConnection? microsoftConnection;
+  final SyncDirection microsoftDirection;
+  final SyncConnection? calendlyConnection;
+  final SyncDirection calendlyDirection;
+  final SyncConnection? zoomConnection;
+  final SyncDirection zoomDirection;
+  final String? savingKey;
   final bool showIosCalendar;
-  final ValueChanged<SyncDirection> onDirectionChanged;
+  final ValueChanged<SyncDirection> onGoogleDirectionChanged;
+  final ValueChanged<SyncDirection> onMicrosoftDirectionChanged;
+  final ValueChanged<SyncDirection> onCalendlyDirectionChanged;
+  final ValueChanged<SyncDirection> onZoomDirectionChanged;
   final VoidCallback onConnectGoogle;
   final VoidCallback onDisconnectGoogle;
   final VoidCallback onSyncGoogle;
+  final VoidCallback onConnectMicrosoft;
+  final VoidCallback onDisconnectMicrosoft;
+  final VoidCallback onSyncMicrosoft;
+  final VoidCallback onConnectCalendly;
+  final VoidCallback onDisconnectCalendly;
+  final VoidCallback onSyncCalendly;
+  final VoidCallback onConnectZoom;
+  final VoidCallback onDisconnectZoom;
+  final VoidCallback onSyncZoom;
+
+  static const bool _kMicrosoftEnabled =
+      bool.fromEnvironment('SYNC_MICROSOFT_ENABLED', defaultValue: false);
+  static const bool _kCalendlyEnabled =
+      bool.fromEnvironment('SYNC_CALENDLY_ENABLED', defaultValue: false);
+  static const bool _kZoomEnabled =
+      bool.fromEnvironment('SYNC_ZOOM_ENABLED', defaultValue: false);
 
   @override
   Widget build(BuildContext context) {
-    final connected = googleConnection?.connected == true;
-
     return _PanelCard(
       title: 'Keep calendars moving with Toatre',
       eyebrow: 'Sync',
@@ -1485,7 +1760,7 @@ class _SyncTab extends StatelessWidget {
                 label: 'Google Calendar',
                 iconLabel: 'G',
                 active: true,
-                connected: connected,
+                connected: googleConnection?.connected == true,
               ),
               if (showIosCalendar)
                 const _SyncProviderButton(
@@ -1494,25 +1769,108 @@ class _SyncTab extends StatelessWidget {
                   active: false,
                   connected: false,
                 ),
-              const _SyncProviderButton(
-                label: 'Office 365',
-                icon: Icons.business_center_rounded,
-                active: false,
-                connected: false,
-              ),
+              if (_kMicrosoftEnabled)
+                _SyncProviderButton(
+                  label: 'Microsoft 365',
+                  iconLabel: '⊞',
+                  active: _kMicrosoftEnabled,
+                  connected: microsoftConnection?.connected == true,
+                ),
+              if (_kCalendlyEnabled)
+                _SyncProviderButton(
+                  label: 'Calendly',
+                  icon: Icons.event_available_rounded,
+                  active: _kCalendlyEnabled,
+                  connected: calendlyConnection?.connected == true,
+                ),
+              if (_kZoomEnabled)
+                _SyncProviderButton(
+                  label: 'Zoom',
+                  iconLabel: 'Z',
+                  active: _kZoomEnabled,
+                  connected: zoomConnection?.connected == true,
+                ),
             ],
           ),
           const SizedBox(height: 18),
           _GoogleCalendarSyncCard(
             connection: googleConnection,
             direction: googleDirection,
-            busy: busy,
-            syncing: syncing,
-            onDirectionChanged: onDirectionChanged,
+            busy: savingKey == 'sync-google',
+            syncing: savingKey == 'sync-google-run',
+            onDirectionChanged: onGoogleDirectionChanged,
             onConnect: onConnectGoogle,
             onDisconnect: onDisconnectGoogle,
             onSync: onSyncGoogle,
           ),
+          if (_kMicrosoftEnabled) ...[
+            const SizedBox(height: 16),
+            _GenericSyncCard(
+              title: 'Microsoft 365 Calendar',
+              iconLabel: '⊞',
+              iconColor: const Color(0xFF0078D7),
+              connection: microsoftConnection,
+              direction: microsoftDirection,
+              busy: savingKey == 'sync-microsoft',
+              syncing: savingKey == 'sync-microsoft-run',
+              directions: const [
+                (id: SyncDirection.sourceToToatre, title: 'Microsoft to Toatre', body: 'New Microsoft 365 calendar entries become Toatre toats.'),
+                (id: SyncDirection.toatreToSource, title: 'Toatre to Microsoft', body: 'New scheduled Toatre toats appear in your Microsoft 365 calendar.'),
+                (id: SyncDirection.twoWay, title: 'Two-way', body: 'New items move both ways from now on.'),
+              ],
+              connectLabel: 'Connect Microsoft 365',
+              disconnectLabel: 'Pause Microsoft sync',
+              connectingLabel: 'Opening Microsoft…',
+              onDirectionChanged: onMicrosoftDirectionChanged,
+              onConnect: onConnectMicrosoft,
+              onDisconnect: onDisconnectMicrosoft,
+              onSync: onSyncMicrosoft,
+            ),
+          ],
+          if (_kCalendlyEnabled) ...[
+            const SizedBox(height: 16),
+            _GenericSyncCard(
+              title: 'Calendly',
+              icon: Icons.event_available_rounded,
+              iconColor: const Color(0xFF006BFF),
+              connection: calendlyConnection,
+              direction: calendlyDirection,
+              busy: savingKey == 'sync-calendly',
+              syncing: savingKey == 'sync-calendly-run',
+              directions: const [
+                (id: SyncDirection.sourceToToatre, title: 'Calendly to Toatre', body: 'New confirmed Calendly bookings appear as toats in your timeline.'),
+              ],
+              connectLabel: 'Connect Calendly',
+              disconnectLabel: 'Pause Calendly sync',
+              connectingLabel: 'Opening Calendly…',
+              onDirectionChanged: onCalendlyDirectionChanged,
+              onConnect: onConnectCalendly,
+              onDisconnect: onDisconnectCalendly,
+              onSync: onSyncCalendly,
+            ),
+          ],
+          if (_kZoomEnabled) ...[
+            const SizedBox(height: 16),
+            _GenericSyncCard(
+              title: 'Zoom',
+              iconLabel: 'Z',
+              iconColor: const Color(0xFF2D8CFF),
+              connection: zoomConnection,
+              direction: zoomDirection,
+              busy: savingKey == 'sync-zoom',
+              syncing: savingKey == 'sync-zoom-run',
+              directions: const [
+                (id: SyncDirection.sourceToToatre, title: 'Zoom to Toatre', body: 'Upcoming Zoom meetings appear as toats in your timeline.'),
+              ],
+              connectLabel: 'Connect Zoom',
+              disconnectLabel: 'Pause Zoom sync',
+              connectingLabel: 'Opening Zoom…',
+              onDirectionChanged: onZoomDirectionChanged,
+              onConnect: onConnectZoom,
+              onDisconnect: onDisconnectZoom,
+              onSync: onSyncZoom,
+            ),
+          ],
         ],
       ),
     );
@@ -1763,6 +2121,128 @@ class _DirectionDiagram extends StatelessWidget {
   }
 }
 
+/// Generic sync card used for Microsoft, Calendly, and Zoom providers.
+class _GenericSyncCard extends StatelessWidget {
+  const _GenericSyncCard({
+    required this.title,
+    required this.connection,
+    required this.direction,
+    required this.busy,
+    required this.syncing,
+    required this.directions,
+    required this.connectLabel,
+    required this.disconnectLabel,
+    required this.connectingLabel,
+    required this.onDirectionChanged,
+    required this.onConnect,
+    required this.onDisconnect,
+    required this.onSync,
+    this.iconLabel,
+    this.icon,
+    this.iconColor,
+  });
+
+  final String title;
+  final SyncConnection? connection;
+  final SyncDirection direction;
+  final bool busy;
+  final bool syncing;
+  final List<({SyncDirection id, String title, String body})> directions;
+  final String connectLabel;
+  final String disconnectLabel;
+  final String connectingLabel;
+  final ValueChanged<SyncDirection> onDirectionChanged;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
+  final VoidCallback onSync;
+  final String? iconLabel;
+  final IconData? icon;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = connection?.connected == true;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ProviderMark(iconLabel: iconLabel, icon: icon, large: true, color: iconColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyles.heading3),
+                    const SizedBox(height: 4),
+                    Text(
+                      connected
+                          ? 'Connected ${_formatSyncDate(connection?.connectedAt)}'
+                          : directions.first.body,
+                      style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              _StatusChip(label: connected ? 'Connected' : 'Ready', highlighted: connected),
+            ],
+          ),
+          if (directions.length > 1) ...[
+            const SizedBox(height: 16),
+            Column(
+              children: [
+                for (int i = 0; i < directions.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  _DirectionOption(
+                    title: directions[i].title,
+                    body: directions[i].body,
+                    direction: directions[i].id,
+                    value: direction,
+                    onChanged: onDirectionChanged,
+                  ),
+                ],
+              ],
+            ),
+          ],
+          if (connected && connection?.lastSyncedAt != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Last synced ${_formatSyncDate(connection?.lastSyncedAt)}',
+              style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+          const SizedBox(height: 18),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: busy || syncing ? null : connected ? onDisconnect : onConnect,
+                child: Text(busy ? connectingLabel : connected ? disconnectLabel : connectLabel),
+              ),
+              if (connected) ...[
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: busy || syncing ? null : onSync,
+                  child: Text(syncing ? 'Syncing…' : 'Sync now'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DirectionOption extends StatelessWidget {
   const _DirectionOption({
     required this.title,
@@ -1818,15 +2298,17 @@ class _DirectionOption extends StatelessWidget {
 }
 
 class _ProviderMark extends StatelessWidget {
-  const _ProviderMark({this.iconLabel, this.icon, this.large = false});
+  const _ProviderMark({this.iconLabel, this.icon, this.large = false, this.color});
 
   final String? iconLabel;
   final IconData? icon;
   final bool large;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final size = large ? 48.0 : 28.0;
+    final iconColor = color ?? const Color(0xFF4285F4);
     return Container(
       width: size,
       height: size,
@@ -1840,14 +2322,14 @@ class _ProviderMark extends StatelessWidget {
             ? Text(
                 iconLabel!,
                 style: TextStyles.bodyMedium.copyWith(
-                  color: const Color(0xFF4285F4),
-                  fontSize: large ? 24 : 15,
+                  color: iconColor,
+                  fontSize: large ? 22 : 14,
                   fontWeight: FontWeight.w800,
                 ),
               )
             : Icon(
                 icon ?? Icons.sync_rounded,
-                color: AppColors.textSecondary,
+                color: iconColor,
                 size: large ? 24 : 16,
               ),
       ),
@@ -2096,6 +2578,390 @@ class _DangerZoneCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ToatLinkTab extends StatelessWidget {
+  const _ToatLinkTab({
+    required this.handle,
+    required this.enabled,
+    required this.windowDays,
+    required this.windowStart,
+    required this.windowEnd,
+    required this.slotLength,
+    required this.buffer,
+    required this.advance,
+    required this.maxDays,
+    required this.loading,
+    required this.saving,
+    required this.onEnabledChanged,
+    required this.onWindowDaysChanged,
+    required this.onWindowStartChanged,
+    required this.onWindowEndChanged,
+    required this.onSlotLengthChanged,
+    required this.onBufferChanged,
+    required this.onAdvanceChanged,
+    required this.onMaxDaysChanged,
+    required this.onSave,
+  });
+
+  final String? handle;
+  final bool enabled;
+  final List<int> windowDays;
+  final String windowStart;
+  final String windowEnd;
+  final int slotLength;
+  final int buffer;
+  final int advance;
+  final int maxDays;
+  final bool loading;
+  final bool saving;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<List<int>> onWindowDaysChanged;
+  final ValueChanged<String> onWindowStartChanged;
+  final ValueChanged<String> onWindowEndChanged;
+  final ValueChanged<int> onSlotLengthChanged;
+  final ValueChanged<int> onBufferChanged;
+  final ValueChanged<int> onAdvanceChanged;
+  final ValueChanged<int> onMaxDaysChanged;
+  final VoidCallback onSave;
+
+  static const _days = <_DayOption>[
+    _DayOption(n: 1, label: 'Mon'),
+    _DayOption(n: 2, label: 'Tue'),
+    _DayOption(n: 3, label: 'Wed'),
+    _DayOption(n: 4, label: 'Thu'),
+    _DayOption(n: 5, label: 'Fri'),
+    _DayOption(n: 6, label: 'Sat'),
+    _DayOption(n: 0, label: 'Sun'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Toat Link', style: TextStyles.heading3),
+          const SizedBox(height: 4),
+          Text(
+            'Let others book time with you. Blocked slots hide your content.',
+            style: TextStyles.small,
+          ),
+          if (handle != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withAlpha(50)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'toatre.com/$handle',
+                      style: TextStyles.smallMedium.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Enable Toat Link', style: TextStyles.bodyMedium),
+            subtitle: Text(
+              'Allow others to request meetings',
+              style: TextStyles.small,
+            ),
+            value: enabled,
+            onChanged: onEnabledChanged,
+            activeColor: AppColors.primary,
+          ),
+          if (loading) ...[
+            const SizedBox(height: 24),
+            const Center(child: CircularProgressIndicator()),
+          ] else if (enabled) ...[
+            const SizedBox(height: 18),
+            Text('Available days', style: TextStyles.label),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _days.map((d) {
+                final active = windowDays.contains(d.n);
+                return GestureDetector(
+                  onTap: () {
+                    final updated = List<int>.from(windowDays);
+                    if (active)
+                      updated.remove(d.n);
+                    else
+                      updated
+                        ..add(d.n)
+                        ..sort();
+                    onWindowDaysChanged(updated);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? AppColors.primary.withAlpha(30)
+                          : AppColors.bg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: active
+                            ? AppColors.primary.withAlpha(80)
+                            : AppColors.border,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      d.label,
+                      style: TextStyles.smallMedium.copyWith(
+                        color: active
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimeField(
+                    label: 'Window start',
+                    value: windowStart,
+                    onChanged: onWindowStartChanged,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _TimeField(
+                    label: 'Window end',
+                    value: windowEnd,
+                    onChanged: onWindowEndChanged,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Text('Slot length', style: TextStyles.label),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _SlotLengthButton(
+                  label: '30 min',
+                  active: slotLength == 30,
+                  onTap: () => onSlotLengthChanged(30),
+                ),
+                const SizedBox(width: 10),
+                _SlotLengthButton(
+                  label: '1 hour',
+                  active: slotLength == 60,
+                  onTap: () => onSlotLengthChanged(60),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _NumberField(
+                    label: 'Buffer (min)',
+                    value: buffer,
+                    onChanged: onBufferChanged,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _NumberField(
+                    label: 'Min notice (min)',
+                    value: advance,
+                    onChanged: onAdvanceChanged,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _NumberField(
+              label: 'Max days ahead',
+              value: maxDays,
+              onChanged: onMaxDaysChanged,
+            ),
+          ],
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: saving ? null : onSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                saving ? 'Saving�' : 'Save Toat Link settings',
+                style: TextStyles.bodyMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayOption {
+  const _DayOption({required this.n, required this.label});
+  final int n;
+  final String label;
+}
+
+class _SlotLengthButton extends StatelessWidget {
+  const _SlotLengthButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary.withAlpha(30) : AppColors.bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: active ? AppColors.primary.withAlpha(80) : AppColors.border,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyles.smallMedium.copyWith(
+            color: active ? AppColors.primary : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeField extends StatelessWidget {
+  const _TimeField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyles.label),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: () async {
+            final parts = value.split(':');
+            final initialTime = TimeOfDay(
+              hour: int.tryParse(parts[0]) ?? 9,
+              minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
+            );
+            final picked = await showTimePicker(
+              context: context,
+              initialTime: initialTime,
+            );
+            if (picked != null) {
+              onChanged(
+                '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(value, style: TextStyles.bodyMedium),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NumberField extends StatelessWidget {
+  const _NumberField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyles.label),
+        const SizedBox(height: 6),
+        TextFormField(
+          initialValue: value.toString(),
+          keyboardType: TextInputType.number,
+          style: TextStyles.bodyMedium,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 11,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            filled: true,
+            fillColor: AppColors.bg,
+          ),
+          onChanged: (v) => onChanged(int.tryParse(v) ?? value),
+        ),
+      ],
     );
   }
 }

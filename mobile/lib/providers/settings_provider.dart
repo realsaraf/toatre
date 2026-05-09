@@ -199,6 +199,141 @@ class SettingsProvider extends ChangeNotifier {
     });
   }
 
+  Future<SettingsPayload> connectMicrosoftCalendar({
+    required SyncDirection direction,
+  }) async {
+    return _runSave('sync-microsoft', () async {
+      final response = await _api.postJson(
+        '/api/sync/microsoft/start',
+        body: <String, Object?>{
+          'direction': syncDirectionToString(direction),
+          'returnTo': '/settings?sync=microsoft',
+        },
+        authenticated: true,
+      );
+      final authUrl = response['authUrl'] as String?;
+      final uri = authUrl == null ? null : Uri.tryParse(authUrl);
+      if (uri == null) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Microsoft Calendar connect URL was not returned.',
+        );
+      }
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Could not open Microsoft Calendar connection.',
+        );
+      }
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> disconnectMicrosoftCalendar() async {
+    return _runSave('sync-microsoft', () async {
+      await _api.postJson('/api/sync/microsoft/disconnect', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> syncMicrosoftNow() async {
+    return _runSave('sync-microsoft-run', () async {
+      await _api.postJson('/api/sync/microsoft/run', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> connectCalendly({
+    required SyncDirection direction,
+  }) async {
+    return _runSave('sync-calendly', () async {
+      final response = await _api.postJson(
+        '/api/sync/calendly/start',
+        body: <String, Object?>{
+          'direction': syncDirectionToString(direction),
+          'returnTo': '/settings?sync=calendly',
+        },
+        authenticated: true,
+      );
+      final authUrl = response['authUrl'] as String?;
+      final uri = authUrl == null ? null : Uri.tryParse(authUrl);
+      if (uri == null) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Calendly connect URL was not returned.',
+        );
+      }
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        throw const ApiServiceException(statusCode: 500, message: 'Could not open Calendly connection.');
+      }
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> disconnectCalendly() async {
+    return _runSave('sync-calendly', () async {
+      await _api.postJson('/api/sync/calendly/disconnect', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> syncCalendlyNow() async {
+    return _runSave('sync-calendly-run', () async {
+      await _api.postJson('/api/sync/calendly/run', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> connectZoom({
+    required SyncDirection direction,
+  }) async {
+    return _runSave('sync-zoom', () async {
+      final response = await _api.postJson(
+        '/api/sync/zoom/start',
+        body: <String, Object?>{
+          'direction': syncDirectionToString(direction),
+          'returnTo': '/settings?sync=zoom',
+        },
+        authenticated: true,
+      );
+      final authUrl = response['authUrl'] as String?;
+      final uri = authUrl == null ? null : Uri.tryParse(authUrl);
+      if (uri == null) {
+        throw const ApiServiceException(statusCode: 500, message: 'Zoom connect URL was not returned.');
+      }
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        throw const ApiServiceException(statusCode: 500, message: 'Could not open Zoom connection.');
+      }
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> disconnectZoom() async {
+    return _runSave('sync-zoom', () async {
+      await _api.postJson('/api/sync/zoom/disconnect', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
+  Future<SettingsPayload> syncZoomNow() async {
+    return _runSave('sync-zoom-run', () async {
+      await _api.postJson('/api/sync/zoom/run', body: <String, Object?>{}, authenticated: true);
+      final latest = await _api.getJson('/api/settings', authenticated: true);
+      return SettingsPayload.fromJson(latest);
+    });
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
