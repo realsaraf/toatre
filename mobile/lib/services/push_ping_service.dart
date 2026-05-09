@@ -15,6 +15,8 @@ class PushPingService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final StreamController<String> _tapController =
       StreamController<String>.broadcast();
+  final StreamController<void> _syncController =
+      StreamController<void>.broadcast();
 
   Future<void>? _initializing;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -25,6 +27,10 @@ class PushPingService {
   String? _registeredToken;
 
   Stream<String> get tappedPayloads => _tapController.stream;
+
+  /// Fires whenever a silent `type: toat-sync` FCM data message arrives
+  /// while the app is in the foreground. Subscribers should refresh toats.
+  Stream<void> get syncRequests => _syncController.stream;
 
   String? takeInitialPayload() {
     final payload = _initialPayload;
@@ -133,6 +139,12 @@ class PushPingService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
+    // Silent cross-device sync signal — ask providers to refresh.
+    if (message.data['type'] == 'toat-sync') {
+      _syncController.add(null);
+      return;
+    }
+
     final payload = _payloadFromMessage(message);
     if (payload == null) {
       return;
@@ -194,5 +206,6 @@ class PushPingService {
     _foregroundMessageSubscription?.cancel();
     _openedMessageSubscription?.cancel();
     _tokenRefreshSubscription?.cancel();
+    _syncController.close();
   }
 }

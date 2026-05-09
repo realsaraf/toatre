@@ -9,6 +9,7 @@ import {
   deleteToatPushReminders,
   syncToatPushReminders,
 } from "@/lib/pings/compute";
+import { notifyUserDevices } from "@/lib/pings/notify-devices";
 
 // â”€â”€â”€ GET /api/toats/[id] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(
@@ -103,6 +104,7 @@ export async function PATCH(
 
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await syncToatPushReminders(result);
+  void notifyUserDevices(user.mongoId, { action: "updated" });
   return NextResponse.json({ toat: serializeToat(result) });
 }
 
@@ -127,6 +129,7 @@ export async function DELETE(
 
   if (result.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await deleteToatPushReminders({ userId: user.mongoId, toatId: id });
+  void notifyUserDevices(user.mongoId, { action: "deleted" });
   return NextResponse.json({ ok: true });
 }
 

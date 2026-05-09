@@ -1,12 +1,24 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:toatre/app.dart';
 import 'package:toatre/firebase_options.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/services/revenue_cat_service.dart';
+
+/// Top-level background message handler — runs in a separate isolate.
+/// Keep this minimal: no UI, no providers. Just store a stale flag.
+/// On next app foreground the [ToatsProvider] will refresh automatically.
+@pragma('vm:entry-point')
+Future<void> _fcmBackgroundHandler(RemoteMessage message) async {
+  // Background data messages of type 'toat-sync' are handled by the
+  // foreground resume path in app.dart when the user opens the app.
+  // No further work needed here — Firebase Messaging already ensures
+  // the Dart VM is woken for this callback.
+}
 
 // Injected at build time via --dart-define or Codemagic env vars
 const _kMixpanelToken = String.fromEnvironment(
@@ -36,6 +48,7 @@ Future<void> main() async {
   );
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_fcmBackgroundHandler);
 
   // Analytics (Firebase Analytics + Mixpanel)
   await AnalyticsService.init(mixpanelToken: _kMixpanelToken);

@@ -22,7 +22,16 @@ private func loadToats() -> [WidgetToat] {
         let json = defaults.string(forKey: "toat_data"),
         let data = json.data(using: .utf8)
     else { return [] }
-    return (try? JSONDecoder().decode([WidgetToat].self, from: data)) ?? []
+    let toats = (try? JSONDecoder().decode([WidgetToat].self, from: data)) ?? []
+    // Always sort chronologically: timed toats first (ascending), untimed last.
+    return toats.sorted { lhs, rhs in
+        switch (parseISO(lhs.time), parseISO(rhs.time)) {
+        case let (l?, r?): return l < r
+        case (_?, nil):    return true
+        case (nil, _?):    return false
+        case (nil, nil):   return false
+        }
+    }
 }
 
 private func parseISO(_ string: String?) -> Date? {

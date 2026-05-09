@@ -34,6 +34,8 @@ class _ToatreAppState extends State<ToatreApp> {
   StreamSubscription<Uri>? _deepLinkSubscription;
   StreamSubscription<String>? _pingTapSubscription;
   StreamSubscription<String>? _pushPingTapSubscription;
+  StreamSubscription<void>? _syncSubscription;
+  AppLifecycleListener? _lifecycleListener;
   String? _lastHandledSharedToken;
   String? _pendingSharedToken;
   String? _lastHandledPingPayload;
@@ -45,6 +47,9 @@ class _ToatreAppState extends State<ToatreApp> {
     unawaited(_configureDeepLinks());
     unawaited(_configureLocalPings());
     unawaited(_configurePushPings());
+    _lifecycleListener = AppLifecycleListener(
+      onResume: _onAppResumed,
+    );
   }
 
   Future<void> _configureDeepLinks() async {
@@ -103,6 +108,18 @@ class _ToatreAppState extends State<ToatreApp> {
       _queuePing,
       onError: (_) {},
     );
+    _syncSubscription = PushPingService.instance.syncRequests.listen(
+      (_) => _refreshToats(),
+      onError: (_) {},
+    );
+  }
+
+  void _onAppResumed() => _refreshToats();
+
+  void _refreshToats() {
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+    Provider.of<ToatsProvider>(context, listen: false).fetchToats().ignore();
   }
 
   void _queuePing(String? payload) {
@@ -179,6 +196,8 @@ class _ToatreAppState extends State<ToatreApp> {
     _deepLinkSubscription?.cancel();
     _pingTapSubscription?.cancel();
     _pushPingTapSubscription?.cancel();
+    _syncSubscription?.cancel();
+    _lifecycleListener?.dispose();
     PushPingService.instance.dispose();
     super.dispose();
   }

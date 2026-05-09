@@ -6,6 +6,7 @@ import { z } from "zod";
 import { migrateTemplateData, migrateStatus, type Enrichments } from "@/types";
 import { EnrichmentsSchema } from "@/lib/ai/extract";
 import { syncToatPushReminders } from "@/lib/pings/compute";
+import { notifyUserDevices } from "@/lib/pings/notify-devices";
 
 const ToatQuerySchema = z.object({
   range: z.enum(["today", "week", "upcoming", "past", "all"]).optional().default("all"),
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
   const saved = await toats.findOne({ _id: result.insertedId });
   if (saved) {
     await syncToatPushReminders(saved);
+    void notifyUserDevices(user.mongoId, { action: "created" });
   }
   return NextResponse.json({ toat: serializeToat(saved!) }, { status: 201 });
 }
