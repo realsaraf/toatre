@@ -69,6 +69,13 @@ class ToatSummary {
     return _parseDate(timeEnrichment?['endAt']);
   }
 
+  /// Duration in minutes from the time enrichment.
+  /// Returns null when there is no time set; default display is 60 min.
+  int? get duration {
+    final d = timeEnrichment?['duration'];
+    return d is int ? d : null;
+  }
+
   String? get location {
     return placeEnrichment?['address'] as String? ??
         placeEnrichment?['placeName'] as String? ??

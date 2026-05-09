@@ -14,28 +14,70 @@ class WhenWhereCard extends StatelessWidget {
     required this.toat,
     required this.onChangeLocation,
     required this.onRemoveLocation,
+    this.onChangeDuration,
   });
 
   final ToatSummary toat;
   final VoidCallback? onChangeLocation;
   final VoidCallback? onRemoveLocation;
+  final VoidCallback? onChangeDuration;
 
   String _formatWhen(ToatSummary t) {
     if (t.datetime == null) return 'Any time';
     final start = DateFormat.yMMMd().add_jm().format(t.datetime!);
     if (t.endDatetime == null) return start;
-    return '$start → ${DateFormat.jm().format(t.endDatetime!)}';
+    return '$start \u2192 ${DateFormat.jm().format(t.endDatetime!)}';
+  }
+
+  String _formatDuration(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = toat.location;
     final hasLocation = loc != null && loc.isNotEmpty;
+    final hasTime = toat.datetime != null;
     return SectionCard(
       title: 'When & where',
       child: Column(
         children: [
           InfoRow(label: 'When', value: _formatWhen(toat)),
+          if (hasTime)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 84,
+                    child: Text(
+                      'Duration',
+                      style: TextStyles.smallMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatDuration(toat.duration ?? 60),
+                    style: TextStyles.body,
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: onChangeDuration,
+                    child: Text(
+                      'Edit',
+                      style: TextStyles.small.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (hasLocation)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),

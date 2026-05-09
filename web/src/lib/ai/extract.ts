@@ -13,6 +13,7 @@ const TimeSchema = z.object({
   dueAt: z.string().nullable().optional(),
   reminderAt: z.string().nullable().optional(),
   recurrence: z.string().nullable().optional(),
+  duration: z.number().int().positive().nullable().optional(),
 });
 
 const PlaceSchema = z.object({

@@ -372,6 +372,105 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     });
   }
 
+  Future<void> _editDuration() async {
+    final currentDuration = _toat.duration ?? 60;
+    // Common durations in minutes
+    final options = [15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 480];
+    final initialIndex = () {
+      final i = options.indexOf(currentDuration);
+      return i == -1 ? 3 : i;  // 3 = index of 60 min
+    }();
+
+    int selected = options[initialIndex < 0 ? 3 : initialIndex];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx2, setSheetState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Duration',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx2).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(ctx2).pop();
+                            _saveDuration(selected);
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 160,
+                    child: CupertinoPicker(
+                      scrollController: FixedExtentScrollController(
+                        initialItem: options.contains(selected)
+                            ? options.indexOf(selected)
+                            : 3,
+                      ),
+                      itemExtent: 38,
+                      onSelectedItemChanged: (i) =>
+                          setSheetState(() => selected = options[i]),
+                      children: options.map((m) {
+                        if (m < 60) return Text('$m min');
+                        final h = m ~/ 60;
+                        final rem = m % 60;
+                        final label = rem == 0 ? '${h}h' : '${h}h ${rem}m';
+                        return Text(label);
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveDuration(int minutes) async {
+    final existing = Map<String, dynamic>.from(
+      _toat.timeEnrichment ?? const <String, dynamic>{},
+    );
+    existing['duration'] = minutes;
+
+    await _runAction('duration', () async {
+      final updated = await context.read<ToatsProvider>().updateToat(
+        _toat.id,
+        {'enrichments.time': existing},
+      );
+      if (!mounted) return;
+      setState(() => _toat = updated);
+    });
+  }
+
   Future<void> _delete() async {
     final shouldDelete =
         await showDialog<bool>(
@@ -543,6 +642,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
           toat: _toat,
           onChangeLocation: _workingAction == null ? _openLocationSearch : null,
           onRemoveLocation: _workingAction == null ? _removeLocation : null,
+          onChangeDuration: _workingAction == null ? _editDuration : null,
         ),
         const SizedBox(height: 16),
       ],
