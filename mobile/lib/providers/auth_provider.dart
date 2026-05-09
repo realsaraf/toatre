@@ -105,7 +105,7 @@ class AuthProvider extends ChangeNotifier {
           handle: _handle,
         );
         await AnalyticsService.logSignUp(method: 'handle');
-        await PushPingService.instance.ensureRegistered();
+        unawaited(PushPingService.instance.ensureRegistered());
       }
     } on AuthServiceException catch (error) {
       _status = AuthStatus.needsHandle;
@@ -164,7 +164,7 @@ class AuthProvider extends ChangeNotifier {
         handle: _handle,
       );
       if (profile.hasHandle) {
-        await PushPingService.instance.ensureRegistered();
+        unawaited(PushPingService.instance.ensureRegistered());
       }
     } on AuthServiceException catch (error) {
       _status = AuthStatus.error;
