@@ -10,10 +10,10 @@ class SuggestedSlot {
   });
 
   factory SuggestedSlot.fromJson(Map<String, Object?> json) => SuggestedSlot(
-        startIso: (json['startIso'] as String?) ?? '',
-        endIso: (json['endIso'] as String?) ?? '',
-        label: (json['label'] as String?) ?? '',
-      );
+    startIso: (json['startIso'] as String?) ?? '',
+    endIso: (json['endIso'] as String?) ?? '',
+    label: (json['label'] as String?) ?? '',
+  );
 
   final String startIso;
   final String endIso;

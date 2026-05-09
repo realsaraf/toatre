@@ -64,13 +64,21 @@ class AnalyticsService {
   static Future<void> logLogin({required String method}) async {
     await _fa?.logLogin(loginMethod: method);
     _mp?.track('Login', properties: {'method': method});
-    if (_phReady) await Posthog().capture(eventName: 'Login', properties: {'method': method});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Login',
+        properties: {'method': method},
+      );
   }
 
   static Future<void> logSignUp({required String method}) async {
     await _fa?.logSignUp(signUpMethod: method);
     _mp?.track('Sign Up', properties: {'method': method});
-    if (_phReady) await Posthog().capture(eventName: 'Sign Up', properties: {'method': method});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Sign Up',
+        properties: {'method': method},
+      );
   }
 
   // ─── Capture / Toat events ────────────────────────────────────────────────
@@ -122,13 +130,21 @@ class AnalyticsService {
   static Future<void> logToatCompleted({required String kind}) async {
     await _fa?.logEvent(name: 'toat_completed', parameters: {'kind': kind});
     _mp?.track('Toat Completed', properties: {'kind': kind});
-    if (_phReady) await Posthog().capture(eventName: 'Toat Completed', properties: {'kind': kind});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Toat Completed',
+        properties: {'kind': kind},
+      );
   }
 
   static Future<void> logToatDeleted({required String kind}) async {
     await _fa?.logEvent(name: 'toat_deleted', parameters: {'kind': kind});
     _mp?.track('Toat Deleted', properties: {'kind': kind});
-    if (_phReady) await Posthog().capture(eventName: 'Toat Deleted', properties: {'kind': kind});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Toat Deleted',
+        properties: {'kind': kind},
+      );
   }
 
   // ─── Ping events ──────────────────────────────────────────────────────────
@@ -136,7 +152,11 @@ class AnalyticsService {
   static Future<void> logPingFired({required String channel}) async {
     await _fa?.logEvent(name: 'ping_fired', parameters: {'channel': channel});
     _mp?.track('Ping Fired', properties: {'channel': channel});
-    if (_phReady) await Posthog().capture(eventName: 'Ping Fired', properties: {'channel': channel});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Ping Fired',
+        properties: {'channel': channel},
+      );
   }
 
   static Future<void> logPingTapped() async {
@@ -158,7 +178,11 @@ class AnalyticsService {
   static Future<void> logPaywallShown({required String reason}) async {
     await _fa?.logEvent(name: 'paywall_shown', parameters: {'reason': reason});
     _mp?.track('Paywall Shown', properties: {'reason': reason});
-    if (_phReady) await Posthog().capture(eventName: 'Paywall Shown', properties: {'reason': reason});
+    if (_phReady)
+      await Posthog().capture(
+        eventName: 'Paywall Shown',
+        properties: {'reason': reason},
+      );
   }
 
   static Future<void> logProPurchaseStarted() async {

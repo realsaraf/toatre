@@ -84,9 +84,21 @@ function toatPeople(toat: TimelineToat): string[] {
 
 function buildDayGroups(toats: TimelineToat[], now: Date): DayGroup[] {
   const buckets = new Map<string, TimelineToat[]>();
+  const today = startOfDay(now);
 
   for (const toat of toats) {
-    const key = toatTime(toat) ? startOfDay(new Date(toatTime(toat)!)).toISOString() : "undated";
+    const t = toatTime(toat);
+    let key: string;
+    if (!t) {
+      key = "undated";
+    } else {
+      const dayStart = startOfDay(new Date(t));
+      if (dayStart < today) {
+        key = "overdue"; // All past items grouped together
+      } else {
+        key = dayStart.toISOString();
+      }
+    }
     const existing = buckets.get(key) ?? [];
     existing.push(toat);
     buckets.set(key, existing);
@@ -96,13 +108,17 @@ function buildDayGroups(toats: TimelineToat[], now: Date): DayGroup[] {
     .sort(([leftKey], [rightKey]) => {
       if (leftKey === "undated") return 1;
       if (rightKey === "undated") return -1;
+      if (leftKey === "overdue") return -1;
+      if (rightKey === "overdue") return 1;
       return new Date(leftKey).getTime() - new Date(rightKey).getTime();
     })
     .map(([key, groupToats]) => {
       if (key === "undated") {
         return { key, title: "Someday", subtitle: "Whenever you get to it", toats: sortToats(groupToats) };
       }
-
+      if (key === "overdue") {
+        return { key, title: "Overdue", subtitle: "Past due", toats: sortToats(groupToats) };
+      }
       const groupDate = new Date(key);
       return {
         key,
@@ -111,6 +127,19 @@ function buildDayGroups(toats: TimelineToat[], now: Date): DayGroup[] {
         toats: sortToats(groupToats),
       };
     });
+}
+
+function isInWeek(toat: TimelineToat, now: Date): boolean {
+  const t = toatTime(toat);
+  if (!t) return false; // no datetime → someday
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+  return new Date(t) < end; // includes overdue (past dates)
+}
+
+function weekRangeLabel(now: Date): string {
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${fmt(now)} – ${fmt(end)}`;
 }
 
 function sortToats(toats: TimelineToat[]) {
@@ -262,7 +291,7 @@ export default function TimelinePage() {
   const { user, loading: authLoading } = useAuth();
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [toats, setToats] = useState<TimelineToat[]>([]);
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [selectedRange, setSelectedRange] = useState<'week' | 'someday'>('week');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [finishingToatId, setFinishingToatId] = useState<string | null>(null);
@@ -328,14 +357,11 @@ export default function TimelinePage() {
   }, []);
 
   const activeToats = toats.filter((toat) => toat.state === "open");
-  const groups = buildDayGroups(activeToats, now);
-  const resolvedSelectedDayKey = selectedDayKey && groups.some((group) => group.key === selectedDayKey)
-    ? selectedDayKey
-    : (groups.find((group) => group.title === "Today") ?? groups[0])?.key ?? null;
-  const activeGroup = groups.find((group) => group.key === resolvedSelectedDayKey) ?? groups[0] ?? null;
-  const visibleToats = activeGroup?.toats ?? [];
-  const sections = buildSections(visibleToats);
-  const upNext = getUpNext(activeToats, new Date());
+  const weekToats = activeToats.filter((toat) => isInWeek(toat, now));
+  const somedayToats = activeToats.filter((toat) => !isInWeek(toat, now));
+  const visibleToats = selectedRange === 'week' ? weekToats : somedayToats;
+  const visibleGroups = buildDayGroups(visibleToats, now);
+  const upNext = selectedRange === 'week' ? getUpNext(weekToats, new Date()) : null;
   const lastToat = visibleToats[visibleToats.length - 1] ?? null;
   const loading = authLoading || (Boolean(user) && !hasLoadedData);
   const isPhoneViewport = viewportWidth === null || viewportWidth <= 768;
@@ -401,31 +427,31 @@ export default function TimelinePage() {
         <section style={{ ...styles.headingRow, ...(isPhoneViewport ? styles.headingRowCompact : {}) }}>
             <div style={{ position: "relative", flex: 1 }}>
               <button type="button" onClick={() => setPickerOpen((value) => !value)} style={{ ...styles.dayButton, ...(isPhoneViewport ? styles.dayButtonCompact : {}) }}>
-                <span style={styles.dayButtonLabel}>{activeGroup?.title ?? "Timeline"}</span>
+                <span style={styles.dayButtonLabel}>{selectedRange === 'week' ? 'Next 7 days' : 'Someday'}</span>
                 <ChevronDownIcon size={22} />
               </button>
-              <p style={{ ...styles.dayButtonSubtitle, ...(isPhoneViewport ? styles.dayButtonSubtitleCompact : {}) }}>{activeGroup?.subtitle ?? "Your next toats"}</p>
+              <p style={{ ...styles.dayButtonSubtitle, ...(isPhoneViewport ? styles.dayButtonSubtitleCompact : {}) }}>{selectedRange === 'week' ? weekRangeLabel(now) : 'Whenever you get to it'}</p>
 
               {pickerOpen ? (
                 <div style={{ ...styles.dayPicker, ...(isPhoneViewport ? styles.dayPickerCompact : {}) }}>
-                  {groups.map((group) => (
+                  {(['week', 'someday'] as const).map((range) => (
                     <button
-                      key={group.key}
+                      key={range}
                       type="button"
                       onClick={() => {
-                        setSelectedDayKey(group.key);
+                        setSelectedRange(range);
                         setPickerOpen(false);
                       }}
                       style={{
                         ...styles.dayPickerItem,
-                        background: group.key === activeGroup?.key ? "rgba(91,61,245,0.10)" : "transparent",
+                        background: range === selectedRange ? "rgba(91,61,245,0.10)" : "transparent",
                       }}
                     >
                       <span>
-                        <span style={styles.dayPickerTitle}>{group.title}</span>
-                        <span style={styles.dayPickerSubtitle}>{group.subtitle}</span>
+                        <span style={styles.dayPickerTitle}>{range === 'week' ? 'Next 7 days' : 'Someday'}</span>
+                        <span style={styles.dayPickerSubtitle}>{range === 'week' ? weekRangeLabel(now) : 'Whenever you get to it'}</span>
                       </span>
-                      <span style={styles.dayPickerCount}>{group.toats.length}</span>
+                      <span style={styles.dayPickerCount}>{range === 'week' ? weekToats.length : somedayToats.length}</span>
                     </button>
                   ))}
                 </div>
@@ -445,11 +471,11 @@ export default function TimelinePage() {
 
         {!loading && visibleToats.length > 0 ? (
             <section>
-              {sections.map((section) => (
-                <div key={section.label} style={styles.sectionBlock}>
-                  <h2 style={{ ...styles.sectionTitle, ...(isPhoneViewport ? styles.sectionTitleCompact : {}) }}>{section.label}</h2>
+              {visibleGroups.map((group) => (
+                <div key={group.key} style={styles.sectionBlock}>
+                  <h2 style={{ ...styles.sectionTitle, ...(isPhoneViewport ? styles.sectionTitleCompact : {}) }}>{group.title}</h2>
                   <div style={{ ...styles.sectionRows, ...(isPhoneViewport ? styles.sectionRowsCompact : {}) }}>
-                    {section.toats.map((toat) => (
+                    {group.toats.map((toat) => (
                       <TimelineRow
                         key={toat.id}
                         toat={toat}
@@ -480,7 +506,7 @@ export default function TimelinePage() {
               <p style={{ ...styles.clearHeadline, ...(isPhoneViewport ? styles.clearHeadlineCompact : {}) }}>
                 {lastToat && toatTime(lastToat) ? `You're all clear after ${formatTime(new Date(toatTime(lastToat)!))}` : "You're all clear."}
               </p>
-              <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>Enjoy your {lastToat && toatTime(lastToat) && new Date(toatTime(lastToat)!).getHours() < 17 ? "evening" : "day"}.</p>
+              <p style={{ ...styles.clearSub, ...(isPhoneViewport ? styles.clearSubCompact : {}) }}>{selectedRange === 'week' ? "Nothing else in the next 7 days." : "Nothing else in someday."}</p>
             </div>
           </div>
           <div style={{ ...styles.clearScene, ...(isPhoneViewport ? styles.clearSceneCompact : {}) }}>

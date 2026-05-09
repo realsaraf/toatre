@@ -331,8 +331,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
               child: Container(
                 decoration: const BoxDecoration(
                   color: AppColors.bgElevated,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: Column(

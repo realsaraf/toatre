@@ -301,7 +301,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
-  Future<void> _openSearch() async {    final changed = await Navigator.of(
+  Future<void> _openSearch() async {
+    final changed = await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const SearchScreen()));
     if (!mounted || changed != true) {
@@ -545,12 +546,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (diff < 0) return 'Overdue';
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
-    const weekdays = [
-      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-    ];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${weekdays[dateTime.weekday - 1]}, '
         '${months[dateTime.month - 1]} ${dateTime.day}';
@@ -644,7 +653,8 @@ class _TimelineRangeDialog extends StatelessWidget {
                   _TimelineRangeOption(
                     range: _TimelineRange.week,
                     title: 'Next 7 days',
-                    subtitle: '${_dateLabel(DateTime.now())} – '
+                    subtitle:
+                        '${_dateLabel(DateTime.now())} – '
                         '${_dateLabel(DateTime.now().add(const Duration(days: 6)))}',
                     count: counts[_TimelineRange.week] ?? 0,
                     selected: selectedRange == _TimelineRange.week,
@@ -1780,9 +1790,7 @@ class _FindSlotButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

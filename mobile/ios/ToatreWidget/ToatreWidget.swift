@@ -140,11 +140,10 @@ private func kindAccent(_ kind: String) -> Color {
     }
 }
 
-private func subtitleText(for toat: WidgetToat) -> String {
-    if let location = toat.location, !location.isEmpty {
-        return location
-    }
-    return toat.kind.capitalized
+/// Returns the time string for a toat ("3:00 PM") or "No time set".
+private func timeSubtitle(for toat: WidgetToat) -> String {
+    guard let date = parseISO(toat.time) else { return "No time set" }
+    return timeOnly(date)
 }
 
 private func tierLabel(_ tier: String) -> String {
@@ -168,12 +167,15 @@ private func awayLabel(_ date: Date) -> String {
     return "\(hours)h \(remainder)m away"
 }
 
-private func listTimeLabel(_ date: Date) -> String {
-    let calendar = Calendar.current
-    if calendar.isDateInTomorrow(date) {
-        return "Tomorrow"
-    }
-    return timeOnly(date).uppercased()
+/// Returns a relative day label: "Overdue", "Today", "Tomorrow", or "Mon, May 11".
+private func dayLabel(_ date: Date) -> String {
+    let cal = Calendar.current
+    if !cal.isDateInToday(date) && date < Date() { return "Overdue" }
+    if cal.isDateInToday(date)    { return "Today" }
+    if cal.isDateInTomorrow(date) { return "Tomorrow" }
+    let fmt = DateFormatter()
+    fmt.dateFormat = "EEE, MMM d"
+    return fmt.string(from: date)
 }
 
 private func attentionCount(_ toats: [WidgetToat]) -> Int {
@@ -483,7 +485,8 @@ private struct HeroToatCard: View {
                                 .foregroundColor(textPrimary)
                                 .lineLimit(2)
 
-                            Text(subtitleText(for: toat))
+                            // Day label beneath title (time is shown in badge above)
+                            Text(date.map { dayLabel($0) } ?? "Someday")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(textSecondary)
                                 .lineLimit(1)
@@ -529,7 +532,8 @@ private struct MediumLeadCard: View {
                         .foregroundColor(textPrimary)
                         .lineLimit(2)
 
-                    Text(subtitleText(for: toat))
+                    // Day label beneath title (awayLabel below already covers time)
+                    Text(date.map { dayLabel($0) } ?? "Someday")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(textSecondary)
                         .lineLimit(1)
@@ -567,18 +571,18 @@ private struct ScheduleRow: View {
                 .padding(.top, 4)
 
             VStack(alignment: .leading, spacing: 3) {
-                if let date {
-                    Text(listTimeLabel(date))
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(kindAccent(toat.kind))
-                }
+                // Day label — "Today", "Tomorrow", "Overdue", "Mon, May 11"
+                Text(date.map { dayLabel($0) } ?? "Someday")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(date == nil ? textSecondary : kindAccent(toat.kind))
 
                 Text(toat.title)
                     .font(.system(size: largeIcon ? 16 : 14, weight: .semibold))
                     .foregroundColor(textPrimary)
                     .lineLimit(1)
 
-                Text(subtitleText(for: toat))
+                // Time — "3:00 PM" or "No time set"
+                Text(timeSubtitle(for: toat))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(textSecondary)
                     .lineLimit(1)
@@ -639,7 +643,7 @@ private struct SmallWidgetView: View {
                                     .foregroundColor(textPrimary)
                                     .lineLimit(2)
 
-                                Text(subtitleText(for: first))
+                                Text(timeSubtitle(for: first))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(textSecondary)
                                     .lineLimit(1)
