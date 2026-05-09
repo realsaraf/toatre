@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Toatre uses the microphone when you capture toats by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Toatre transcribes your voice on-device for faster, private capture.</string>
 	<key>GIDClientID</key>
 	<string>1021588615586-85r84b6fddqq7343fhfdbs6sgv4ffmft.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>

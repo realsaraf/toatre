@@ -166,10 +166,13 @@ class _ListeningStateState extends State<_ListeningState> {
           _TranscriptCard(
             text: capture.transcript.isNotEmpty
                 ? capture.transcript
+                : isRecording && capture.liveTranscript.isNotEmpty
+                ? capture.liveTranscript
                 : isRecording
                 ? 'I\'m listening for multiple toats in one capture.'
                 : 'You can say multiple things - I\'ll organise them for you.',
-            hasTranscript: capture.transcript.isNotEmpty,
+            hasTranscript: capture.transcript.isNotEmpty ||
+                (isRecording && capture.liveTranscript.isNotEmpty),
           ),
           if (capture.error != null) ...[
             const SizedBox(height: 12),
@@ -388,14 +391,18 @@ class _ReviewStateState extends State<_ReviewState> {
         toat: toat,
         onSave: (updated) {
           widget.capture.updateToatLocally(updated);
-          // Also patch the server
+          // Persist changes immediately so the server is in sync.
           final api = ApiService.instance;
           api.patchJson(
             '/api/toats/${toat.id}',
             body: <String, Object?>{
               'title': updated.title,
-              'datetime': updated.datetime?.toIso8601String(),
-              'location': updated.location,
+              'tier': updated.tier,
+              if (updated.placeEnrichment != null)
+                'enrichments.place': updated.placeEnrichment,
+              if (updated.placeEnrichment == null &&
+                  toat.placeEnrichment != null)
+                'enrichments.place': null,
             },
             authenticated: true,
           );
@@ -946,12 +953,14 @@ class _EditCaptureToatModal extends StatefulWidget {
 class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _locationCtrl;
+  late String _tier;
 
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController(text: widget.toat.title);
     _locationCtrl = TextEditingController(text: widget.toat.location ?? '');
+    _tier = widget.toat.tier;
   }
 
   @override
@@ -971,6 +980,7 @@ class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
     }
     final updated = widget.toat.copyWith(
       title: _titleCtrl.text.trim(),
+      tier: _tier,
       enrichments: newEnrichments,
     );
     widget.onSave(updated);
@@ -1043,6 +1053,52 @@ class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
                 borderSide: BorderSide.none,
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Tier',
+            style: TextStyles.smallMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final t in ['urgent', 'important', 'regular'])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _tier = t),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _tier == t
+                            ? AppColors.primary.withValues(alpha: 0.15)
+                            : AppColors.bgElevated,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _tier == t
+                              ? AppColors.primary
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        t[0].toUpperCase() + t.substring(1),
+                        style: TextStyles.small.copyWith(
+                          color:
+                              _tier == t ? AppColors.primary : AppColors.text,
+                          fontWeight: _tier == t
+                              ? FontWeight.w700
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 24),
           SizedBox(

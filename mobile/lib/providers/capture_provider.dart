@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/services/analytics_service.dart';
@@ -17,12 +19,17 @@ enum CaptureInputMode { voice, text }
 class CaptureProvider extends ChangeNotifier {
   final ApiService _api = ApiService.instance;
   final AudioRecorder _recorder = AudioRecorder();
+  final SpeechToText _stt = SpeechToText();
   final Random _random = Random();
+
+  // Whether on-device STT is available and being used this session.
+  bool _usingOnDeviceStt = false;
 
   CaptureStatus _status = CaptureStatus.idle;
   CaptureInputMode _mode = CaptureInputMode.voice;
   String? _error;
   String _transcript = '';
+  String _liveTranscript = ''; // On-device STT partial result
   int _elapsedSeconds = 0;
   String? _recordingPath;
   List<double> _waveform = List<double>.filled(18, 0.15);
@@ -37,6 +44,8 @@ class CaptureProvider extends ChangeNotifier {
   CaptureInputMode get mode => _mode;
   String? get error => _error;
   String get transcript => _transcript;
+  /// Live partial transcript from on-device STT (shown during recording).
+  String get liveTranscript => _liveTranscript;
   int get elapsedSeconds => _elapsedSeconds;
   List<double> get waveform => _waveform;
   List<ToatSummary> get toats => _toats;
@@ -45,6 +54,8 @@ class CaptureProvider extends ChangeNotifier {
   bool get isProcessing => _status == CaptureStatus.processing;
   bool get isReviewing => _status == CaptureStatus.review;
   bool get isTextMode => _mode == CaptureInputMode.text;
+  /// True when recording with on-device speech recognition.
+  bool get isUsingOnDeviceStt => _usingOnDeviceStt;
 
   String? get captureId => _captureId;
 
@@ -67,29 +78,55 @@ class CaptureProvider extends ChangeNotifier {
     _selectedIds = <String>{};
     _elapsedSeconds = 0;
     _waveform = List<double>.filled(18, 0.15);
+    _liveTranscript = '';
+    _usingOnDeviceStt = false;
 
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) {
-      _status = CaptureStatus.error;
-      _error = 'Microphone permission is required.';
+    // Prefer on-device STT (faster + private). Fall back to file+Whisper.
+    final sttAvailable = await _stt.initialize(
+      onError: (_) {},
+      onStatus: (_) {},
+    );
+
+    if (sttAvailable) {
+      _usingOnDeviceStt = true;
+      _status = CaptureStatus.recording;
       notifyListeners();
-      return;
+      await AnalyticsService.logVoiceCaptureStarted();
+
+      _stt.listen(
+        onResult: _onSttResult,
+        listenFor: const Duration(minutes: 5),
+        pauseFor: const Duration(seconds: 4),
+        listenOptions: SpeechListenOptions(
+          cancelOnError: false,
+          partialResults: true,
+        ),
+      );
+    } else {
+      // Fallback: record to file, send to Whisper.
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        _status = CaptureStatus.error;
+        _error = 'Microphone permission is required.';
+        notifyListeners();
+        return;
+      }
+
+      final dir = await getTemporaryDirectory();
+      _recordingPath = p.join(
+        dir.path,
+        'capture-${DateTime.now().millisecondsSinceEpoch}.m4a',
+      );
+
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: _recordingPath!,
+      );
+
+      _status = CaptureStatus.recording;
+      notifyListeners();
+      await AnalyticsService.logVoiceCaptureStarted();
     }
-
-    final dir = await getTemporaryDirectory();
-    _recordingPath = p.join(
-      dir.path,
-      'capture-${DateTime.now().millisecondsSinceEpoch}.m4a',
-    );
-
-    await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: _recordingPath!,
-    );
-
-    _status = CaptureStatus.recording;
-    notifyListeners();
-    await AnalyticsService.logVoiceCaptureStarted();
 
     _elapsedTimer?.cancel();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -107,6 +144,11 @@ class CaptureProvider extends ChangeNotifier {
     });
   }
 
+  void _onSttResult(SpeechRecognitionResult result) {
+    _liveTranscript = result.recognizedWords;
+    notifyListeners();
+  }
+
   Future<void> stopRecording() async {
     if (_status != CaptureStatus.recording) {
       return;
@@ -117,10 +159,48 @@ class CaptureProvider extends ChangeNotifier {
     _status = CaptureStatus.processing;
     notifyListeners();
 
-    final recordedPath = await _recorder.stop();
     await AnalyticsService.logVoiceCaptureStopped(
       durationMs: _elapsedSeconds * 1000,
     );
+
+    if (_usingOnDeviceStt) {
+      await _stt.stop();
+      final captured = _liveTranscript.trim();
+      _usingOnDeviceStt = false;
+
+      if (captured.isNotEmpty) {
+        // On-device transcription succeeded — post as text capture.
+        try {
+          final response = await _api.postJson(
+            '/api/captures',
+            body: <String, Object?>{
+              'transcript': captured,
+              'timezone': _deviceTimezone(),
+            },
+            authenticated: true,
+          );
+          await _applyCaptureResponse(response, fromVoice: true);
+        } on ApiServiceException catch (error) {
+          _status = CaptureStatus.error;
+          _error = error.message;
+        } catch (_) {
+          _status = CaptureStatus.error;
+          _error = 'Capture failed. Try again.';
+        }
+        notifyListeners();
+        return;
+      }
+
+      // On-device returned empty — fall through to file recording fallback.
+      // Ask user to try again (no file was recorded this session).
+      _status = CaptureStatus.error;
+      _error = 'Speech not recognised. Try speaking again.';
+      notifyListeners();
+      return;
+    }
+
+    // Whisper fallback path (file recording).
+    final recordedPath = await _recorder.stop();
 
     if (recordedPath == null || recordedPath.isEmpty) {
       _status = CaptureStatus.error;
