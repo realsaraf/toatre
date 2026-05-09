@@ -15,12 +15,27 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-05-07
-**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; latest dogfood fixes pushed to `main`; remaining: Playwright account steps)
+**Last updated:** 2026-05-12
+**Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; STT+edit review+email reminders+defaultTier+account deletion+schedule suggest shipped; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-11 (cross-device sync + toat duration + reminder edit) — completed
+- iOS widget: sorts toats chronologically in Swift `loadToats()`.
+- Cross-device sync: `notifyUserDevices()` helper sends silent `type:toat-sync` FCM data message to all user devices after every toat POST/PATCH/DELETE on web. Mobile `PushPingService` exposes `syncRequests` stream; `AppLifecycleListener` triggers `ToatsProvider.fetchToats()` on foreground resume; top-level `_fcmBackgroundHandler` registered for FCM background messages.
+- Toat duration: `duration` field (minutes) added to `TimeEnrichment` type, Zod schema, `ToatSummary`, `WhenWhereCard` (shows/edits via Cupertino picker), and `toat_detail_screen._editDuration`.
+- Editable reminder offset: `reminderOffset` (minutes before event) added to `TimeEnrichment`, Zod schema, `compute.ts` (uses offset instead of hardcoded 10 min), `ToatSummary`, `WhenWhereCard` Remind row, and `toat_detail_screen._editReminder` Cupertino picker.
+- Validation: `flutter analyze` + `npx tsc --noEmit` clean. Commits: `f403871`, `c1c85c9`, `f66afce`.
+
+### Session 2026-05-12 (STT, edit review, email, settings, account deletion, schedule suggest) — completed
+- On-device STT: `CaptureProvider` uses `speech_to_text: ^7.0.0` with `SpeechListenOptions`; live transcript shown in `_TranscriptCard`; skips Whisper when on-device STT available. iOS `Info.plist` speech recognition permission added.
+- Toat edit before save: tier picker pills added to `_EditCaptureToatModal`; `_openEditModal` patches `title`, `tier`, `enrichments.place`. Commit: `8593e8c`.
+- Resend email reminders: `web/src/lib/email/resend.ts` (singleton client), `web/src/lib/email/reminder.ts` (dark HTML template), `compute.ts` emits `channel:email` for `leave-by` moment, `dispatch.ts` processes email queue. Commit: `b02c4f1`.
+- defaultTier setting: web `settings/route.ts` + `defaults.ts`, mobile `AppSettings`, `SettingsProvider.saveGeneral()`, `settings_screen._GeneralTab` tier selector pills. Commit: `fc60e7e`.
+- Account deletion: `DELETE /api/users/me` wipes all MongoDB collections + Firebase Auth user; `SettingsProvider.deleteAccount()`; `_deleteAccount()` confirmation dialog in settings; `_DangerZoneCard` in General tab. Commit: `da85523`.
+- AI scheduling suggest: `POST /api/schedule/suggest` (GPT parses NL query → window + duration → finds clash-free 15-min-aligned slots); `ScheduleProvider` on mobile; "Find a slot" pill in timeline header opens `_ScheduleSuggestSheet` bottom sheet. Commit: `756e4a4`.
 
 ### Session 2026-05-07 (reminder Ping delivery) — completed
 - Added mobile reminder delivery through both local scheduling and FCM registration: local Pings now respect the saved per-kind push settings, auth startup loads those settings before timeline fetches, and sign-out clears scheduled local Pings.
