@@ -21,12 +21,11 @@ class WidgetService {
     _initialized = true;
   }
 
-  /// Serializes the next [maxItems] upcoming open toats and pushes them to
+  /// Serializes the next [maxItems] open toats and pushes them to
   /// the widget's shared UserDefaults, then asks WidgetKit to reload.
   ///
-  /// "Upcoming" = open, has a datetime, datetime >= now.
-  /// If none today, uses tomorrow's, then the day after — i.e. just
-  /// chronologically the soonest ones.
+  /// Order matches the timeline: overdue (oldest first) → upcoming
+  /// (chronological) → unscheduled (most-recently-updated first).
   static Future<void> update(
     List<ToatSummary> toats, {
     int maxItems = 8,
@@ -35,33 +34,35 @@ class WidgetService {
 
     final now = DateTime.now();
 
-    final upcoming =
-        toats
-            .where(
-              (t) =>
-                  t.state == 'open' &&
-                  t.datetime != null &&
-                  t.datetime!.isAfter(now.subtract(const Duration(minutes: 1))),
-            )
-            .toList()
-          ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
-
-    final unscheduled =
-        toats.where((t) => t.state == 'open' && t.datetime == null).toList()
-          ..sort((a, b) => _sortByRecency(b).compareTo(_sortByRecency(a)));
-
+    // Overdue: open, has datetime, in the past. Sorted oldest-first so the
+    // most-past item (highest urgency) appears at top — matches timeline.
     final overdue =
         toats
             .where(
               (t) =>
                   t.state == 'open' &&
                   t.datetime != null &&
-                  t.datetime!.isBefore(
-                    now.subtract(const Duration(minutes: 1)),
-                  ),
+                  t.datetime!.isBefore(now.subtract(const Duration(minutes: 1))),
             )
             .toList()
-          ..sort((a, b) => b.datetime!.compareTo(a.datetime!));
+          ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
+
+    // Upcoming: open, has datetime, in the future. Sorted chronologically.
+    final upcoming =
+        toats
+            .where(
+              (t) =>
+                  t.state == 'open' &&
+                  t.datetime != null &&
+                  !t.datetime!.isBefore(now.subtract(const Duration(minutes: 1))),
+            )
+            .toList()
+          ..sort((a, b) => a.datetime!.compareTo(b.datetime!));
+
+    // Unscheduled: open, no datetime. Sorted by most recently updated.
+    final unscheduled =
+        toats.where((t) => t.state == 'open' && t.datetime == null).toList()
+          ..sort((a, b) => _sortByRecency(b).compareTo(_sortByRecency(a)));
 
     final ranked = <ToatSummary>[];
 
@@ -69,16 +70,16 @@ class WidgetService {
       for (final toat in batch) {
         final title = toat.title.trim();
         if (title.isEmpty) continue;
-        final alreadyAdded = ranked.any((entry) => entry.id == toat.id);
-        if (alreadyAdded) continue;
+        if (ranked.any((entry) => entry.id == toat.id)) continue;
         ranked.add(toat);
         if (ranked.length >= maxItems) return;
       }
     }
 
-    appendUnique(upcoming);
+    // Priority order: overdue → upcoming → unscheduled.
+    appendUnique(overdue);
+    if (ranked.length < maxItems) appendUnique(upcoming);
     if (ranked.length < maxItems) appendUnique(unscheduled);
-    if (ranked.length < maxItems) appendUnique(overdue);
 
     final payload = ranked.take(maxItems).map((t) {
       return <String, Object?>{
