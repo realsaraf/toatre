@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -325,9 +326,9 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     if (date == null || !mounted) {
       return;
     }
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
+    final time = await _showFiveMinTimePicker(
+      context,
+      TimeOfDay.fromDateTime(initial),
     );
     if (time == null || !mounted) {
       return;
@@ -774,6 +775,138 @@ class _TipCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── File-scope helpers ─────────────────────────────────────────────────────
+
+/// Shows a bottom-sheet time picker restricted to 5-minute intervals.
+/// Returns the selected [TimeOfDay], or null if dismissed.
+Future<TimeOfDay?> _showFiveMinTimePicker(
+  BuildContext context,
+  TimeOfDay initial,
+) {
+  final initialHour = initial.hour;
+  final initialMinuteIndex = (initial.minute / 5).round().clamp(0, 11);
+
+  var selectedHour = initialHour;
+  var selectedMinuteIndex = initialMinuteIndex;
+
+  return showModalBottomSheet<TimeOfDay>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return SafeArea(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.bgElevated,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Pick a time', style: TextStyles.heading3),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 180,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: initialHour,
+                            ),
+                            itemExtent: 46,
+                            looping: true,
+                            onSelectedItemChanged: (i) =>
+                                setSheetState(() => selectedHour = i),
+                            children: List.generate(
+                              24,
+                              (i) => Center(
+                                child: Text(
+                                  i.toString().padLeft(2, '0'),
+                                  style: TextStyles.bodyMedium.copyWith(
+                                    fontSize: 22,
+                                    color: AppColors.text,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          ':',
+                          style: TextStyles.heading2.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: initialMinuteIndex,
+                            ),
+                            itemExtent: 46,
+                            looping: true,
+                            onSelectedItemChanged: (i) =>
+                                setSheetState(() => selectedMinuteIndex = i),
+                            children: List.generate(
+                              12,
+                              (i) => Center(
+                                child: Text(
+                                  (i * 5).toString().padLeft(2, '0'),
+                                  style: TextStyles.bodyMedium.copyWith(
+                                    fontSize: 22,
+                                    color: AppColors.text,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(
+                        TimeOfDay(
+                          hour: selectedHour,
+                          minute: selectedMinuteIndex * 5,
+                        ),
+                      ),
+                      child: const Text('Confirm'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 /// A simple visual toggle switch (read-only display).
