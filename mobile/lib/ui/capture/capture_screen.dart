@@ -171,7 +171,8 @@ class _ListeningStateState extends State<_ListeningState> {
                 : isRecording
                 ? 'I\'m listening for multiple toats in one capture.'
                 : 'You can say multiple things - I\'ll organise them for you.',
-            hasTranscript: capture.transcript.isNotEmpty ||
+            hasTranscript:
+                capture.transcript.isNotEmpty ||
                 (isRecording && capture.liveTranscript.isNotEmpty),
           ),
           if (capture.error != null) ...[
@@ -1088,8 +1089,9 @@ class _EditCaptureToatModalState extends State<_EditCaptureToatModal> {
                       child: Text(
                         t[0].toUpperCase() + t.substring(1),
                         style: TextStyles.small.copyWith(
-                          color:
-                              _tier == t ? AppColors.primary : AppColors.text,
+                          color: _tier == t
+                              ? AppColors.primary
+                              : AppColors.text,
                           fontWeight: _tier == t
                               ? FontWeight.w700
                               : FontWeight.normal,

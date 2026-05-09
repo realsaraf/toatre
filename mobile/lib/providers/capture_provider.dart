@@ -44,6 +44,7 @@ class CaptureProvider extends ChangeNotifier {
   CaptureInputMode get mode => _mode;
   String? get error => _error;
   String get transcript => _transcript;
+
   /// Live partial transcript from on-device STT (shown during recording).
   String get liveTranscript => _liveTranscript;
   int get elapsedSeconds => _elapsedSeconds;
@@ -54,6 +55,7 @@ class CaptureProvider extends ChangeNotifier {
   bool get isProcessing => _status == CaptureStatus.processing;
   bool get isReviewing => _status == CaptureStatus.review;
   bool get isTextMode => _mode == CaptureInputMode.text;
+
   /// True when recording with on-device speech recognition.
   bool get isUsingOnDeviceStt => _usingOnDeviceStt;
 

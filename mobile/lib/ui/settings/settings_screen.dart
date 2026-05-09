@@ -2069,8 +2069,7 @@ class _DangerZoneCard extends StatelessWidget {
           GestureDetector(
             onTap: onDeleteAccount,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF1F2),
                 borderRadius: BorderRadius.circular(14),
