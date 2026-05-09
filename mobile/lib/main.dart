@@ -25,6 +25,11 @@ const _kMixpanelToken = String.fromEnvironment(
   'MIXPANEL_TOKEN',
   defaultValue: '67d3cdd399f801648bac2de0777878ae',
 );
+const _kPosthogApiKey = String.fromEnvironment('POSTHOG_API_KEY');
+const _kPosthogHost = String.fromEnvironment(
+  'POSTHOG_HOST',
+  defaultValue: 'https://us.i.posthog.com',
+);
 const _kRevenueCatApiKeyIos = String.fromEnvironment(
   'REVENUECAT_API_KEY_IOS',
   defaultValue: 'test_AzbpYFmaFgTYqareCKANNuJDWqX',
@@ -50,8 +55,12 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_fcmBackgroundHandler);
 
-  // Analytics (Firebase Analytics + Mixpanel)
-  await AnalyticsService.init(mixpanelToken: _kMixpanelToken);
+  // Analytics (Firebase Analytics + Mixpanel + PostHog)
+  await AnalyticsService.init(
+    mixpanelToken: _kMixpanelToken,
+    posthogApiKey: _kPosthogApiKey.isNotEmpty ? _kPosthogApiKey : null,
+    posthogHost: _kPosthogHost,
+  );
 
   // RevenueCat
   await RevenueCatService.instance.init(apiKey: _kRevenueCatApiKeyIos);
