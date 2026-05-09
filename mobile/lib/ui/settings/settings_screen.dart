@@ -43,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _workStart = '09:00';
   String _workEnd = '17:30';
   bool _voiceRetention = false;
+  String _defaultTier = 'regular';
   bool _signingOut = false;
   String _handleDraft = '';
   String _phoneDraft = '';
@@ -160,6 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               workStart: _workStart,
                               workEnd: _workEnd,
                               voiceRetention: _voiceRetention,
+                              defaultTier: _defaultTier,
                               busy: settingsProvider.savingKey == 'general',
                               onTimezoneChanged: (value) =>
                                   setState(() => _timezone = value),
@@ -169,6 +171,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   setState(() => _workEnd = value),
                               onVoiceRetentionChanged: (value) =>
                                   setState(() => _voiceRetention = value),
+                              onDefaultTierChanged: (value) =>
+                                  setState(() => _defaultTier = value),
                               onSave: () => _saveGeneral(settingsProvider),
                             ),
                             const SizedBox(height: 16),
@@ -276,6 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _workStart = payload.settings.workStart;
     _workEnd = payload.settings.workEnd;
     _voiceRetention = payload.settings.voiceRetention;
+    _defaultTier = payload.settings.defaultTier;
     _handleDraft = payload.profile.handle ?? '';
     _phoneDraft =
         payload.settings.pendingPhone ?? payload.settings.reminderPhone ?? '';
@@ -308,6 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         workStart: _workStart,
         workEnd: _workEnd,
         voiceRetention: _voiceRetention,
+        defaultTier: _defaultTier,
       );
       _showNotice('General settings updated.', _NoticeTone.success);
     } catch (_) {
@@ -717,11 +723,13 @@ class _GeneralTab extends StatelessWidget {
     required this.workStart,
     required this.workEnd,
     required this.voiceRetention,
+    required this.defaultTier,
     required this.busy,
     required this.onTimezoneChanged,
     required this.onWorkStartChanged,
     required this.onWorkEndChanged,
     required this.onVoiceRetentionChanged,
+    required this.onDefaultTierChanged,
     required this.onSave,
   });
 
@@ -729,11 +737,13 @@ class _GeneralTab extends StatelessWidget {
   final String workStart;
   final String workEnd;
   final bool voiceRetention;
+  final String defaultTier;
   final bool busy;
   final ValueChanged<String> onTimezoneChanged;
   final ValueChanged<String> onWorkStartChanged;
   final ValueChanged<String> onWorkEndChanged;
   final ValueChanged<bool> onVoiceRetentionChanged;
+  final ValueChanged<String> onDefaultTierChanged;
   final VoidCallback onSave;
 
   @override
@@ -792,6 +802,49 @@ class _GeneralTab extends StatelessWidget {
                 'Turn this on only if you want capture transcripts kept after extraction.',
             value: voiceRetention,
             onChanged: onVoiceRetentionChanged,
+          ),
+          const SizedBox(height: 14),
+          _FieldLabel(
+            label: 'Default tier',
+            child: Row(
+              children: [
+                for (final t in ['urgent', 'important', 'regular'])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => onDefaultTierChanged(t),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: defaultTier == t
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : AppColors.bgElevated,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: defaultTier == t
+                                ? AppColors.primary
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: Text(
+                          t[0].toUpperCase() + t.substring(1),
+                          style: TextStyles.small.copyWith(
+                            color: defaultTier == t
+                                ? AppColors.primary
+                                : AppColors.text,
+                            fontWeight: defaultTier == t
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 18),
           SizedBox(

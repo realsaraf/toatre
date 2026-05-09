@@ -73,6 +73,11 @@ function serializeSettings(
         settingsDoc && typeof settingsDoc.workEnd === "string" && isTimeValue(settingsDoc.workEnd)
           ? settingsDoc.workEnd
           : defaults.workEnd,
+      defaultTier:
+        settingsDoc && typeof settingsDoc.defaultTier === "string" &&
+        ["urgent", "important", "regular"].includes(settingsDoc.defaultTier)
+          ? settingsDoc.defaultTier
+          : defaults.defaultTier,
       notificationPreferences: normalizeNotificationPreferences(settingsDoc?.notificationPreferences),
       syncConnections: serializeSyncConnections(settingsDoc?.syncConnections, calendarSyncTokenDoc),
     },
@@ -198,6 +203,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     updates.workEnd = payload.workEnd;
+  }
+
+  if ("defaultTier" in payload) {
+    if (
+      typeof payload.defaultTier !== "string" ||
+      !["urgent", "important", "regular"].includes(payload.defaultTier)
+    ) {
+      return NextResponse.json(
+        { error: "defaultTier must be urgent, important, or regular." },
+        { status: 400 },
+      );
+    }
+
+    updates.defaultTier = payload.defaultTier;
   }
 
   if ("smsEnabled" in payload) {

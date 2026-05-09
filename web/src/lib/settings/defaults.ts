@@ -117,6 +117,7 @@ export function createDefaultUserSettings(timezone: string) {
     phoneVerifiedAt: null as string | null,
     workStart: "09:00",
     workEnd: "17:30",
+    defaultTier: "regular" as string,
     notificationPreferences: createDefaultNotificationPreferences(),
     syncConnections: {} as SyncConnections,
   };

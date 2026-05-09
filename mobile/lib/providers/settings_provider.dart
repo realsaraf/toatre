@@ -46,6 +46,7 @@ class SettingsProvider extends ChangeNotifier {
     required String workStart,
     required String workEnd,
     required bool voiceRetention,
+    required String defaultTier,
   }) async {
     return _runSave(
       'general',
@@ -57,6 +58,7 @@ class SettingsProvider extends ChangeNotifier {
             'workStart': workStart,
             'workEnd': workEnd,
             'voiceRetention': voiceRetention,
+            'defaultTier': defaultTier,
           },
           authenticated: true,
         ),

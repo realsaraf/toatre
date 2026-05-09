@@ -234,6 +234,7 @@ class AppSettings {
     required this.phoneVerifiedAt,
     required this.workStart,
     required this.workEnd,
+    required this.defaultTier,
     required this.notificationPreferences,
     required this.syncConnections,
   });
@@ -247,6 +248,7 @@ class AppSettings {
   final DateTime? phoneVerifiedAt;
   final String workStart;
   final String workEnd;
+  final String defaultTier;
   final NotificationPreferences notificationPreferences;
   final SyncConnections syncConnections;
 
@@ -261,6 +263,11 @@ class AppSettings {
       phoneVerifiedAt: _parseSettingsDate(json['phoneVerifiedAt']),
       workStart: json['workStart'] as String? ?? '09:00',
       workEnd: json['workEnd'] as String? ?? '17:30',
+      defaultTier: () {
+        const valid = ['urgent', 'important', 'regular'];
+        final v = json['defaultTier'] as String?;
+        return valid.contains(v) ? v! : 'regular';
+      }(),
       notificationPreferences: notificationPreferencesFromJson(
         json['notificationPreferences'],
       ),
@@ -281,6 +288,7 @@ class AppSettings {
     bool clearPhoneVerifiedAt = false,
     String? workStart,
     String? workEnd,
+    String? defaultTier,
     NotificationPreferences? notificationPreferences,
     SyncConnections? syncConnections,
   }) {
@@ -300,6 +308,7 @@ class AppSettings {
           : phoneVerifiedAt ?? this.phoneVerifiedAt,
       workStart: workStart ?? this.workStart,
       workEnd: workEnd ?? this.workEnd,
+      defaultTier: defaultTier ?? this.defaultTier,
       notificationPreferences:
           notificationPreferences ?? this.notificationPreferences,
       syncConnections: syncConnections ?? this.syncConnections,
@@ -317,6 +326,7 @@ class AppSettings {
       'phoneVerifiedAt': phoneVerifiedAt?.toIso8601String(),
       'workStart': workStart,
       'workEnd': workEnd,
+      'defaultTier': defaultTier,
       'notificationPreferences': notificationPreferencesToJson(
         notificationPreferences,
       ),
