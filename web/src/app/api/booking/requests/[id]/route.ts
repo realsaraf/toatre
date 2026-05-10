@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/require-user";
 import { getCollections } from "@/lib/mongo/collections";
 import { sendBookingNotification } from "@/lib/email/booking";
 import { notifyUserDevices } from "@/lib/pings/notify-devices";
+import { createGoogleMeetEvent } from "@/lib/sync/google-calendar";
 
 const PatchSchema = z.object({
   state: z.enum(["accepted", "denied"]),
@@ -68,6 +69,30 @@ export async function PATCH(
   const ownerDoc = await users.findOne({ _id: new ObjectId(user.mongoId) });
   const ownerName = typeof ownerDoc?.displayName === "string" ? ownerDoc.displayName : user.email ?? "Toatre";
 
+  // Create Google Meet when accepted
+  let meetLink: string | null = null;
+  if (newState === "accepted") {
+    const ownerEmail = typeof ownerDoc?.email === "string" ? ownerDoc.email : null;
+    if (ownerEmail) {
+      meetLink = await createGoogleMeetEvent(user.mongoId, {
+        ownerEmail,
+        ownerName,
+        bookerEmail: reqDoc.email as string,
+        bookerName: reqDoc.name as string,
+        slotStart: new Date(reqDoc.slotStart as Date),
+        slotEnd: new Date(reqDoc.slotEnd as Date),
+        message: (reqDoc.message as string | null) ?? null,
+      }).catch(() => null);
+
+      if (meetLink) {
+        await bookingRequests.updateOne(
+          { _id: requestId },
+          { $set: { meetLink, updatedAt: now } },
+        );
+      }
+    }
+  }
+
   void sendBookingNotification({
     type: newState === "accepted" ? "accepted" : "denied",
     toEmail: reqDoc.email as string,
@@ -78,6 +103,7 @@ export async function PATCH(
     slotEnd: new Date(reqDoc.slotEnd as Date),
     message: null,
     toatId: reqDoc.toatId as string | null,
+    meetLink: meetLink ?? null,
   }).catch(() => null);
 
   // Push notification to booker if they have a Toatre account

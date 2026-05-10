@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { google, calendar_v3 } from "googleapis";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/mongo/collections";
@@ -95,6 +96,77 @@ export async function disconnectGoogleCalendar(userId: string): Promise<void> {
       },
     },
   );
+}
+
+/**
+ * Creates a Google Calendar event with an auto-generated Google Meet link.
+ * Adds both the owner and booker as attendees so Google sends them calendar invites.
+ * Returns the Meet join URL, or null if the owner has no connected Google Calendar.
+ */
+export async function createGoogleMeetEvent(
+  ownerUserId: string,
+  params: {
+    ownerEmail: string;
+    ownerName: string;
+    bookerEmail: string;
+    bookerName: string;
+    slotStart: Date;
+    slotEnd: Date;
+    message: string | null;
+  },
+): Promise<string | null> {
+  const { calendarSyncTokens } = await getCollections();
+  const tokenDoc = await calendarSyncTokens.findOne({
+    userId: ownerUserId,
+    provider: PROVIDER,
+    connected: true,
+  }) as TokenDoc | null;
+  if (!tokenDoc) return null;
+
+  const oauth = createGoogleOAuthClient();
+  oauth.setCredentials({
+    refresh_token: decryptSecret(tokenDoc.encryptedRefreshToken),
+    access_token: tokenDoc.encryptedAccessToken ? decryptSecret(tokenDoc.encryptedAccessToken) : undefined,
+    expiry_date: tokenDoc.accessTokenExpiresAt?.getTime(),
+  });
+
+  oauth.on("tokens", async (tokens) => {
+    const { calendarSyncTokens: syncTokens } = await getCollections();
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (tokens.refresh_token) updates.encryptedRefreshToken = encryptSecret(tokens.refresh_token);
+    if (tokens.access_token) updates.encryptedAccessToken = encryptSecret(tokens.access_token);
+    if (tokens.expiry_date) updates.accessTokenExpiresAt = new Date(tokens.expiry_date);
+    await syncTokens.updateOne({ userId: ownerUserId, provider: PROVIDER }, { $set: updates });
+  });
+
+  const calendar = google.calendar({ version: "v3", auth: oauth });
+  const description = params.message
+    ? `Booking message: ${params.message}\n\nBooked via Toatre.`
+    : "Booked via Toatre.";
+
+  const event = await calendar.events.insert({
+    calendarId: "primary",
+    conferenceDataVersion: 1,
+    sendUpdates: "all",
+    requestBody: {
+      summary: `${params.bookerName} + ${params.ownerName}`,
+      description,
+      start: { dateTime: params.slotStart.toISOString() },
+      end: { dateTime: params.slotEnd.toISOString() },
+      attendees: [
+        { email: params.ownerEmail, displayName: params.ownerName },
+        { email: params.bookerEmail, displayName: params.bookerName },
+      ],
+      conferenceData: {
+        createRequest: {
+          requestId: randomUUID(),
+          conferenceSolutionKey: { type: "hangoutsMeet" },
+        },
+      },
+    },
+  });
+
+  return event.data.hangoutLink ?? null;
 }
 
 async function syncGoogleCalendarToken(tokenDoc: TokenDoc): Promise<SyncStats> {

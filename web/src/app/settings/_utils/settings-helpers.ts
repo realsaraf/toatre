@@ -73,6 +73,11 @@ export interface BookingSettingsResponse {
   requireReason?: boolean;
   disableDuringOfficeHours?: boolean;
   timezone?: string;
+  maxPerDay?: number;
+  allowRescheduling?: boolean;
+  allowCancellations?: boolean;
+  showSuccessMessage?: boolean;
+  collectEmailFirst?: boolean;
 }
 
 export function normalizeBookingSlotLength(value: number | undefined): BookingSlotLength {

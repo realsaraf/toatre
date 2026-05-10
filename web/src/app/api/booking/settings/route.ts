@@ -18,6 +18,11 @@ const DEFAULT_SETTINGS = {
   maxDaysAhead: 14,
   requireReason: false,
   disableDuringOfficeHours: false,
+  maxPerDay: 10,
+  allowRescheduling: true,
+  allowCancellations: true,
+  showSuccessMessage: true,
+  collectEmailFirst: false,
 };
 
 function isBookingSlotLength(input: unknown): input is 15 | 30 | 45 | 60 {
@@ -47,6 +52,11 @@ function serializeBookingSettings(doc: Record<string, unknown> | null, timezone:
     maxDaysAhead: typeof doc.maxDaysAhead === "number" ? doc.maxDaysAhead : DEFAULT_SETTINGS.maxDaysAhead,
     requireReason: doc.requireReason === true,
     disableDuringOfficeHours: doc.disableDuringOfficeHours === true,
+    maxPerDay: typeof doc.maxPerDay === "number" ? doc.maxPerDay : DEFAULT_SETTINGS.maxPerDay,
+    allowRescheduling: doc.allowRescheduling !== false,
+    allowCancellations: doc.allowCancellations !== false,
+    showSuccessMessage: doc.showSuccessMessage !== false,
+    collectEmailFirst: doc.collectEmailFirst === true,
     timezone: typeof doc.timezone === "string" ? doc.timezone : timezone,
   };
 }
@@ -84,6 +94,11 @@ const PatchSchema = z.object({
   maxDaysAhead: z.number().int().min(1).max(90).optional(),
   requireReason: z.boolean().optional(),
   disableDuringOfficeHours: z.boolean().optional(),
+  maxPerDay: z.number().int().min(1).max(100).optional(),
+  allowRescheduling: z.boolean().optional(),
+  allowCancellations: z.boolean().optional(),
+  showSuccessMessage: z.boolean().optional(),
+  collectEmailFirst: z.boolean().optional(),
 });
 
 export async function PATCH(request: NextRequest) {

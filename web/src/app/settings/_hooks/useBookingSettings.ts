@@ -78,6 +78,11 @@ export function useBookingSettings({
       setBookingRequireReason(data.requireReason ?? false);
       setBookingDisableDuringOfficeHours(data.disableDuringOfficeHours ?? false);
       setBookingTimezone(data.timezone ?? timezone);
+      setBookingMaxPerDay(data.maxPerDay ?? 10);
+      setBookingAllowRescheduling(data.allowRescheduling ?? true);
+      setBookingAllowCancellations(data.allowCancellations ?? true);
+      setBookingShowSuccessMessage(data.showSuccessMessage ?? true);
+      setBookingCollectEmailFirst(data.collectEmailFirst ?? false);
     } catch { /* best effort */ }
     finally { setLoadingBooking(false); }
   }, [authorizedFetch, timezone, user]);
@@ -110,6 +115,11 @@ export function useBookingSettings({
           maxDaysAhead: bookingMaxDays,
           requireReason: bookingRequireReason,
           disableDuringOfficeHours: bookingDisableDuringOfficeHours,
+          maxPerDay: bookingMaxPerDay,
+          allowRescheduling: bookingAllowRescheduling,
+          allowCancellations: bookingAllowCancellations,
+          showSuccessMessage: bookingShowSuccessMessage,
+          collectEmailFirst: bookingCollectEmailFirst,
         }),
       });
       if (!response.ok) {
@@ -139,6 +149,11 @@ export function useBookingSettings({
     bookingWindowDays,
     bookingWindowEnd,
     bookingWindowStart,
+    bookingMaxPerDay,
+    bookingAllowRescheduling,
+    bookingAllowCancellations,
+    bookingShowSuccessMessage,
+    bookingCollectEmailFirst,
   ]);
 
   const toggleBookingWindowDay = useCallback((dayValue: number) => {
