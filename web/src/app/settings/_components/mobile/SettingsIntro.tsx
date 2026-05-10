@@ -1,21 +1,13 @@
+import { MobilePageIntro } from "@/app/_components/mobile-app-shell";
 import type { MobileSettingsScreen } from "./MobileSettingsView";
 
 const styles = {
-  rootIntro: { margin: "2px 0 22px" },
-  rootTitle: { margin: 0, fontSize: "clamp(38px, 10.5vw, 44px)", lineHeight: 1, fontWeight: 850, letterSpacing: "-0.045em", color: "#0f1b4c" },
   backIntro: { display: "grid", gap: 14, marginBottom: 20 },
   backButton: { width: 46, height: 46, borderRadius: 16, border: "1px solid rgba(91,61,245,0.14)", background: "rgba(255,255,255,0.88)", color: "#5b3df5", fontSize: 20, fontWeight: 700, cursor: "pointer" },
-  eyebrow: { margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#5b3df5" },
-  title: { margin: "6px 0 0", fontSize: "clamp(26px, 6.8vw, 32px)", lineHeight: 1, fontWeight: 850, letterSpacing: "-0.032em", color: "#0f1b4c" },
-  body: { margin: "10px 0 0", fontSize: 14, lineHeight: 1.4, color: "#6b7280" },
 } as const;
 
 export function SettingsRootIntro() {
-  return (
-    <section style={styles.rootIntro}>
-      <h1 style={styles.rootTitle}>Settings</h1>
-    </section>
-  );
+  return <MobilePageIntro title="Settings" subtitle="Manage your account, handle, Pings, and integrations" />;
 }
 
 export function SubpageIntro({ screen, onBack }: { screen: Exclude<MobileSettingsScreen, "root">; onBack: () => void }) {
@@ -26,11 +18,7 @@ export function SubpageIntro({ screen, onBack }: { screen: Exclude<MobileSetting
       <button type="button" onClick={onBack} style={styles.backButton} aria-label="Back to Settings">
         {"<"}
       </button>
-      <div>
-        <p style={styles.eyebrow}>Settings</p>
-        <h1 style={styles.title}>{meta.title}</h1>
-        <p style={styles.body}>{meta.body}</p>
-      </div>
+      <MobilePageIntro title={meta.title} subtitle={meta.body} />
     </div>
   );
 }

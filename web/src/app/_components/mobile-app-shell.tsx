@@ -120,7 +120,7 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   title: {
     margin: 0,
-    fontSize: 40,
+    fontSize: 30,
     lineHeight: 1,
     fontWeight: 850,
     letterSpacing: 0,
@@ -142,7 +142,7 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   subtitle: {
     margin: 0,
-    fontSize: 17,
+    fontSize: 15,
     lineHeight: 1.35,
     color: "#6b7280",
   },
@@ -439,7 +439,7 @@ export function MobilePageIntro({ title, subtitle, count, titleAccessory, contro
     <section style={shellStyles.intro}>
       <div>
         <div style={shellStyles.titleRow}>
-          <h1 style={shellStyles.title}>{title}</h1>
+          <h2 style={shellStyles.title}>{title}</h2>
           {titleAccessory}
           {typeof count === "number" ? <span style={shellStyles.countBubble}>{count}</span> : null}
         </div>
