@@ -8,8 +8,11 @@ export type NotificationPreferences = Record<string, NotificationChannels>;
 
 export type SyncDirection = "sourceToToatre" | "toatreToSource" | "twoWay";
 
+export const SYNC_PROVIDERS = ["googleCalendar", "microsoft", "calendly", "zoom"] as const;
+export type SyncProvider = (typeof SYNC_PROVIDERS)[number];
+
 export interface SyncConnection {
-  provider: "googleCalendar";
+  provider: SyncProvider;
   direction: SyncDirection;
   connected: boolean;
   connectedAt: string | null;
@@ -81,30 +84,45 @@ function normalizeSyncDirection(input: unknown): SyncDirection {
   return "sourceToToatre";
 }
 
+function normalizeSyncProvider(input: unknown): SyncProvider {
+  return SYNC_PROVIDERS.includes(input as SyncProvider)
+    ? (input as SyncProvider)
+    : "googleCalendar";
+}
+
+function normalizeSyncConnection(input: Record<string, unknown>, provider: SyncProvider): SyncConnection {
+  return {
+    provider: normalizeSyncProvider(input.provider ?? provider),
+    direction: normalizeSyncDirection(input.direction),
+    connected: input.connected === true,
+    connectedAt: normalizeDateString(input.connectedAt),
+    forwardOnlyFrom: normalizeDateString(input.forwardOnlyFrom),
+    lastSyncedAt: normalizeDateString(input.lastSyncedAt),
+    updatedAt: normalizeDateString(input.updatedAt),
+  };
+}
+
 export function normalizeSyncConnections(input: unknown): SyncConnections {
   if (!input || typeof input !== "object") {
     return {};
   }
 
   const record = input as Record<string, unknown>;
-  const googleCalendar = record.googleCalendar;
+  const connections: SyncConnections = {};
 
-  if (!googleCalendar || typeof googleCalendar !== "object") {
-    return {};
+  for (const provider of SYNC_PROVIDERS) {
+    const candidate = record[provider];
+    if (!candidate || typeof candidate !== "object") {
+      continue;
+    }
+
+    connections[provider] = normalizeSyncConnection(
+      candidate as Record<string, unknown>,
+      provider,
+    );
   }
 
-  const connection = googleCalendar as Record<string, unknown>;
-  return {
-    googleCalendar: {
-      provider: "googleCalendar",
-      direction: normalizeSyncDirection(connection.direction),
-      connected: connection.connected === true,
-      connectedAt: normalizeDateString(connection.connectedAt),
-      forwardOnlyFrom: normalizeDateString(connection.forwardOnlyFrom),
-      lastSyncedAt: normalizeDateString(connection.lastSyncedAt),
-      updatedAt: normalizeDateString(connection.updatedAt),
-    },
-  };
+  return connections;
 }
 
 export function createDefaultUserSettings(timezone: string) {

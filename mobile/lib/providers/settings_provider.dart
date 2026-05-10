@@ -219,7 +219,10 @@ class SettingsProvider extends ChangeNotifier {
           message: 'Microsoft Calendar connect URL was not returned.',
         );
       }
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       if (!launched) {
         throw const ApiServiceException(
           statusCode: 500,
@@ -233,7 +236,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> disconnectMicrosoftCalendar() async {
     return _runSave('sync-microsoft', () async {
-      await _api.postJson('/api/sync/microsoft/disconnect', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/microsoft/disconnect',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });
@@ -241,7 +248,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> syncMicrosoftNow() async {
     return _runSave('sync-microsoft-run', () async {
-      await _api.postJson('/api/sync/microsoft/run', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/microsoft/run',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });
@@ -267,9 +278,15 @@ class SettingsProvider extends ChangeNotifier {
           message: 'Calendly connect URL was not returned.',
         );
       }
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       if (!launched) {
-        throw const ApiServiceException(statusCode: 500, message: 'Could not open Calendly connection.');
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Could not open Calendly connection.',
+        );
       }
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
@@ -278,7 +295,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> disconnectCalendly() async {
     return _runSave('sync-calendly', () async {
-      await _api.postJson('/api/sync/calendly/disconnect', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/calendly/disconnect',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });
@@ -286,7 +307,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> syncCalendlyNow() async {
     return _runSave('sync-calendly-run', () async {
-      await _api.postJson('/api/sync/calendly/run', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/calendly/run',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });
@@ -307,11 +332,20 @@ class SettingsProvider extends ChangeNotifier {
       final authUrl = response['authUrl'] as String?;
       final uri = authUrl == null ? null : Uri.tryParse(authUrl);
       if (uri == null) {
-        throw const ApiServiceException(statusCode: 500, message: 'Zoom connect URL was not returned.');
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Zoom connect URL was not returned.',
+        );
       }
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       if (!launched) {
-        throw const ApiServiceException(statusCode: 500, message: 'Could not open Zoom connection.');
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Could not open Zoom connection.',
+        );
       }
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
@@ -320,7 +354,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> disconnectZoom() async {
     return _runSave('sync-zoom', () async {
-      await _api.postJson('/api/sync/zoom/disconnect', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/zoom/disconnect',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });
@@ -328,7 +366,11 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<SettingsPayload> syncZoomNow() async {
     return _runSave('sync-zoom-run', () async {
-      await _api.postJson('/api/sync/zoom/run', body: <String, Object?>{}, authenticated: true);
+      await _api.postJson(
+        '/api/sync/zoom/run',
+        body: <String, Object?>{},
+        authenticated: true,
+      );
       final latest = await _api.getJson('/api/settings', authenticated: true);
       return SettingsPayload.fromJson(latest);
     });

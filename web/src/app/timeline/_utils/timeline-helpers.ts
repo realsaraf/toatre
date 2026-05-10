@@ -57,6 +57,17 @@ export function formatSecondaryDate(date: Date): string {
   });
 }
 
+export function getWeekRangeLabel(date: Date): string {
+  const start = startOfDay(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+
+  const startMonth = start.toLocaleDateString("en-US", { month: "short" });
+  const endMonth = end.toLocaleDateString("en-US", { month: "short" });
+
+  return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
+}
+
 export function formatMinutesLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);

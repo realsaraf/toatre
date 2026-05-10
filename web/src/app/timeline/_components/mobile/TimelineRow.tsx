@@ -125,39 +125,39 @@ export function TimelineRow({
               {description}
             </p>
           </div>
-        </div>
 
-        <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
-          {action ? (
+          <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
+            {action ? (
+              <button
+                type="button"
+                onClick={runAction}
+                style={{
+                  ...styles.cardActionButton,
+                  ...(compact ? styles.cardActionButtonCompact : {}),
+                  color: visual.accent,
+                  background: visual.soft,
+                }}
+              >
+                {action.label === "Directions" ? (
+                  <>
+                    <SteeringWheelIcon size={compact ? 13 : 15} /> Directions
+                  </>
+                ) : (
+                  action.label
+                )}
+              </button>
+            ) : null}
             <button
+              ref={doneRowRef}
               type="button"
-              onClick={runAction}
-              style={{
-                ...styles.cardActionButton,
-                ...(compact ? styles.cardActionButtonCompact : {}),
-                color: visual.accent,
-                background: visual.soft,
-              }}
+              onClick={runDone}
+              disabled={doneDisabled}
+              style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}
+              aria-label="Mark done"
             >
-              {action.label === "Directions" ? (
-                <>
-                  <SteeringWheelIcon size={compact ? 13 : 15} /> Directions
-                </>
-              ) : (
-                action.label
-              )}
+              <DoneIcon size={compact ? 15 : 18} />
             </button>
-          ) : null}
-          <button
-            ref={doneRowRef}
-            type="button"
-            onClick={runDone}
-            disabled={doneDisabled}
-            style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}
-            aria-label="Mark done"
-          >
-            <DoneIcon size={compact ? 15 : 18} />
-          </button>
+          </div>
         </div>
       </div>
     </div>

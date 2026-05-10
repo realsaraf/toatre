@@ -1,27 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { User } from "firebase/auth";
 import {
-  AppBrand,
-  BottomTabBar,
   ChevronDownIcon,
-  FloatingMicButton,
-  InboxIcon,
-  KeyboardIcon,
-  PeopleIcon,
   SearchIcon,
-  SettingsIcon,
-  TimelineIcon,
   UserAvatar,
 } from "@/components/mobile-ui";
+import { MobileAppShell } from "@/app/_components/mobile-app-shell";
 import {
   type TimelineToat,
   type DayGroup,
   buildDayGroups,
   sortToats,
-  formatSecondaryDate,
   getUpNext,
+  getWeekRangeLabel,
 } from "../../_utils/timeline-helpers";
 import { EmptyTimeline } from "./EmptyTimeline";
 import { UpNextCard } from "./UpNextCard";
@@ -42,14 +35,13 @@ interface MobileTimelineViewProps {
   removingToatId: string | null;
   onMarkDone: (toat: TimelineToat, anchorEl?: HTMLElement | null) => void;
   onArchiveToat: (toat: TimelineToat) => void;
-  onOpenSettings: () => void;
   onOpenTimeline: () => void;
   onOpenSearch: () => void;
   onOpenCapture: () => void;
-  onOpenTextCapture: () => void;
   onOpenToat: (toat: TimelineToat) => void;
   onOpenInbox: () => void;
-  onOpenPeople: () => void;
+  onOpenBookings: () => void;
+  onOpenMenu: () => void;
 }
 
 export function MobileTimelineView({
@@ -65,18 +57,14 @@ export function MobileTimelineView({
   archivingToatId,
   removingToatId,
   onMarkDone,
-  onOpenSettings,
   onOpenTimeline,
   onOpenSearch,
   onOpenCapture,
-  onOpenTextCapture,
   onOpenToat,
   onOpenInbox,
-  onOpenPeople,
+  onOpenBookings,
+  onOpenMenu,
 }: MobileTimelineViewProps) {
-  const [showDayPicker, setShowDayPicker] = useState(false);
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
-
   const sortedToats = useMemo(() => [...toats].sort(sortToats), [toats]);
   const upNext = getUpNext(sortedToats, now);
 
@@ -85,108 +73,71 @@ export function MobileTimelineView({
     [sortedToats, upNext, now],
   );
 
-  const resolvedSelectedDayKey =
-    selectedDayKey && groupedToats.some((g) => g.key === selectedDayKey)
-      ? selectedDayKey
-      : (groupedToats[0]?.key ?? null);
-
-  const activeGroups = resolvedSelectedDayKey
-    ? groupedToats.filter((g) => g.key === resolvedSelectedDayKey)
-    : groupedToats;
-
   const isLoading = authLoading || fetching;
-
+  const weekRangeLabel = useMemo(() => getWeekRangeLabel(now), [now]);
   return (
-    <div style={styles.page}>
-      <div style={styles.backgroundHaloOne} />
-      <div style={styles.backgroundHaloTwo} />
-      <div style={styles.backgroundHaloThree} />
-
-      <main style={{ ...styles.main, ...(isCompact ? styles.mainCompact : {}) }}>
-        {/* Top row */}
-        <div style={{ ...styles.topRow, ...(isCompact ? styles.topRowCompact : {}) }}>
-          <AppBrand />
-          <div style={{ display: "flex", alignItems: "center", gap: isCompact ? 8 : 10 }}>
-            <button
-              type="button"
-              onClick={onOpenSearch}
-              aria-label="Search"
-              style={{
-                width: isCompact ? 42 : 46,
-                height: isCompact ? 42 : 46,
-                borderRadius: 16,
-                border: "1px solid rgba(91,61,245,0.10)",
-                background: "rgba(255,255,255,0.88)",
-                color: "#5B3DF5",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 18px 38px rgba(31,41,55,0.06)",
-              }}
-            >
-              <SearchIcon size={isCompact ? 18 : 20} />
-            </button>
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              style={styles.avatarButton}
-              aria-label="Open settings"
-            >
-              <UserAvatar user={user} />
-            </button>
-          </div>
+    <MobileAppShell
+      user={user}
+      active="timeline"
+      compact={isCompact}
+      inboxCount={bookingCount}
+      onOpenTimeline={onOpenTimeline}
+      onOpenInbox={onOpenInbox}
+      onOpenBookings={onOpenBookings}
+      onOpenMenu={onOpenMenu}
+      onOpenCapture={onOpenCapture}
+      topRight={(
+        <div style={{ display: "flex", alignItems: "center", gap: isCompact ? 8 : 10 }}>
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Search"
+            style={{
+              width: isCompact ? 38 : 42,
+              height: isCompact ? 38 : 42,
+              borderRadius: 14,
+              border: "1px solid rgba(91,61,245,0.10)",
+              background: "rgba(255,255,255,0.88)",
+              color: "#5B3DF5",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 18px 38px rgba(31,41,55,0.06)",
+            }}
+          >
+            <SearchIcon size={isCompact ? 16 : 18} />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenMenu}
+            style={styles.avatarButton}
+            aria-label="Open menu"
+          >
+            <UserAvatar user={user} />
+          </button>
         </div>
-
-        {/* Heading / day picker */}
+      )}
+      header={(
         <div style={{ ...styles.headingRow, ...(isCompact ? styles.headingRowCompact : {}) }}>
           <div>
-            <button
-              type="button"
-              onClick={() => setShowDayPicker((v) => !v)}
-              style={{ ...styles.dayButton, ...(isCompact ? styles.dayButtonCompact : {}) }}
-            >
-              <span style={styles.dayButtonLabel}>{activeGroups[0]?.title ?? "Today"}</span>
-              <ChevronDownIcon size={isCompact ? 16 : 18} />
-            </button>
+            <div style={{ ...styles.dayButton, ...(isCompact ? styles.dayButtonCompact : {}) }}>
+              <span style={styles.dayButtonLabel}>Next 7 days</span>
+              <span style={styles.dayButtonChevron} aria-hidden>
+                <ChevronDownIcon size={isCompact ? 16 : 18} />
+              </span>
+            </div>
             <p
               style={{
                 ...styles.dayButtonSubtitle,
                 ...(isCompact ? styles.dayButtonSubtitleCompact : {}),
               }}
             >
-              {activeGroups[0]?.subtitle ?? formatSecondaryDate(now)}
+              {weekRangeLabel}
             </p>
           </div>
-
-          {showDayPicker && groupedToats.length > 0 ? (
-            <div style={{ ...styles.dayPicker, ...(isCompact ? styles.dayPickerCompact : {}) }}>
-              {groupedToats.map((group) => (
-                <button
-                  key={group.key}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDayKey(group.key);
-                    setShowDayPicker(false);
-                  }}
-                  style={{
-                    ...styles.dayPickerItem,
-                    background:
-                      group.key === resolvedSelectedDayKey
-                        ? "rgba(91,61,245,0.08)"
-                        : "transparent",
-                  }}
-                >
-                  <span>
-                    <span style={styles.dayPickerTitle}>{group.title}</span>
-                    <span style={styles.dayPickerSubtitle}>{group.subtitle}</span>
-                  </span>
-                  <span style={styles.dayPickerCount}>{group.toats.length}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
-
+      )}
+    >
         {/* Loading state */}
         {isLoading && toats.length === 0 ? (
           <section
@@ -211,7 +162,7 @@ export function MobileTimelineView({
           <EmptyTimeline
             compact={isCompact}
             onOpenCapture={onOpenCapture}
-            onOpenTextCapture={onOpenTextCapture}
+            onOpenTextCapture={onOpenSearch}
           />
         ) : (
           <>
@@ -225,7 +176,7 @@ export function MobileTimelineView({
               />
             ) : null}
 
-            {activeGroups.map((group) => (
+            {groupedToats.map((group) => (
               <section key={group.key} style={styles.sectionBlock}>
                 <p
                   style={{
@@ -257,43 +208,6 @@ export function MobileTimelineView({
             ))}
           </>
         )}
-      </main>
-
-      <button
-        type="button"
-        onClick={onOpenTextCapture}
-        style={styles.textCaptureDockButton}
-        aria-label="Open text capture"
-      >
-        <KeyboardIcon size={22} />
-      </button>
-      <FloatingMicButton onClick={onOpenCapture} />
-
-      <BottomTabBar
-        items={[
-          {
-            label: "Timeline",
-            icon: <TimelineIcon size={22} />,
-            href: "/timeline",
-            active: true,
-            onClick: onOpenTimeline,
-          },
-          {
-            label: "Inbox",
-            icon: <InboxIcon size={22} />,
-            href: "/inbox",
-            badge: bookingCount || undefined,
-            onClick: onOpenInbox,
-          },
-          {
-            label: "People",
-            icon: <PeopleIcon size={22} />,
-            href: "/people",
-            onClick: onOpenPeople,
-          },
-          { label: "Settings", icon: <SettingsIcon size={22} />, href: "/settings" },
-        ]}
-      />
-    </div>
+    </MobileAppShell>
   );
 }

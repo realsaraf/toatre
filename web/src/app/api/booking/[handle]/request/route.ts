@@ -44,6 +44,10 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (bsDoc.requireReason === true && !parsed.data.message?.trim()) {
+    return NextResponse.json({ error: "Please add a short reason for booking." }, { status: 422 });
+  }
+
   const slotStart = new Date(parsed.data.slotStart);
   const slotEnd = new Date(parsed.data.slotEnd);
 

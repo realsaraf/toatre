@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:toatre/config/app_config.dart';
@@ -23,6 +24,7 @@ class ApiService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final http.Client _client = http.Client();
+  String? _cachedTimezone;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
@@ -131,7 +133,23 @@ class ApiService {
 
     final token = await user.getIdToken();
     headers['Authorization'] = 'Bearer $token';
+    headers['X-Toatre-Timezone'] = await _localTimezone();
     return headers;
+  }
+
+  Future<String> _localTimezone() async {
+    if (_cachedTimezone != null && _cachedTimezone!.isNotEmpty) {
+      return _cachedTimezone!;
+    }
+
+    try {
+      final timezone = await FlutterTimezone.getLocalTimezone();
+      _cachedTimezone = timezone.identifier;
+    } catch (_) {
+      _cachedTimezone = 'UTC';
+    }
+
+    return _cachedTimezone!;
   }
 
   Map<String, dynamic> _decodeMap(http.Response response) {

@@ -22,6 +22,19 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-05-10 (mobile web layout pass) — completed
+- Added a shared mobile app shell for web with the new Timeline / Inbox / mic / Bookings / Menu dock and reused it across the phone/tablet routes.
+- Added dedicated mobile Inbox and Bookings surfaces so those routes no longer fall back to the desktop dashboard shell below the desktop breakpoint.
+- Reworked mobile Settings into an iOS-style drill-in menu, added a matching mobile Help surface, and made mobile People open the connections drill-in instead of the old tabbed settings root.
+- Moved mobile Timeline onto the same dock/menu model so primary navigation is consistent across Timeline, Inbox, Bookings, Settings, Help, and People.
+- Validation: focused ESLint on the touched mobile routes/components, `npm run typecheck`, `npm run build`, and browser spot-checks of fresh localhost pages for Timeline, Inbox, Bookings, Settings, Help, and People.
+
+### Session 2026-05-12 (desktop settings) — completed
+- Desktop Settings now uses a full four-section shell for General, Notifications, Handle, and Integrations instead of the Toat Link-only desktop view.
+- Extracted settings route behavior into composable hooks and added the desktop settings component/CSS surface aligned to the provided mockups.
+- Wired profile, notification preferences, booking page settings, handle save/copy, and calendar provider actions through the existing authenticated API flows; browser-scoped desktop-only preferences are stateful and persist locally.
+- Validation: focused settings ESLint, `npm run typecheck`, and `npm run build` clean.
+
 ### Session 2026-05-11 (cross-device sync + toat duration + reminder edit) — completed
 - iOS widget: sorts toats chronologically in Swift `loadToats()`.
 - Cross-device sync: `notifyUserDevices()` helper sends silent `type:toat-sync` FCM data message to all user devices after every toat POST/PATCH/DELETE on web. Mobile `PushPingService` exposes `syncRequests` stream; `AppLifecycleListener` triggers `ToatsProvider.fetchToats()` on foreground resume; top-level `_fcmBackgroundHandler` registered for FCM background messages.

@@ -46,9 +46,11 @@ export const desktopTimelineCss = `
     text-align: left;
   }
 
-  .desktop-sidebar-link { cursor: default; }
-  .desktop-sidebar-nav:hover { background: #f6f3ff; }
-  .desktop-sidebar-nav.active { background: linear-gradient(135deg, #f3efff, #faf8ff); color: #6126ff; }
+  .desktop-sidebar-link { cursor: pointer; }
+  .desktop-sidebar-nav:hover,
+  .desktop-sidebar-link:hover { background: #f6f3ff; }
+  .desktop-sidebar-nav.active,
+  .desktop-sidebar-link.active { background: linear-gradient(135deg, #f3efff, #faf8ff); color: #6126ff; }
   .desktop-sidebar-nav.compact { min-height: 42px; color: #17224d; font-size: 14px; }
   .desktop-sidebar-nav-icon,
   .desktop-sidebar-mini-icon { width: 20px; flex-shrink: 0; display: inline-flex; justify-content: center; color: currentColor; }
@@ -78,7 +80,7 @@ export const desktopTimelineCss = `
   .desktop-usage-track { height: 8px; border-radius: 999px; background: #f1eef9; overflow: hidden; }
   .desktop-usage-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6426ff, #8b5cf6); }
 
-  .desktop-app-main { min-width: 0; display: grid; grid-template-rows: 92px minmax(0, 1fr); }
+  .desktop-app-main { min-width: 0; display: grid; grid-template-rows: 92px auto minmax(0, 1fr); }
   .desktop-app-topbar { border-bottom: 1px solid #e8ebf4; background: rgba(255,255,255,0.86); display: grid; grid-template-columns: minmax(260px, 396px) minmax(360px, 1fr) auto; align-items: center; gap: 28px; padding: 0 28px; }
   .desktop-date-nav,
   .desktop-topbar-right,
@@ -99,13 +101,17 @@ export const desktopTimelineCss = `
   .desktop-user-button { border: none; background: transparent; color: #17224d; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
   .desktop-user-button > div { width: 48px !important; height: 48px !important; }
 
-  .desktop-content-grid { display: grid; grid-template-columns: minmax(560px, 1fr) 460px; align-items: stretch; min-height: calc(100vh - 92px); }
-  .desktop-timeline-board { position: relative; padding: 30px 32px 34px; border-right: 1px solid #e8ebf4; min-width: 0; display: flex; flex-direction: column; }
+  .desktop-page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 32px 34px 14px; }
+  .desktop-page-intro-copy { min-width: 0; }
+  .desktop-page-intro h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.1; font-weight: 850; letter-spacing: 0; color: #080f2d; }
+  .desktop-page-intro p { margin: 0; color: #53617f; font-size: 15px; line-height: 1.5; }
+  .desktop-page-intro-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .desktop-content-grid { display: grid; grid-template-columns: minmax(560px, 1fr) 460px; align-items: stretch; min-height: 0; }
+  .desktop-timeline-board { position: relative; padding: 12px 32px 34px; border-right: 1px solid #e8ebf4; min-width: 0; display: flex; flex-direction: column; }
   .desktop-detail-panel { background: #ffffff; padding: 26px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-  .desktop-board-head { display: grid; gap: 20px; margin-bottom: 18px; }
-  .desktop-board-head h1 { margin: 0 0 6px; font-size: 25px; font-weight: 800; letter-spacing: 0; color: #080f2d; }
-  .desktop-board-head p { margin: 0; color: #53617f; font-size: 14px; }
+  .desktop-board-head { display: flex; align-items: center; justify-content: flex-end; gap: 20px; margin-bottom: 18px; }
   .desktop-board-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .desktop-filter-chip,
   .desktop-filter-button { height: 38px; padding: 0 16px; border: 1px solid #e5e8f2; background: #ffffff; color: #17224d; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -234,15 +240,26 @@ export const desktopTimelineCss = `
 
   .desktop-capture-modal.review-mode {
     position: relative;
-    width: min(760px, calc(100vw - 44px));
-    padding: 32px;
+    width: min(940px, calc(100vw - 44px));
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .desktop-capture-close.review-close {
     position: absolute;
-    right: 22px;
-    top: 22px;
+    right: 18px;
+    top: 18px;
     z-index: 2;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(121, 130, 159, 0.18);
+    color: #171336;
+    font-size: 24px;
+    font-weight: 300;
   }
 
   .desktop-capture-sr-title {
@@ -659,6 +676,7 @@ export const desktopTimelineCss = `
   .desktop-empty-detail p { margin: 0; color: #53617f; font-size: 14px; }
 
   @media (max-width: 1280px) {
+    .desktop-page-intro { padding: 28px 24px 12px; }
     .desktop-content-grid { grid-template-columns: minmax(500px, 1fr) 420px; }
     .desktop-app-topbar { grid-template-columns: minmax(220px, 340px) minmax(320px, 1fr) auto; gap: 18px; padding: 0 22px; }
     .desktop-end-card { margin-right: 178px; }

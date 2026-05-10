@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { User, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 
+function browserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
 async function createSession(user: User): Promise<{ hasHandle: boolean }> {
   const idToken = await user.getIdToken();
   const res = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ idToken, timezone: browserTimezone() }),
   });
 
   if (!res.ok) {

@@ -47,7 +47,7 @@ function CapturePageContent() {
     return (
       <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
         <TopNav />
-        <main style={S.main}>
+        <main style={{ ...S.main, maxWidth: 1220 }}>
           <ReviewScreen
             transcript={transcript}
             toats={toats}
@@ -56,6 +56,26 @@ function CapturePageContent() {
             onToggleAll={() => {
               const all = selected.every(Boolean);
               setSelected(selected.map(() => !all));
+            }}
+            onAddToat={() => {
+              const now = new Date().toISOString();
+              const newIndex = toats.length;
+              setToats((prev) => [
+                ...prev,
+                {
+                  id: `temp-toat-${crypto.randomUUID()}`,
+                  tier: "regular",
+                  state: "open",
+                  title: "New toat",
+                  notes: null,
+                  enrichments: {},
+                  captureId: null,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              ]);
+              setSelected((prev) => [...prev, true]);
+              return newIndex;
             }}
             onUpdateToat={(i, updated) =>
               setToats((prev) => prev.map((t, j) => (j === i ? { ...t, ...updated } : t)))

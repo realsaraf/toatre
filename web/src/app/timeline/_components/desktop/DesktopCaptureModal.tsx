@@ -412,6 +412,26 @@ export function DesktopCaptureModal({
               const allSelected = selected.every(Boolean);
               setSelected(selected.map(() => !allSelected));
             }}
+            onAddToat={() => {
+              const now = new Date().toISOString();
+              const newIndex = toats.length;
+              setToats((current) => [
+                ...current,
+                {
+                  id: `temp-toat-${crypto.randomUUID()}`,
+                  tier: "regular",
+                  state: "open",
+                  title: "New toat",
+                  notes: null,
+                  enrichments: {},
+                  captureId: null,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              ]);
+              setSelected((current) => [...current, true]);
+              return newIndex;
+            }}
             onUpdateToat={(index, updated) => setToats((current) => current.map((toat, itemIndex) => (itemIndex === index ? { ...toat, ...updated } : toat)))}
             onReorder={(from, to) => {
               setToats((current) => {

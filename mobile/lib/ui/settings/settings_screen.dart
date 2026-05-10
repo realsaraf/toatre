@@ -287,15 +287,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onGoogleDirectionChanged: (direction) => setState(
                             () => _googleCalendarDirection = direction,
                           ),
-                          onMicrosoftDirectionChanged: (direction) => setState(
-                            () => _microsoftDirection = direction,
-                          ),
-                          onCalendlyDirectionChanged: (direction) => setState(
-                            () => _calendlyDirection = direction,
-                          ),
-                          onZoomDirectionChanged: (direction) => setState(
-                            () => _zoomDirection = direction,
-                          ),
+                          onMicrosoftDirectionChanged: (direction) =>
+                              setState(() => _microsoftDirection = direction),
+                          onCalendlyDirectionChanged: (direction) =>
+                              setState(() => _calendlyDirection = direction),
+                          onZoomDirectionChanged: (direction) =>
+                              setState(() => _zoomDirection = direction),
                           onConnectGoogle: () =>
                               _connectGoogleCalendar(settingsProvider),
                           onDisconnectGoogle: () =>
@@ -387,8 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _syncConnections['microsoft']?.direction ??
         SyncDirection.sourceToToatre;
     _calendlyDirection =
-        _syncConnections['calendly']?.direction ??
-        SyncDirection.sourceToToatre;
+        _syncConnections['calendly']?.direction ?? SyncDirection.sourceToToatre;
     _zoomDirection =
         _syncConnections['zoom']?.direction ?? SyncDirection.sourceToToatre;
   }
@@ -528,9 +524,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _connectMicrosoft(SettingsProvider provider) async {
     try {
       await provider.connectMicrosoftCalendar(direction: _microsoftDirection);
-      _showNotice('Finish Microsoft approval in the browser.', _NoticeTone.success);
+      _showNotice(
+        'Finish Microsoft approval in the browser.',
+        _NoticeTone.success,
+      );
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not connect Microsoft Calendar sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not connect Microsoft Calendar sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -539,7 +541,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.disconnectMicrosoftCalendar();
       _showNotice('Microsoft Calendar sync paused.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not pause Microsoft Calendar sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not pause Microsoft Calendar sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -548,16 +553,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.syncMicrosoftNow();
       _showNotice('Microsoft Calendar sync finished.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not sync Microsoft Calendar.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not sync Microsoft Calendar.',
+        _NoticeTone.error,
+      );
     }
   }
 
   Future<void> _connectCalendly(SettingsProvider provider) async {
     try {
       await provider.connectCalendly(direction: _calendlyDirection);
-      _showNotice('Finish Calendly approval in the browser.', _NoticeTone.success);
+      _showNotice(
+        'Finish Calendly approval in the browser.',
+        _NoticeTone.success,
+      );
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not connect Calendly sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not connect Calendly sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -566,7 +580,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.disconnectCalendly();
       _showNotice('Calendly sync paused.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not pause Calendly sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not pause Calendly sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -575,7 +592,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.syncCalendlyNow();
       _showNotice('Calendly sync finished.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not sync Calendly.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not sync Calendly.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -584,7 +604,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.connectZoom(direction: _zoomDirection);
       _showNotice('Finish Zoom approval in the browser.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not connect Zoom sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not connect Zoom sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -593,7 +616,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await provider.disconnectZoom();
       _showNotice('Zoom sync paused.', _NoticeTone.success);
     } catch (_) {
-      _showNotice(provider.error ?? 'Could not pause Zoom sync.', _NoticeTone.error);
+      _showNotice(
+        provider.error ?? 'Could not pause Zoom sync.',
+        _NoticeTone.error,
+      );
     }
   }
 
@@ -1732,12 +1758,18 @@ class _SyncTab extends StatelessWidget {
   final VoidCallback onDisconnectZoom;
   final VoidCallback onSyncZoom;
 
-  static const bool _kMicrosoftEnabled =
-      bool.fromEnvironment('SYNC_MICROSOFT_ENABLED', defaultValue: false);
-  static const bool _kCalendlyEnabled =
-      bool.fromEnvironment('SYNC_CALENDLY_ENABLED', defaultValue: false);
-  static const bool _kZoomEnabled =
-      bool.fromEnvironment('SYNC_ZOOM_ENABLED', defaultValue: false);
+  static const bool _kMicrosoftEnabled = bool.fromEnvironment(
+    'SYNC_MICROSOFT_ENABLED',
+    defaultValue: false,
+  );
+  static const bool _kCalendlyEnabled = bool.fromEnvironment(
+    'SYNC_CALENDLY_ENABLED',
+    defaultValue: false,
+  );
+  static const bool _kZoomEnabled = bool.fromEnvironment(
+    'SYNC_ZOOM_ENABLED',
+    defaultValue: false,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1814,9 +1846,23 @@ class _SyncTab extends StatelessWidget {
               busy: savingKey == 'sync-microsoft',
               syncing: savingKey == 'sync-microsoft-run',
               directions: const [
-                (id: SyncDirection.sourceToToatre, title: 'Microsoft to Toatre', body: 'New Microsoft 365 calendar entries become Toatre toats.'),
-                (id: SyncDirection.toatreToSource, title: 'Toatre to Microsoft', body: 'New scheduled Toatre toats appear in your Microsoft 365 calendar.'),
-                (id: SyncDirection.twoWay, title: 'Two-way', body: 'New items move both ways from now on.'),
+                (
+                  id: SyncDirection.sourceToToatre,
+                  title: 'Microsoft to Toatre',
+                  body:
+                      'New Microsoft 365 calendar entries become Toatre toats.',
+                ),
+                (
+                  id: SyncDirection.toatreToSource,
+                  title: 'Toatre to Microsoft',
+                  body:
+                      'New scheduled Toatre toats appear in your Microsoft 365 calendar.',
+                ),
+                (
+                  id: SyncDirection.twoWay,
+                  title: 'Two-way',
+                  body: 'New items move both ways from now on.',
+                ),
               ],
               connectLabel: 'Connect Microsoft 365',
               disconnectLabel: 'Pause Microsoft sync',
@@ -1838,7 +1884,12 @@ class _SyncTab extends StatelessWidget {
               busy: savingKey == 'sync-calendly',
               syncing: savingKey == 'sync-calendly-run',
               directions: const [
-                (id: SyncDirection.sourceToToatre, title: 'Calendly to Toatre', body: 'New confirmed Calendly bookings appear as toats in your timeline.'),
+                (
+                  id: SyncDirection.sourceToToatre,
+                  title: 'Calendly to Toatre',
+                  body:
+                      'New confirmed Calendly bookings appear as toats in your timeline.',
+                ),
               ],
               connectLabel: 'Connect Calendly',
               disconnectLabel: 'Pause Calendly sync',
@@ -1860,7 +1911,12 @@ class _SyncTab extends StatelessWidget {
               busy: savingKey == 'sync-zoom',
               syncing: savingKey == 'sync-zoom-run',
               directions: const [
-                (id: SyncDirection.sourceToToatre, title: 'Zoom to Toatre', body: 'Upcoming Zoom meetings appear as toats in your timeline.'),
+                (
+                  id: SyncDirection.sourceToToatre,
+                  title: 'Zoom to Toatre',
+                  body:
+                      'Upcoming Zoom meetings appear as toats in your timeline.',
+                ),
               ],
               connectLabel: 'Connect Zoom',
               disconnectLabel: 'Pause Zoom sync',
@@ -2176,7 +2232,12 @@ class _GenericSyncCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ProviderMark(iconLabel: iconLabel, icon: icon, large: true, color: iconColor),
+              _ProviderMark(
+                iconLabel: iconLabel,
+                icon: icon,
+                large: true,
+                color: iconColor,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -2188,12 +2249,17 @@ class _GenericSyncCard extends StatelessWidget {
                       connected
                           ? 'Connected ${_formatSyncDate(connection?.connectedAt)}'
                           : directions.first.body,
-                      style: TextStyles.small.copyWith(color: AppColors.textSecondary),
+                      style: TextStyles.small.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              _StatusChip(label: connected ? 'Connected' : 'Ready', highlighted: connected),
+              _StatusChip(
+                label: connected ? 'Connected' : 'Ready',
+                highlighted: connected,
+              ),
             ],
           ),
           if (directions.length > 1) ...[
@@ -2225,8 +2291,18 @@ class _GenericSyncCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ElevatedButton(
-                onPressed: busy || syncing ? null : connected ? onDisconnect : onConnect,
-                child: Text(busy ? connectingLabel : connected ? disconnectLabel : connectLabel),
+                onPressed: busy || syncing
+                    ? null
+                    : connected
+                    ? onDisconnect
+                    : onConnect,
+                child: Text(
+                  busy
+                      ? connectingLabel
+                      : connected
+                      ? disconnectLabel
+                      : connectLabel,
+                ),
               ),
               if (connected) ...[
                 const SizedBox(height: 10),
@@ -2298,7 +2374,12 @@ class _DirectionOption extends StatelessWidget {
 }
 
 class _ProviderMark extends StatelessWidget {
-  const _ProviderMark({this.iconLabel, this.icon, this.large = false, this.color});
+  const _ProviderMark({
+    this.iconLabel,
+    this.icon,
+    this.large = false,
+    this.color,
+  });
 
   final String? iconLabel;
   final IconData? icon;

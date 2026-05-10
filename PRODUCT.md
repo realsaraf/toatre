@@ -164,7 +164,6 @@ fires on creation.)
 - Watch app, widgets
 - Drive mode / hands-free
 - Group toats (>2 participants without explicit sharing)
-- Hifz-style memorization features (N/A — Mutqin product)
 
 ---
 

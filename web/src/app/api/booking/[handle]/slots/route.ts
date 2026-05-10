@@ -8,6 +8,51 @@ interface SlotInfo {
   blocked: boolean;
 }
 
+function formatDateKey(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function timezoneOffsetMs(date: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+  return asUtc - date.getTime();
+}
+
+function makeDateInTimezone(dateKey: string, time: string, timezone: string): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  return new Date(utcGuess.getTime() - timezoneOffsetMs(utcGuess, timezone));
+}
+
+function isBookingSlotLength(input: unknown): input is 15 | 30 | 45 | 60 {
+  return input === 15 || input === 30 || input === 45 || input === 60;
+}
+
 /** Generate all candidate slots for a day given booking settings. */
 function generateDaySlots(
   date: Date,
@@ -17,18 +62,9 @@ function generateDaySlots(
   bufferMinutes: number,
   timezone: string,
 ): Array<{ start: Date; end: Date }> {
-  const [startH, startM] = windowStart.split(":").map(Number);
-  const [endH, endM] = windowEnd.split(":").map(Number);
-
-  // Build the window using the user's timezone via Intl
-  const dayStr = date.toLocaleDateString("en-CA", { timeZone: timezone }); // "YYYY-MM-DD"
-  const windowStartMs = new Date(`${dayStr}T${windowStart}:00`).getTime();
-  const windowEndMs = new Date(`${dayStr}T${windowEnd}:00`).getTime();
-
-  // Fallback: if timezone parsing fails just use date in UTC
-  if (Number.isNaN(windowStartMs) || Number.isNaN(windowEndMs)) {
-    return [];
-  }
+  const dayStr = formatDateKey(date, timezone);
+  const windowStartMs = makeDateInTimezone(dayStr, windowStart, timezone).getTime();
+  const windowEndMs = makeDateInTimezone(dayStr, windowEnd, timezone).getTime();
 
   const step = (slotLength + bufferMinutes) * 60000;
   const slotMs = slotLength * 60000;
@@ -37,8 +73,6 @@ function generateDaySlots(
   for (let t = windowStartMs; t + slotMs <= windowEndMs; t += step) {
     slots.push({ start: new Date(t), end: new Date(t + slotMs) });
   }
-
-  void startH; void startM; void endH; void endM; // consumed via string
   return slots;
 }
 
@@ -53,7 +87,7 @@ export async function GET(
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
 
-  const { users, bookingSettings, toats } = await getCollections();
+  const { users, bookingSettings, toats, settings, bookingRequests } = await getCollections();
 
   // Resolve handle → user
   const cleanHandle = handle.replace(/^@/, '').toLowerCase();
@@ -68,12 +102,17 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const settingsDoc = await settings.findOne({ userId: userDoc._id.toString() });
   const timezone = (typeof bsDoc.timezone === "string" && bsDoc.timezone) || "UTC";
-  const slotLength = bsDoc.slotLength === 60 ? 60 : 30;
+  const slotLength = isBookingSlotLength(bsDoc.slotLength) ? bsDoc.slotLength : 30;
   const bufferMinutes = typeof bsDoc.bufferMinutes === "number" ? bsDoc.bufferMinutes : 0;
   const advanceNoticeMs = ((typeof bsDoc.advanceNoticeMinutes === "number" ? bsDoc.advanceNoticeMinutes : 60)) * 60000;
   const maxDaysAhead = typeof bsDoc.maxDaysAhead === "number" ? bsDoc.maxDaysAhead : 14;
   const windowDays: number[] = Array.isArray(bsDoc.windowDays) ? (bsDoc.windowDays as number[]) : [1, 2, 3, 4, 5];
+  const disableDuringOfficeHours = bsDoc.disableDuringOfficeHours === true;
+  const officeStart =
+    typeof settingsDoc?.workStart === "string" ? settingsDoc.workStart : null;
+  const officeEnd = typeof settingsDoc?.workEnd === "string" ? settingsDoc.workEnd : null;
 
   const now = new Date();
   const fromDate = fromParam ? new Date(fromParam) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -149,7 +188,7 @@ export async function GET(
   }
 
   // Also block already-booked pending/accepted request slots
-  const existingRequests = await (await getCollections()).bookingRequests.find({
+  const existingRequests = await bookingRequests.find({
     ownerId,
     state: { $ne: "denied" },
     slotStart: { $gte: windowStart, $lt: windowEnd },
@@ -167,6 +206,15 @@ export async function GET(
   function isBlocked(slot: { start: Date; end: Date }): boolean {
     const ss = slot.start.getTime();
     const se = slot.end.getTime();
+    if (disableDuringOfficeHours && officeStart && officeEnd) {
+      const dayKey = formatDateKey(slot.start, timezone);
+      const officeWindowStart = makeDateInTimezone(dayKey, officeStart, timezone).getTime();
+      const officeWindowEnd = makeDateInTimezone(dayKey, officeEnd, timezone).getTime();
+      if (ss < officeWindowEnd && se > officeWindowStart) {
+        return true;
+      }
+    }
+
     return blockedIntervals.some(({ start, end }) => ss < end && se > start);
   }
 
@@ -176,7 +224,24 @@ export async function GET(
     blocked: isBlocked(s),
   }));
 
-  return NextResponse.json({ slots, host: serializeHost(userDoc) });
+  return NextResponse.json({
+    slots,
+    host: serializeHost(userDoc),
+    booking: {
+      timezone,
+      greetingMessage:
+        typeof bsDoc.greetingMessage === "string" ? bsDoc.greetingMessage : "",
+      pageTitle:
+        typeof bsDoc.pageTitle === "string" && bsDoc.pageTitle.trim().length > 0
+          ? bsDoc.pageTitle
+          : "Let's find a time that works for you.",
+      metaDescription:
+        typeof bsDoc.metaDescription === "string" && bsDoc.metaDescription.trim().length > 0
+          ? bsDoc.metaDescription
+          : "Book a 1-on-1 session with me. Simple, quick and hassle-free.",
+      requireReason: bsDoc.requireReason === true,
+    },
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,5 +250,19 @@ function serializeHost(userDoc: any) {
     displayName: userDoc.displayName ?? null,
     handle: userDoc.handle ?? null,
     photoUrl: userDoc.photoUrl ?? null,
+    socialLinks: Array.isArray(userDoc.socialLinks)
+      ? userDoc.socialLinks.filter((link: unknown) => {
+          if (!link || typeof link !== "object") return false;
+          const candidate = link as { type?: unknown; url?: unknown };
+          return (
+            (candidate.type === "x" ||
+              candidate.type === "linkedin" ||
+              candidate.type === "instagram" ||
+              candidate.type === "youtube") &&
+            typeof candidate.url === "string" &&
+            candidate.url.trim().length > 0
+          );
+        })
+      : [],
   };
 }

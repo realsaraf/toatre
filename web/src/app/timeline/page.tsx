@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { isPhoneViewport } from "@/lib/viewport";
 import { useTimelineToats } from "./_hooks/useTimelineToats";
 import { MobileTimelineView } from "./_components/mobile/MobileTimelineView";
 import { DesktopTimelineView } from "./_components/desktop/DesktopTimelineView";
@@ -35,7 +36,7 @@ export default function TimelinePage() {
   }, [loading, router, user]);
 
   const now = new Date();
-  const isCompact = viewportWidth !== null && viewportWidth < 430;
+  const isCompact = viewportWidth !== null && isPhoneViewport(viewportWidth);
   const isDesktop = viewportWidth !== null && viewportWidth >= 1100;
   const bookingCount = toats.filter((t) =>
     Boolean((t as TimelineToat & { bookingRequestId?: string | null }).bookingRequestId),
@@ -43,11 +44,12 @@ export default function TimelinePage() {
 
   const openTimeline = () => router.push("/timeline");
   const openInbox = () => router.push("/inbox");
+  const openBookings = () => router.push("/bookings");
   const openPeople = () => router.push("/people");
+  const openHelp = () => router.push("/help");
   const openSearch = () => router.push("/capture?mode=text");
   const openSettings = () => router.push("/settings");
   const openCapture = () => router.push("/capture");
-  const openTextCapture = () => router.push("/capture?mode=text");
   const openToat = (toat: TimelineToat) => router.push(`/toats/${toat.id}`);
   const refreshTimeline = () => { void reloadToats(); };
 
@@ -60,7 +62,9 @@ export default function TimelinePage() {
         onOpenSettings={openSettings}
         onOpenTimeline={openTimeline}
         onOpenInbox={openInbox}
+        onOpenBookings={openBookings}
         onOpenPeople={openPeople}
+        onOpenHelp={openHelp}
         onOpenSearch={openSearch}
         onCaptureSaved={refreshTimeline}
         onOpenToat={openToat}
@@ -88,13 +92,12 @@ export default function TimelinePage() {
       removingToatId={removingToatId}
       onMarkDone={(toat, anchorEl) => updateToatState(toat, "done", anchorEl)}
       onArchiveToat={(toat) => updateToatState(toat, "archived")}
-      onOpenSettings={openSettings}
       onOpenSearch={openSearch}
       onOpenCapture={openCapture}
-      onOpenTextCapture={openTextCapture}
       onOpenToat={openToat}
       onOpenInbox={openInbox}
-      onOpenPeople={openPeople}
+      onOpenBookings={openBookings}
+      onOpenMenu={openSettings}
       onOpenTimeline={openTimeline}
     />
   );

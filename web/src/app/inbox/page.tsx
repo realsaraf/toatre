@@ -1,54 +1,84 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { MobileInboxView } from "./_components/mobile/MobileInboxView";
 import {
-  AppBrand,
-  BottomTabBar,
-  CalendarIcon,
-  InboxIcon,
-  PeopleIcon,
-  SearchIcon,
-  TimelineIcon,
-} from "@/components/mobile-ui";
+  BookingDashboardShell,
+  RequestAvatar,
+  formatClock,
+  formatDateLabel,
+  timeAgo,
+  type BookingRequestItem,
+} from "@/app/_components/booking-dashboard";
 
-interface BookingToat {
+interface SharedInboxToat {
   id: string;
-  title: string;
-  state: string;
-  bookingRequestId: string | null;
-  enrichments?: {
-    time?: { at?: string; endAt?: string };
-    communication?: { contact?: string; email?: string; phone?: string; message?: string };
-  };
+  token: string;
+  shareUrl: string;
+  role: string;
   createdAt: string;
+  updatedAt: string;
+  sender: {
+    id: string | null;
+    name: string;
+    handle: string | null;
+    email: string | null;
+    photoUrl: string | null;
+  };
+  recipient: {
+    name: string | null;
+    relationship: string | null;
+  };
+  toat: {
+    id: string;
+    title: string;
+    notes: string | null;
+    enrichments?: {
+      time?: { at?: string | null; startAt?: string | null; dueAt?: string | null };
+      place?: { address?: string | null; placeName?: string | null };
+      event?: { venueName?: string | null; address?: string | null };
+      communication?: { contact?: string | null };
+    };
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
-function formatSlot(at?: string, endAt?: string): string {
-  if (!at) return "Time not set";
-  const start = new Date(at);
-  const startStr = start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  if (!endAt) return startStr;
-  const endStr = new Date(endAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${startStr} – ${endStr}`;
+interface InboxResponse {
+  bookingRequests?: BookingRequestItem[];
+  sharedToats?: SharedInboxToat[];
 }
 
-function timeFromNow(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.round(hrs / 24)}d ago`;
+type InboxItem =
+  | { type: "booking"; createdAt: string; request: BookingRequestItem }
+  | { type: "shared"; createdAt: string; share: SharedInboxToat };
+
+function MiniCalendarIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden><rect x="4" y="6" width="16" height="14" rx="3" stroke="currentColor" strokeWidth="2" /><path d="M8 3v5M16 3v5M4 10h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+}
+
+function MiniClockIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2" /><path d="M12 7.5v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+}
+
+function MiniPinIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="11" r="2" fill="currentColor" /></svg>;
+}
+
+function ShareGlyph() {
+  return <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M7 12a3 3 0 1 0 0 .01M17 6a3 3 0 1 0 0 .01M17 18a3 3 0 1 0 0 .01M9.6 10.7l4.8-3.4M9.6 13.3l4.8 3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
 }
 
 export default function InboxPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-
-  const [toats, setToats] = useState<BookingToat[]>([]);
+  const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+  const [bookingRequests, setBookingRequests] = useState<BookingRequestItem[]>([]);
+  const [sharedToats, setSharedToats] = useState<SharedInboxToat[]>([]);
+  const [acceptedBookingsCount, setAcceptedBookingsCount] = useState(0);
   const [loadingState, setLoadingState] = useState(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,6 +86,13 @@ export default function InboxPage() {
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, router, user]);
+
+  useEffect(() => {
+    const update = () => setViewportWidth(window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const authorizedFetch = useCallback(async (input: string, init?: RequestInit) => {
     if (!user) throw new Error("Auth required");
@@ -66,176 +103,163 @@ export default function InboxPage() {
     return fetch(input, { ...init, headers });
   }, [user]);
 
-  const loadInbox = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
     setLoadingState(true);
     try {
-      const res = await authorizedFetch("/api/toats?source=booking_request&state=open");
-      const data = (await res.json()) as { toats?: BookingToat[] };
-      setToats(data.toats ?? []);
-    } catch { /* silent */ }
-    finally { setLoadingState(false); }
+      const [inboxResponse, bookingsResponse] = await Promise.all([
+        authorizedFetch("/api/inbox"),
+        authorizedFetch("/api/booking/requests?state=accepted&range=all"),
+      ]);
+      const inboxData = (await inboxResponse.json()) as InboxResponse;
+      const bookingsData = (await bookingsResponse.json()) as { requests?: BookingRequestItem[] };
+      setBookingRequests(inboxData.bookingRequests ?? []);
+      setSharedToats(inboxData.sharedToats ?? []);
+      setAcceptedBookingsCount(bookingsData.requests?.length ?? 0);
+    } catch {
+      setNotice("Inbox could not refresh. Try again in a moment.");
+    } finally {
+      setLoadingState(false);
+    }
   }, [authorizedFetch, user]);
 
-  useEffect(() => { void loadInbox(); }, [loadInbox]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadData();
+    });
+  }, [loadData]);
 
-  const act = useCallback(async (toat: BookingToat, state: "accepted" | "denied") => {
-    if (!toat.bookingRequestId) return;
-    setActioningId(toat.id);
+  const act = useCallback(async (request: BookingRequestItem, state: "accepted" | "denied") => {
+    setActioningId(request.id);
     setNotice(null);
     try {
-      const res = await authorizedFetch(`/api/booking/requests/${toat.bookingRequestId}`, {
+      const response = await authorizedFetch(`/api/booking/requests/${request.id}`, {
         method: "PATCH",
         body: JSON.stringify({ state }),
       });
-      if (!res.ok) {
-        const d = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(d?.error ?? "Could not complete action.");
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not complete that action.");
       }
-      setNotice(state === "accepted" ? "Booking accepted — booker has been notified." : "Booking declined — booker has been notified.");
-      void loadInbox();
-    } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Something went wrong.");
+      setNotice(state === "accepted" ? `${request.name}'s booking moved to Bookings.` : `${request.name}'s request was declined.`);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Something went wrong.");
     } finally {
       setActioningId(null);
     }
-  }, [authorizedFetch, loadInbox]);
+  }, [authorizedFetch, loadData]);
+
+  const inboxItems = useMemo<InboxItem[]>(() => [
+    ...bookingRequests.map((request) => ({ type: "booking" as const, createdAt: request.createdAt, request })),
+    ...sharedToats.map((share) => ({ type: "shared" as const, createdAt: share.createdAt, share })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [bookingRequests, sharedToats]);
+
+  const isDesktop = viewportWidth !== null && viewportWidth >= 1100;
+
+  if (!isDesktop) {
+    return (
+      <MobileInboxView
+        user={user}
+        bookingRequests={bookingRequests}
+        sharedToats={sharedToats}
+        acceptedBookingsCount={acceptedBookingsCount}
+        loadingState={loadingState}
+        notice={notice}
+        actioningId={actioningId}
+        onRefresh={() => void loadData()}
+        onAct={act}
+        onOpenTimeline={() => router.push("/timeline")}
+        onOpenInbox={() => router.push("/inbox")}
+        onOpenBookings={() => router.push("/bookings")}
+        onOpenMenu={() => router.push("/settings")}
+        onOpenCapture={() => router.push("/capture")}
+      />
+    );
+  }
 
   return (
-    <div style={s.page}>
-      <div style={s.bgGlow1} />
+    <BookingDashboardShell
+      user={user}
+      active="inbox"
+      inboxCount={inboxItems.length}
+      bookingCount={acceptedBookingsCount}
+      pageTitle="Inbox"
+      pageSubtitle="Requests you received and toats shared by your connections"
+      onCapture={() => router.push("/capture?mode=text")}
+    >
+      <section className="booking-dashboard-content" style={{ gridTemplateColumns: "1fr" }}>
+        <div className="booking-panel">
+          <div className="booking-panel-head">
+            <div className="booking-panel-meta"><strong>Waiting now</strong><span className="booking-panel-count">{inboxItems.length}</span></div>
+            <button type="button" className="booking-small-button" onClick={() => void loadData()}>Refresh</button>
+          </div>
 
-      <header style={s.header}>
-        <AppBrand />
-      </header>
+          {notice ? <div className="booking-notice">{notice}</div> : null}
+          {loadingState ? <div className="booking-empty"><strong>Loading inbox</strong><span>Checking booking requests and shared toats.</span></div> : null}
+          {!loadingState && inboxItems.length === 0 ? <div className="booking-empty"><strong>All clear</strong><span>No booking requests or shared toats are waiting.</span></div> : null}
 
-      <main style={s.main}>
-        <div style={s.titleRow}>
-          <h1 style={s.pageTitle}>Inbox</h1>
-          <span style={s.badge}>{toats.length > 0 ? toats.length : ""}</span>
+          <div className="request-list">
+            {inboxItems.map((item, index) => item.type === "booking" ? (
+              <BookingRequestCard
+                key={`booking-${item.request.id}`}
+                request={item.request}
+                unread={index === 0}
+                disabled={actioningId === item.request.id}
+                onAct={act}
+              />
+            ) : (
+              <SharedToatCard key={`shared-${item.share.id}`} share={item.share} unread={index === 0} />
+            ))}
+          </div>
         </div>
-        <p style={s.pageSubtitle}>Pending booking requests. Accept or decline each one.</p>
-
-        {notice && (
-          <div style={s.notice}>{notice}</div>
-        )}
-
-        {loadingState ? (
-          <div style={s.center}>
-            <div style={s.spinner} className="animate-spin" />
-          </div>
-        ) : toats.length === 0 ? (
-          <div style={s.empty}>
-            <div style={s.emptyIcon}>📭</div>
-            <p style={s.emptyTitle}>All clear</p>
-            <p style={s.emptyBody}>No pending booking requests right now.</p>
-          </div>
-        ) : (
-          <div style={s.list}>
-            {toats.map((toat) => {
-              const comm = toat.enrichments?.communication;
-              const time = toat.enrichments?.time;
-              const isActioning = actioningId === toat.id;
-              return (
-                <div key={toat.id} style={s.card}>
-                  <div style={s.cardHeader}>
-                    <div style={s.avatarCircle}>{(comm?.contact ?? "?")[0].toUpperCase()}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={s.bookerName}>{comm?.contact ?? "Unknown"}</p>
-                      <p style={s.bookerEmail}>{comm?.email ?? ""}</p>
-                    </div>
-                    <span style={s.timeAgo}>{timeFromNow(toat.createdAt)}</span>
-                  </div>
-
-                  <div style={s.slotPill}>
-                    <span style={{ fontSize: 14 }}>📅</span>
-                    <span style={s.slotText}>{formatSlot(time?.at, time?.endAt)}</span>
-                  </div>
-
-                  {comm?.message && (
-                    <p style={s.message}>&ldquo;{comm.message}&rdquo;</p>
-                  )}
-
-                  {comm?.phone && (
-                    <p style={s.phoneRow}>📞 {comm.phone}</p>
-                  )}
-
-                  <div style={s.actionRow}>
-                    <button
-                      type="button"
-                      disabled={isActioning}
-                      onClick={() => void act(toat, "accepted")}
-                      style={{ ...s.acceptBtn, ...(isActioning ? s.btnDisabled : {}) }}
-                    >
-                      {isActioning ? "…" : "Accept"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isActioning}
-                      onClick={() => void act(toat, "denied")}
-                      style={{ ...s.denyBtn, ...(isActioning ? s.btnDisabled : {}) }}
-                    >
-                      {isActioning ? "…" : "Decline"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      <BottomTabBar
-        items={[
-          { label: "Timeline", icon: <TimelineIcon />, href: "/timeline" },
-          { label: "Search", icon: <SearchIcon /> },
-          { label: "People", icon: <PeopleIcon /> },
-          { label: "Inbox", icon: <InboxIcon />, href: "/inbox" },
-          { label: "Calendar", icon: <CalendarIcon />, href: "/timeline" },
-        ]}
-      />
-    </div>
+      </section>
+    </BookingDashboardShell>
   );
 }
 
-const s: Record<string, CSSProperties> = {
-  page: { minHeight: "100vh", background: "linear-gradient(180deg,#FBFAFF 0%,#F7F5FF 52%,#FBFAFF 100%)", position: "relative" },
-  bgGlow1: { position: "absolute", top: -120, left: -160, width: 420, height: 420, background: "radial-gradient(circle, rgba(91,61,245,0.10), transparent)", filter: "blur(24px)", pointerEvents: "none" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px 0" },
-  main: { padding: "12px 16px 120px", maxWidth: 600, margin: "0 auto" },
+function BookingRequestCard({ request, unread, disabled, onAct }: { request: BookingRequestItem; unread: boolean; disabled: boolean; onAct: (request: BookingRequestItem, state: "accepted" | "denied") => Promise<void> }) {
+  const start = formatClock(request.slotStart);
+  return (
+    <article className={`request-card${unread ? " unread" : ""}`}>
+      <RequestAvatar name={request.name} />
+      <div className="request-copy">
+        <strong>{request.name}</strong>
+        <p>{request.message || request.title}</p>
+        <div className="request-meta">
+          <span><MiniCalendarIcon /> {formatDateLabel(request.slotStart)}</span>
+          <span><MiniClockIcon /> {start.time} {start.period}</span>
+          {request.location ? <span><MiniPinIcon /> {request.location}</span> : null}
+        </div>
+      </div>
+      <span className="request-age">{timeAgo(request.createdAt)}</span>
+      <div className="request-actions">
+        <button type="button" className="decline-button" disabled={disabled} onClick={() => void onAct(request, "denied")}>{disabled ? "..." : "Decline"}</button>
+        <button type="button" className="accept-button" disabled={disabled} onClick={() => void onAct(request, "accepted")}>{disabled ? "..." : "Accept"}</button>
+      </div>
+    </article>
+  );
+}
 
-  titleRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 4 },
-  pageTitle: { fontSize: 28, fontWeight: 800, color: "#1E1B4B", margin: 0, letterSpacing: -0.8 },
-  badge: { fontSize: 13, fontWeight: 700, background: "rgba(91,61,245,0.12)", color: "#5B3DF5", borderRadius: 999, padding: "3px 10px", minWidth: 22, textAlign: "center" },
-  pageSubtitle: { fontSize: 14, color: "#6B7280", margin: "0 0 20px" },
-
-  notice: { fontSize: 14, color: "#374151", background: "rgba(91,61,245,0.08)", border: "1px solid rgba(91,61,245,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 },
-
-  center: { display: "flex", justifyContent: "center", paddingTop: 60 },
-  spinner: { width: 36, height: 36, border: "3px solid rgba(91,61,245,0.15)", borderTopColor: "#5B3DF5", borderRadius: "50%" },
-
-  empty: { textAlign: "center", padding: "60px 20px" },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: 700, color: "#1E1B4B", margin: "0 0 6px" },
-  emptyBody: { fontSize: 14, color: "#6B7280", margin: 0 },
-
-  list: { display: "flex", flexDirection: "column", gap: 14 },
-
-  card: { background: "#fff", borderRadius: 18, border: "1px solid rgba(91,61,245,0.1)", padding: "16px", boxShadow: "0 2px 12px rgba(91,61,245,0.06)" },
-  cardHeader: { display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 },
-  avatarCircle: { width: 40, height: 40, borderRadius: 20, background: "linear-gradient(135deg,#5B3DF5,#9333EA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff", flexShrink: 0 },
-  bookerName: { fontSize: 15, fontWeight: 700, color: "#1E1B4B", margin: "0 0 2px" },
-  bookerEmail: { fontSize: 12, color: "#9CA3AF", margin: 0 },
-  timeAgo: { fontSize: 12, color: "#9CA3AF", whiteSpace: "nowrap", paddingTop: 2 },
-
-  slotPill: { display: "flex", gap: 8, alignItems: "center", background: "rgba(91,61,245,0.07)", borderRadius: 10, padding: "8px 12px", marginBottom: 10, border: "1px solid rgba(91,61,245,0.13)" },
-  slotText: { fontSize: 13, fontWeight: 600, color: "#5B3DF5" },
-
-  message: { fontSize: 13, color: "#4B5563", fontStyle: "italic", margin: "0 0 10px", padding: "10px 12px", background: "#F9FAFB", borderRadius: 10, lineHeight: 1.5 },
-  phoneRow: { fontSize: 13, color: "#6B7280", margin: "0 0 10px" },
-
-  actionRow: { display: "flex", gap: 10 },
-  acceptBtn: { flex: 1, padding: "10px", background: "linear-gradient(135deg,#059669,#10B981)", border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
-  denyBtn: { flex: 1, padding: "10px", background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.25)", borderRadius: 12, color: "#DC2626", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
-  btnDisabled: { opacity: 0.5, cursor: "not-allowed" },
-};
+function SharedToatCard({ share, unread }: { share: SharedInboxToat; unread: boolean }) {
+  const time = share.toat.enrichments?.time?.at ?? share.toat.enrichments?.time?.startAt ?? share.toat.enrichments?.time?.dueAt ?? null;
+  const location = share.toat.enrichments?.place?.address ?? share.toat.enrichments?.place?.placeName ?? share.toat.enrichments?.event?.venueName ?? share.toat.enrichments?.event?.address ?? null;
+  return (
+    <article className={`request-card shared-toat-card${unread ? " unread" : ""}`}>
+      <span className="request-avatar shared-avatar"><ShareGlyph /></span>
+      <div className="request-copy">
+        <strong>{share.sender.name}</strong>
+        <p>Shared “{share.toat.title}” with you{share.recipient.relationship ? ` as ${share.recipient.relationship}` : ""}.</p>
+        <div className="request-meta">
+          {time ? <span><MiniCalendarIcon /> {formatDateLabel(time)}</span> : null}
+          {location ? <span><MiniPinIcon /> {location}</span> : null}
+          {share.role ? <span>{share.role === "edit" ? "Can edit" : "Can view"}</span> : null}
+        </div>
+      </div>
+      <span className="request-age">{timeAgo(share.createdAt)}</span>
+      <div className="request-actions">
+        <Link className="accept-button inbox-open-link" href={share.shareUrl}>Open</Link>
+      </div>
+    </article>
+  );
+}

@@ -12,7 +12,7 @@ import {
 /**
  * POST /api/captures/[id]/commit
  *
- * Keeps selected toats and deletes unselected ones for a capture.
+ * Keeps selected toats, deletes unselected ones, and persists any manually added review toats for a capture.
  * Body: { selectedIds: string[], edits?: Record<id, partial-toat> }
  *
  * Returns: { toats: SerializedToat[] } — only the kept toats
@@ -42,7 +42,7 @@ export async function POST(
       .record(
         z.string(),
         z.object({
-          title: z.string().optional(),
+          title: z.string().max(200).optional(),
           tier: z.enum(["urgent", "important", "regular"]).optional(),
           notes: z.string().nullable().optional(),
           enrichments: z.record(z.string(), z.unknown()).optional(),
@@ -71,6 +71,7 @@ export async function POST(
     .toArray();
 
   const selectedSet = new Set(selectedIds);
+  const captureToatIds = new Set(captureToats.map((toat) => toat._id.toString()));
 
   // Delete unselected toats
   const unselectedIds = captureToats
@@ -106,10 +107,33 @@ export async function POST(
     await toats.updateOne({ _id: toat._id, ownerId }, { $set: update });
   }
 
+  const addedToatDocs = selectedIds
+    .filter((selectedId) => !captureToatIds.has(selectedId))
+    .map((selectedId) => edits[selectedId])
+    .filter((edit) => edit?.title?.trim())
+    .map((edit) => ({
+      ownerId,
+      captureId: captureOid,
+      tier: edit.tier ?? "regular",
+      state: "open" as const,
+      title: edit.title!.trim(),
+      notes: edit.notes ?? null,
+      enrichments: edit.enrichments ?? {},
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+  let addedOids: ObjectId[] = [];
+  if (addedToatDocs.length > 0) {
+    const result = await toats.insertMany(addedToatDocs);
+    addedOids = Object.values(result.insertedIds) as ObjectId[];
+  }
+
   // Return the kept toats
   const keptOids = captureToats
     .filter((t) => selectedSet.has(t._id.toString()))
     .map((t) => t._id);
+  keptOids.push(...addedOids);
 
   const savedToats = await toats.find({ _id: { $in: keptOids }, ownerId }).toArray();
   for (const toat of savedToats) {

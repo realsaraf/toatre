@@ -35,10 +35,6 @@ export function DesktopTimelineBoard({
   return (
     <section className="desktop-timeline-board">
       <div className="desktop-board-head">
-        <div>
-          <h1>Your timeline</h1>
-          <p>Everything in chronological order</p>
-        </div>
         <div className="desktop-board-actions" aria-label="Timeline filters">
           <button type="button" className="desktop-filter-chip active">
             <ListIcon /> All

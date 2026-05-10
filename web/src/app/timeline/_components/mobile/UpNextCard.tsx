@@ -96,7 +96,7 @@ export function UpNextCard({
           <Icon size={compact ? 24 : 30} />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={styles.upNextContent}>
           <h3 style={{ ...styles.upNextTitle, ...(compact ? styles.upNextTitleCompact : {}) }}>
             {toat.title}
           </h3>
@@ -119,39 +119,39 @@ export function UpNextCard({
           >
             {getCountdownLabel(toat, new Date())}
           </p>
-        </div>
 
-        <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
-          {action ? (
+          <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
+            {action ? (
+              <button
+                type="button"
+                onClick={runAction}
+                style={{
+                  ...styles.cardActionButton,
+                  ...(compact ? styles.cardActionButtonCompact : {}),
+                  color: visual.accent,
+                  background: visual.soft,
+                }}
+              >
+                {action.label === "Directions" ? (
+                  <>
+                    <SteeringWheelIcon size={compact ? 13 : 15} /> Directions
+                  </>
+                ) : (
+                  action.label
+                )}
+              </button>
+            ) : null}
             <button
+              ref={doneButtonRef}
               type="button"
-              onClick={runAction}
-              style={{
-                ...styles.cardActionButton,
-                ...(compact ? styles.cardActionButtonCompact : {}),
-                color: visual.accent,
-                background: visual.soft,
-              }}
+              onClick={runDone}
+              disabled={doneDisabled}
+              style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}
+              aria-label="Mark done"
             >
-              {action.label === "Directions" ? (
-                <>
-                  <SteeringWheelIcon size={compact ? 13 : 15} /> Directions
-                </>
-              ) : (
-                action.label
-              )}
+              <DoneIcon size={compact ? 15 : 18} />
             </button>
-          ) : null}
-          <button
-            ref={doneButtonRef}
-            type="button"
-            onClick={runDone}
-            disabled={doneDisabled}
-            style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}
-            aria-label="Mark done"
-          >
-            <DoneIcon size={compact ? 15 : 18} />
-          </button>
+          </div>
         </div>
       </div>
     </section>

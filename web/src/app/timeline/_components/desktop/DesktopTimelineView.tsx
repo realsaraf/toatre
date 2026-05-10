@@ -18,6 +18,7 @@ import { DesktopTopbar } from "./DesktopTopbar";
 import { DesktopTimelineBoard } from "./DesktopTimelineBoard";
 import { DesktopDetailPanel } from "./DesktopDetailPanel";
 import { DesktopCaptureModal } from "./DesktopCaptureModal";
+import { DesktopPageIntro } from "@/app/_components/desktop-page-intro";
 
 interface DesktopUserSummary {
   photoURL?: string | null;
@@ -32,7 +33,9 @@ interface DesktopTimelineViewProps {
   onOpenSettings: () => void;
   onOpenTimeline: () => void;
   onOpenInbox: () => void;
+  onOpenBookings: () => void;
   onOpenPeople: () => void;
+  onOpenHelp: () => void;
   onOpenSearch: () => void;
   onCaptureSaved: () => void;
   onOpenToat: (toat: TimelineToat) => void;
@@ -50,7 +53,9 @@ export function DesktopTimelineView({
   onOpenSettings,
   onOpenTimeline,
   onOpenInbox,
+  onOpenBookings,
   onOpenPeople,
+  onOpenHelp,
   onOpenSearch,
   onCaptureSaved,
   onOpenToat,
@@ -141,8 +146,10 @@ export function DesktopTimelineView({
         bookingCount={bookingCount}
         onOpenTimeline={onOpenTimeline}
         onOpenInbox={onOpenInbox}
+        onOpenBookings={onOpenBookings}
         onOpenPeople={onOpenPeople}
         onOpenSettings={onOpenSettings}
+        onOpenHelp={onOpenHelp}
       />
 
       <div className="desktop-app-main">
@@ -165,6 +172,11 @@ export function DesktopTimelineView({
           onToday={() => setSelectedDateKey(todayKey)}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
+        />
+
+        <DesktopPageIntro
+          title="Your timeline"
+          subtitle="Everything in chronological order"
         />
 
         <div className="desktop-content-grid">

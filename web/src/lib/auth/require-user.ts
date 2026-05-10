@@ -8,6 +8,11 @@ export interface AuthenticatedUser {
   mongoId: string;       // MongoDB _id as string
 }
 
+function requestedTimezone(request: NextRequest): string | null {
+  const value = request.headers.get("x-toatre-timezone")?.trim();
+  return value ? value : null;
+}
+
 /**
  * Verify the Firebase ID token from the Authorization header.
  * Returns the user or throws a 401 response.
@@ -47,7 +52,8 @@ export async function requireUser(
 
   let mongoUser;
   try {
-    const { users } = await getCollections();
+    const timezone = requestedTimezone(request);
+    const { users, settings } = await getCollections();
     mongoUser = await users.findOne({ firebaseUid: decodedToken.uid });
 
     if (!mongoUser) {
@@ -59,11 +65,24 @@ export async function requireUser(
         handle: null,
         displayName: decodedToken.name ?? null,
         photoUrl: decodedToken.picture ?? null,
-        timezone: "UTC",
+        timezone: timezone ?? "UTC",
         createdAt: now,
         updatedAt: now,
       });
       mongoUser = await users.findOne({ _id: result.insertedId });
+    } else if (timezone && mongoUser.timezone === "UTC") {
+      const settingsDoc = await settings.findOne({ userId: mongoUser._id.toString() });
+      const hasSavedTimezone =
+        typeof settingsDoc?.timezone === "string" && settingsDoc.timezone.trim().length > 0;
+
+      if (!hasSavedTimezone) {
+        const now = new Date();
+        await users.updateOne(
+          { _id: mongoUser._id },
+          { $set: { timezone, updatedAt: now } },
+        );
+        mongoUser = { ...mongoUser, timezone, updatedAt: now };
+      }
     }
   } catch (error) {
     console.error("[requireUser] mongo failure", error);

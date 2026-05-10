@@ -1,25 +1,33 @@
 "use client";
 
 import { AppBrand, InboxIcon, PeopleIcon, TimelineIcon } from "@/components/mobile-ui";
-import { BookingIcon, ExternalLinkIcon, GearIcon, HelpIcon, LinkIcon } from "./desktop-icons";
+import { BookingIcon, ExternalLinkIcon, GearIcon, HelpIcon } from "./desktop-icons";
 import { SidebarNavButton } from "./SidebarNavButton";
 
 interface DesktopAppSidebarProps {
   toatsTotal: number;
+  inboxCount?: number;
   bookingCount: number;
+  active?: "timeline" | "inbox" | "people" | "bookings" | "settings" | "help";
   onOpenTimeline: () => void;
   onOpenInbox: () => void;
   onOpenPeople: () => void;
   onOpenSettings: () => void;
+  onOpenBookings: () => void;
+  onOpenHelp?: () => void;
 }
 
 export function DesktopAppSidebar({
   toatsTotal,
+  inboxCount,
   bookingCount,
+  active = "timeline",
   onOpenTimeline,
   onOpenInbox,
   onOpenPeople,
   onOpenSettings,
+  onOpenBookings,
+  onOpenHelp = () => window.location.assign("mailto:help@toatre.com"),
 }: DesktopAppSidebarProps) {
   const weeklyLimit = 20;
   const weeklyUsed = Math.min(toatsTotal, weeklyLimit);
@@ -32,27 +40,22 @@ export function DesktopAppSidebar({
       </div>
 
       <div className="desktop-sidebar-group">
-        <SidebarNavButton label="Timeline" active onClick={onOpenTimeline} icon={<TimelineIcon size={18} />} />
+        <SidebarNavButton label="Timeline" active={active === "timeline"} onClick={onOpenTimeline} icon={<TimelineIcon size={18} />} />
         <SidebarNavButton
           label="Inbox"
+          active={active === "inbox"}
           onClick={onOpenInbox}
           icon={<InboxIcon size={18} />}
-          badge={bookingCount > 0 ? bookingCount : 3}
+          badge={(inboxCount ?? 0) > 0 ? inboxCount : undefined}
         />
-        <SidebarNavButton label="People" onClick={onOpenPeople} icon={<PeopleIcon size={18} />} />
-      </div>
-
-      <div className="desktop-sidebar-section">
-        <span className="desktop-sidebar-heading">Shared Links</span>
-        <div className="desktop-sidebar-link muted">
-          <span className="desktop-sidebar-mini-icon"><LinkIcon size={16} /></span>
-          <span>Toatre Link</span>
-        </div>
-        <div className="desktop-sidebar-link muted">
-          <span className="desktop-sidebar-mini-icon"><BookingIcon size={16} /></span>
-          <span>Bookings</span>
-          <span className="desktop-sidebar-count">{bookingCount > 0 ? bookingCount : 7}</span>
-        </div>
+        <SidebarNavButton
+          label="Bookings"
+          active={active === "bookings"}
+          onClick={onOpenBookings}
+          icon={<BookingIcon size={18} />}
+          badge={bookingCount > 0 ? bookingCount : undefined}
+        />
+        <SidebarNavButton label="People" active={active === "people"} onClick={onOpenPeople} icon={<PeopleIcon size={18} />} />
       </div>
 
       <div className="desktop-link-card">
@@ -70,10 +73,11 @@ export function DesktopAppSidebar({
       </div>
 
       <div className="desktop-sidebar-footer">
-        <SidebarNavButton label="Settings" onClick={onOpenSettings} icon={<GearIcon />} compact />
+        <SidebarNavButton label="Settings" active={active === "settings"} onClick={onOpenSettings} icon={<GearIcon />} compact />
         <SidebarNavButton
           label="Help & feedback"
-          onClick={() => window.location.assign("mailto:help@toatre.com")}
+          active={active === "help"}
+          onClick={onOpenHelp}
           icon={<HelpIcon />}
           compact
         />

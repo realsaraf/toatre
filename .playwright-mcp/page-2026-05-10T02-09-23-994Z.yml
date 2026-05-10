@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "Toatre" [ref=e5]
+        - generic [ref=e6]: toatre
+      - heading "Welcome back" [level=1] [ref=e7]
+      - paragraph [ref=e8]: Own your slice of time.
+      - button "Continue with Google" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+        - text: Continue with Google
+      - button "Continue with Apple" [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+        - text: Continue with Apple
+      - generic [ref=e20]: or continue with email
+      - generic [ref=e22]:
+        - textbox "you@email.com" [ref=e23]
+        - button "Send magic link" [disabled] [ref=e24]
+      - paragraph [ref=e25]:
+        - text: By continuing you agree to our
+        - link "Terms" [ref=e26] [cursor=pointer]:
+          - /url: /tos
+        - text: and
+        - link "Privacy Policy" [ref=e27] [cursor=pointer]:
+          - /url: /privacy
+        - text: .
+  - button "Open Next.js Dev Tools" [ref=e33] [cursor=pointer]:
+    - img [ref=e34]

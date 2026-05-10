@@ -20,7 +20,7 @@ export function ChecklistSection({
   showNotes,
   setNotesLocal,
   saveNotesText,
-  notesSaveTimer,
+  notesSaveTimerRef,
 }: {
   checklistLocal: ChecklistItem[];
   setChecklistLocal: (v: ChecklistItem[]) => void;
@@ -35,7 +35,7 @@ export function ChecklistSection({
   showNotes: boolean;
   setNotesLocal: (v: string) => void;
   saveNotesText: (v: string) => Promise<void>;
-  notesSaveTimer: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  notesSaveTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   user: { displayName: string | null } | null;
   toat: ToatDetail;
 }) {
@@ -165,8 +165,8 @@ export function ChecklistSection({
             value={notesLocal}
             onChange={(e) => {
               setNotesLocal(e.target.value);
-              if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-              notesSaveTimer.current = setTimeout(
+              if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
+              notesSaveTimerRef.current = setTimeout(
                 () => {
                   void saveNotesText(e.target.value);
                 },

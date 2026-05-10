@@ -20,7 +20,7 @@ export function WhenWhereCard({
   showNotes,
   setNotesLocal,
   saveNotesText,
-  notesSaveTimer,
+  notesSaveTimerRef,
   onChangeLocation,
   onRemoveLocation,
   onShareOrCall,
@@ -38,7 +38,7 @@ export function WhenWhereCard({
   showNotes: boolean;
   setNotesLocal: (v: string) => void;
   saveNotesText: (v: string) => Promise<void>;
-  notesSaveTimer: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  notesSaveTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
   onShareOrCall: () => void;
@@ -120,8 +120,8 @@ export function WhenWhereCard({
             value={notesLocal}
             onChange={(e) => {
               setNotesLocal(e.target.value);
-              if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
-              notesSaveTimer.current = setTimeout(
+              if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
+              notesSaveTimerRef.current = setTimeout(
                 () => {
                   void saveNotesText(e.target.value);
                 },

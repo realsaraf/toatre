@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "toatre_session";
 
 // Paths that don't require auth
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos", "/toats"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos", "/toats", "/.well-known", "/apple-app-site-association"];
+const RESERVED_APP_PATHS = new Set(["bookings", "capture", "help", "inbox", "j", "people", "settings", "timeline"]);
+
+function isPublicHandlePath(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length !== 1) return false;
+  return !RESERVED_APP_PATHS.has(segments[0]);
+}
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -33,6 +40,11 @@ export function proxy(req: NextRequest) {
 
   // Public auth pages — pass through (login page handles redirect after sign-in)
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Public Toatre Links live at /[handle]. Reserved app paths remain protected.
+  if (isPublicHandlePath(pathname)) {
     return NextResponse.next();
   }
 
