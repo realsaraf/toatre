@@ -22,6 +22,12 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-05-10 (mobile shell consistency) — completed
+- Moved the mobile Timeline header onto the shared web mobile page intro so Timeline, Inbox, Bookings, and Settings use the same parent title/subtitle sizing.
+- Added shared mobile segmented tabs and empty-state primitives to the app shell, then reused them for Inbox and Bookings.
+- Restored the shell avatar on Inbox, removed the mobile refresh buttons from Inbox and Bookings, compacted Inbox booking request cards, and added empty-state actions for Handle settings and adjacent views.
+- Validation: focused ESLint on touched web files, `npm run typecheck`, and `npm run build` clean.
+
 ### Session 2026-05-10 (mobile web layout pass) — completed
 - Added a shared mobile app shell for web with the new Timeline / Inbox / mic / Bookings / Menu dock and reused it across the phone/tablet routes.
 - Added dedicated mobile Inbox and Bookings surfaces so those routes no longer fall back to the desktop dashboard shell below the desktop breakpoint.

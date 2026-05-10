@@ -38,7 +38,19 @@ interface MobilePageIntroProps {
   title: string;
   subtitle: string;
   count?: number;
+  titleAccessory?: ReactNode;
   controls?: ReactNode;
+}
+
+interface MobileSegmentedControlItem<T extends string> {
+  value: T;
+  label: string;
+}
+
+interface MobileEmptyStateAction {
+  label: string;
+  onClick: () => void;
+  variant?: "primary" | "secondary";
 }
 
 const shellStyles: Record<string, CSSProperties> = {
@@ -108,10 +120,10 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   title: {
     margin: 0,
-    fontSize: "clamp(27px, 7vw, 34px)",
+    fontSize: 40,
     lineHeight: 1,
     fontWeight: 850,
-    letterSpacing: "-0.035em",
+    letterSpacing: 0,
     color: "#0f1b4c",
   },
   countBubble: {
@@ -130,14 +142,86 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   subtitle: {
     margin: 0,
-    fontSize: "clamp(13px, 3.4vw, 15px)",
-    lineHeight: 1.32,
+    fontSize: 17,
+    lineHeight: 1.35,
     color: "#6b7280",
   },
   controls: {
     display: "flex",
     flexWrap: "wrap",
     gap: 8,
+  },
+  segment: {
+    display: "grid",
+    gap: 4,
+    padding: 4,
+    borderRadius: 18,
+    border: "1px solid rgba(192,179,255,0.34)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.84))",
+    boxShadow: "0 14px 34px rgba(31,41,55,0.05)",
+    width: "100%",
+  },
+  segmentButton: {
+    minHeight: 36,
+    borderRadius: 14,
+    border: "none",
+    background: "transparent",
+    color: "#6b7280",
+    fontSize: 12,
+    fontWeight: 780,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  emptyState: {
+    minHeight: 236,
+    borderRadius: 24,
+    padding: 24,
+    border: "1px solid rgba(192,179,255,0.26)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.72))",
+    color: "#6b7280",
+    display: "grid",
+    alignContent: "center",
+    justifyItems: "center",
+    textAlign: "center",
+    gap: 12,
+    boxShadow: "0 22px 60px rgba(31,41,55,0.06)",
+  },
+  emptyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    display: "grid",
+    placeItems: "center",
+    background: "rgba(124,58,237,0.10)",
+    color: "#5b3df5",
+  },
+  emptyTitle: {
+    margin: 0,
+    fontSize: 18,
+    lineHeight: 1.2,
+    fontWeight: 850,
+    color: "#0f1b4c",
+  },
+  emptyBody: {
+    margin: 0,
+    maxWidth: 300,
+    fontSize: 14,
+    lineHeight: 1.45,
+    color: "#6b7280",
+  },
+  emptyActions: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 10,
+    width: "100%",
+    marginTop: 4,
+  },
+  emptyAction: {
+    minHeight: 42,
+    borderRadius: 15,
+    fontSize: 13,
+    fontWeight: 850,
+    cursor: "pointer",
   },
   dockWrap: {
     position: "fixed",
@@ -350,18 +434,96 @@ export function MobileAppShell({
   );
 }
 
-export function MobilePageIntro({ title, subtitle, count, controls }: MobilePageIntroProps) {
+export function MobilePageIntro({ title, subtitle, count, titleAccessory, controls }: MobilePageIntroProps) {
   return (
     <section style={shellStyles.intro}>
       <div>
         <div style={shellStyles.titleRow}>
           <h1 style={shellStyles.title}>{title}</h1>
+          {titleAccessory}
           {typeof count === "number" ? <span style={shellStyles.countBubble}>{count}</span> : null}
         </div>
         <p style={shellStyles.subtitle}>{subtitle}</p>
       </div>
       {controls ? <div style={shellStyles.controls}>{controls}</div> : null}
     </section>
+  );
+}
+
+export function MobileSegmentedControl<T extends string>({
+  value,
+  items,
+  onChange,
+}: {
+  value: T;
+  items: Array<MobileSegmentedControlItem<T>>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div style={{ ...shellStyles.segment, gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+      {items.map((item) => {
+        const active = item.value === value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            style={{
+              ...shellStyles.segmentButton,
+              background: active ? "#fff" : "transparent",
+              boxShadow: active ? "0 10px 24px rgba(31,41,55,0.06)" : "none",
+              color: active ? "#5b3df5" : "#6b7280",
+            }}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MobileEmptyState({
+  icon,
+  title,
+  body,
+  actions = [],
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  actions?: MobileEmptyStateAction[];
+}) {
+  return (
+    <div style={shellStyles.emptyState}>
+      <div style={shellStyles.emptyIcon}>{icon}</div>
+      <div style={{ display: "grid", gap: 8, justifyItems: "center" }}>
+        <h2 style={shellStyles.emptyTitle}>{title}</h2>
+        <p style={shellStyles.emptyBody}>{body}</p>
+      </div>
+      {actions.length ? (
+        <div style={{ ...shellStyles.emptyActions, gridTemplateColumns: actions.length === 1 ? "1fr" : shellStyles.emptyActions.gridTemplateColumns }}>
+          {actions.map((action) => {
+            const primary = action.variant !== "secondary";
+            return (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.onClick}
+                style={{
+                  ...shellStyles.emptyAction,
+                  border: primary ? "none" : "1px solid rgba(91,61,245,0.18)",
+                  background: primary ? "linear-gradient(135deg, #5b3df5, #7c3aed)" : "rgba(255,255,255,0.9)",
+                  color: primary ? "#fff" : "#5b3df5",
+                }}
+              >
+                {action.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -99,7 +99,6 @@ export default function BookingsPage() {
         notice={notice}
         currentFilter={filter}
         onChangeFilter={setFilter}
-        onRefresh={() => void loadBookings()}
         onOpenRequest={(request) => {
           if (request.toatId) {
             router.push(`/toats/${request.toatId}`);

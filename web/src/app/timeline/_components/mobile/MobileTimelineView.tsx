@@ -7,7 +7,7 @@ import {
   SearchIcon,
   UserAvatar,
 } from "@/components/mobile-ui";
-import { MobileAppShell } from "@/app/_components/mobile-app-shell";
+import { MobileAppShell, MobilePageIntro } from "@/app/_components/mobile-app-shell";
 import {
   type TimelineToat,
   type DayGroup,
@@ -117,26 +117,7 @@ export function MobileTimelineView({
           </button>
         </div>
       )}
-      header={(
-        <div style={{ ...styles.headingRow, ...(isCompact ? styles.headingRowCompact : {}) }}>
-          <div>
-            <div style={{ ...styles.dayButton, ...(isCompact ? styles.dayButtonCompact : {}) }}>
-              <span style={styles.dayButtonLabel}>Next 7 days</span>
-              <span style={styles.dayButtonChevron} aria-hidden>
-                <ChevronDownIcon size={isCompact ? 16 : 18} />
-              </span>
-            </div>
-            <p
-              style={{
-                ...styles.dayButtonSubtitle,
-                ...(isCompact ? styles.dayButtonSubtitleCompact : {}),
-              }}
-            >
-              {weekRangeLabel}
-            </p>
-          </div>
-        </div>
-      )}
+      header={<MobilePageIntro title="Next 7 days" subtitle={weekRangeLabel} titleAccessory={<ChevronDownIcon size={isCompact ? 18 : 20} />} />}
     >
         {/* Loading state */}
         {isLoading && toats.length === 0 ? (

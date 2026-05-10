@@ -167,7 +167,6 @@ export default function InboxPage() {
         loadingState={loadingState}
         notice={notice}
         actioningId={actioningId}
-        onRefresh={() => void loadData()}
         onAct={act}
         onOpenTimeline={() => router.push("/timeline")}
         onOpenInbox={() => router.push("/inbox")}

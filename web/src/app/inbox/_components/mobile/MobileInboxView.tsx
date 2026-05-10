@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarIcon, ChevronRightIcon, LocationIcon } from "@/components/mobile-ui";
+import { CalendarIcon, ChevronRightIcon, InboxIcon, LocationIcon } from "@/components/mobile-ui";
 import {
   formatClock,
   formatDateLabel,
   timeAgo,
   type BookingRequestItem,
 } from "@/app/_components/booking-dashboard";
-import { MobileAppShell, MobilePageIntro } from "@/app/_components/mobile-app-shell";
+import { MobileAppShell, MobileEmptyState, MobilePageIntro, MobileSegmentedControl } from "@/app/_components/mobile-app-shell";
 
 interface SharedInboxToat {
   id: string;
@@ -31,6 +31,7 @@ interface SharedInboxToat {
 }
 
 type InboxFilter = "all" | "requests" | "shared";
+type InboxSegment = InboxFilter | "accepted";
 
 interface MobileInboxViewProps {
   user: {
@@ -44,7 +45,6 @@ interface MobileInboxViewProps {
   loadingState: boolean;
   notice: string | null;
   actioningId: string | null;
-  onRefresh: () => void;
   onAct: (request: BookingRequestItem, state: "accepted" | "denied") => Promise<void>;
   onOpenTimeline: () => void;
   onOpenInbox: () => void;
@@ -58,86 +58,71 @@ const styles = {
     display: "grid",
     gap: 16,
   },
-  tabs: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 5,
-    padding: 5,
-    borderRadius: 20,
-    border: "1px solid rgba(192,179,255,0.36)",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82))",
-    boxShadow: "0 14px 34px rgba(31,41,55,0.05)",
-  },
-  tabButton: {
-    minHeight: 34,
-    borderRadius: 16,
-    border: "none",
-    background: "transparent",
-    color: "#6b7280",
-    fontSize: 12,
-    fontWeight: 760,
-    cursor: "pointer",
-    whiteSpace: "nowrap" as const,
-  },
   list: {
     display: "grid",
-    gap: 18,
+    gap: 12,
   },
   card: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 22,
+    padding: 16,
     background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86))",
     border: "1px solid rgba(255,255,255,0.94)",
     boxShadow: "0 28px 80px rgba(31,41,55,0.08)",
     display: "grid",
-    gap: 18,
+    gap: 14,
   },
   cardTop: {
     display: "grid",
-    gridTemplateColumns: "68px minmax(0, 1fr) auto",
-    gap: 16,
+    gridTemplateColumns: "48px minmax(0, 1fr)",
+    gap: 12,
     alignItems: "start",
   },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     objectFit: "cover" as const,
     boxShadow: "0 18px 40px rgba(31,41,55,0.12)",
   },
   avatarFallback: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     display: "grid",
     placeItems: "center" as const,
     background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.12))",
     color: "#5b3df5",
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: 800,
   },
   cardCopy: {
     display: "grid",
-    gap: 8,
+    gap: 6,
     minWidth: 0,
+  },
+  cardMetaRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   sender: {
     margin: 0,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 700,
     color: "#1f2a5a",
   },
   title: {
     margin: 0,
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: 800,
     lineHeight: 1.15,
     color: "#0f1b4c",
   },
   body: {
     margin: 0,
-    fontSize: 15,
-    lineHeight: 1.5,
+    fontSize: 13,
+    lineHeight: 1.4,
     color: "#6b7280",
   },
   tag: {
@@ -145,21 +130,21 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 34,
-    padding: "0 14px",
+    padding: "0 10px",
     borderRadius: 999,
     background: "rgba(124,58,237,0.1)",
     color: "#6d28d9",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 700,
   },
   meta: {
     display: "flex",
     flexWrap: "wrap" as const,
     gap: 12,
-    paddingTop: 16,
+    paddingTop: 12,
     borderTop: "1px solid rgba(99,102,241,0.1)",
     color: "#6b7280",
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 1.45,
   },
   metaItem: {
@@ -173,9 +158,9 @@ const styles = {
     gap: 14,
   },
   button: {
-    minHeight: 54,
-    borderRadius: 18,
-    fontSize: 16,
+    minHeight: 44,
+    borderRadius: 15,
+    fontSize: 14,
     fontWeight: 700,
     cursor: "pointer",
     display: "inline-flex",
@@ -193,18 +178,6 @@ const styles = {
     background: "linear-gradient(135deg, #5b3df5, #7c3aed)",
     color: "#fff",
     boxShadow: "0 22px 44px rgba(91,61,245,0.18)",
-  },
-  empty: {
-    minHeight: 220,
-    borderRadius: 28,
-    padding: 28,
-    border: "1px dashed rgba(99,102,241,0.18)",
-    background: "rgba(255,255,255,0.72)",
-    color: "#6b7280",
-    display: "grid",
-    placeItems: "center" as const,
-    textAlign: "center" as const,
-    gap: 10,
   },
   notice: {
     borderRadius: 18,
@@ -231,7 +204,6 @@ export function MobileInboxView({
   loadingState,
   notice,
   actioningId,
-  onRefresh,
   onAct,
   onOpenTimeline,
   onOpenInbox,
@@ -245,6 +217,12 @@ export function MobileInboxView({
   const filteredRequests = filter === "shared" ? [] : bookingRequests;
   const filteredShared = filter === "requests" ? [] : sharedToats;
   const hasAcceptedShortcut = acceptedBookingsCount > 0;
+  const segmentItems: Array<{ value: InboxSegment; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "requests", label: "Requests" },
+    { value: "shared", label: "Shared" },
+    { value: "accepted", label: "Accepted" },
+  ];
 
   const earlierItems = useMemo(
     () => bookingRequests.filter((request) => new Date(request.slotStart).getTime() < referenceTime),
@@ -261,19 +239,20 @@ export function MobileInboxView({
       onOpenBookings={onOpenBookings}
       onOpenMenu={onOpenMenu}
       onOpenCapture={onOpenCapture}
-      topRight={null}
       header={
         <MobilePageIntro
           title="Inbox"
           subtitle="Requests and shared toats"
           count={bookingRequests.length + sharedToats.length}
           controls={
-            <div style={styles.tabs}>
-              <SegmentButton active={filter === "all"} onClick={() => setFilter("all")}>All</SegmentButton>
-              <SegmentButton active={filter === "requests"} onClick={() => setFilter("requests")}>Requests</SegmentButton>
-              <SegmentButton active={filter === "shared"} onClick={() => setFilter("shared")}>Shared</SegmentButton>
-              <SegmentButton active={false} onClick={onOpenBookings}>Accepted</SegmentButton>
-            </div>
+            <MobileSegmentedControl
+              value={filter as InboxSegment}
+              items={segmentItems}
+              onChange={(next) => {
+                if (next === "accepted") onOpenBookings();
+                else setFilter(next);
+              }}
+            />
           }
         />
       }
@@ -281,16 +260,7 @@ export function MobileInboxView({
       <section style={styles.section}>
         {notice ? <div style={styles.notice}>{notice}</div> : null}
         {loadingState ? (
-          <div style={styles.empty}>
-            <strong>Loading inbox</strong>
-            <span>Checking booking requests and shared toats now.</span>
-          </div>
-        ) : null}
-
-        {!loadingState ? (
-          <button type="button" onClick={onRefresh} style={{ ...styles.button, ...styles.secondaryButton }}>
-            Refresh inbox
-          </button>
+          <MobileEmptyState icon={<InboxIcon size={24} />} title="Loading inbox" body="Checking booking requests and shared toats now." />
         ) : null}
 
         <div style={styles.list}>
@@ -299,11 +269,13 @@ export function MobileInboxView({
               <div style={styles.cardTop}>
                 <AvatarImage name={share.sender.name} photoUrl={share.sender.photoUrl} />
                 <div style={styles.cardCopy}>
-                  <p style={styles.sender}>{share.sender.name}</p>
+                  <div style={styles.cardMetaRow}>
+                    <p style={styles.sender}>{share.sender.name}</p>
+                    <span style={styles.tag}>Shared toat</span>
+                  </div>
                   <h2 style={styles.title}>{share.toat.title}</h2>
                   <p style={styles.body}>{share.sender.name.split(" ")[0]} shared this toat with you.</p>
                 </div>
-                <span style={styles.tag}>Shared toat</span>
               </div>
 
               <div style={styles.meta}>
@@ -334,13 +306,15 @@ export function MobileInboxView({
               <div style={styles.cardTop}>
                 <AvatarImage name={request.name} />
                 <div style={styles.cardCopy}>
-                  <p style={styles.sender}>{request.name}</p>
+                  <div style={styles.cardMetaRow}>
+                    <p style={styles.sender}>{request.name}</p>
+                    <span style={{ ...styles.tag, background: "rgba(251,146,60,0.12)", color: "#ea580c" }}>
+                      Booking
+                    </span>
+                  </div>
                   <h2 style={styles.title}>{request.message || request.title}</h2>
                   <p style={styles.body}>Requested {timeAgo(request.createdAt)}.</p>
                 </div>
-                <span style={{ ...styles.tag, background: "rgba(251,146,60,0.12)", color: "#ea580c" }}>
-                  Booking request
-                </span>
               </div>
 
               <div style={styles.meta}>
@@ -379,10 +353,15 @@ export function MobileInboxView({
         </div>
 
         {!loadingState && filteredRequests.length === 0 && filteredShared.length === 0 ? (
-          <div style={styles.empty}>
-            <strong>{hasAcceptedShortcut ? "Nothing waiting here" : "Inbox is clear"}</strong>
-            <span>{hasAcceptedShortcut ? "Accepted bookings are already moved into Bookings." : "No requests or shared toats are waiting right now."}</span>
-          </div>
+          <MobileEmptyState
+            icon={<InboxIcon size={24} />}
+            title={hasAcceptedShortcut ? "Nothing waiting here" : "Inbox is clear"}
+            body={hasAcceptedShortcut ? "Accepted bookings have moved into Bookings. New booking requests and shared toats will appear here." : "Booking requests sent through your handle page and toats shared by connections will appear here."}
+            actions={[
+              { label: "Handle settings", onClick: onOpenMenu },
+              { label: "View Bookings", onClick: onOpenBookings, variant: "secondary" },
+            ]}
+          />
         ) : null}
 
         {!loadingState && filter === "all" && earlierItems.length > 0 ? (
@@ -410,31 +389,6 @@ export function MobileInboxView({
         ) : null}
       </section>
     </MobileAppShell>
-  );
-}
-
-function SegmentButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        ...styles.tabButton,
-        background: active ? "#fff" : "transparent",
-        boxShadow: active ? "0 12px 28px rgba(31,41,55,0.06)" : "none",
-        color: active ? "#5b3df5" : "#6b7280",
-      }}
-    >
-      {children}
-    </button>
   );
 }
 

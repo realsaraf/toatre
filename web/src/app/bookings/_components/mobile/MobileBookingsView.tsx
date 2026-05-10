@@ -7,7 +7,7 @@ import {
   formatDateLabel,
   type BookingRequestItem,
 } from "@/app/_components/booking-dashboard";
-import { MobileAppShell, MobilePageIntro } from "@/app/_components/mobile-app-shell";
+import { MobileAppShell, MobileEmptyState, MobilePageIntro, MobileSegmentedControl } from "@/app/_components/mobile-app-shell";
 
 type DisplayFilter = "all" | "upcoming" | "completed" | "canceled";
 type ServerFilter = "all" | "upcoming" | "past";
@@ -24,7 +24,6 @@ interface MobileBookingsViewProps {
   notice: string | null;
   currentFilter: ServerFilter;
   onChangeFilter: (filter: ServerFilter) => void;
-  onRefresh: () => void;
   onOpenRequest: (request: BookingRequestItem) => void;
   onOpenTimeline: () => void;
   onOpenInbox: () => void;
@@ -37,27 +36,6 @@ const styles = {
   section: {
     display: "grid",
     gap: 16,
-  },
-  tabs: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 5,
-    padding: 5,
-    borderRadius: 20,
-    border: "1px solid rgba(192,179,255,0.36)",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82))",
-    boxShadow: "0 14px 34px rgba(31,41,55,0.05)",
-  },
-  tabButton: {
-    minHeight: 34,
-    borderRadius: 16,
-    border: "none",
-    background: "transparent",
-    color: "#6b7280",
-    fontSize: 12,
-    fontWeight: 760,
-    cursor: "pointer",
-    whiteSpace: "nowrap" as const,
   },
   summary: {
     display: "grid",
@@ -184,18 +162,6 @@ const styles = {
     fontSize: 14,
     fontWeight: 600,
   },
-  empty: {
-    minHeight: 220,
-    borderRadius: 28,
-    padding: 28,
-    border: "1px dashed rgba(99,102,241,0.18)",
-    background: "rgba(255,255,255,0.72)",
-    color: "#6b7280",
-    display: "grid",
-    placeItems: "center" as const,
-    textAlign: "center" as const,
-    gap: 10,
-  },
 } as const;
 
 export function MobileBookingsView({
@@ -206,7 +172,6 @@ export function MobileBookingsView({
   notice,
   currentFilter,
   onChangeFilter,
-  onRefresh,
   onOpenRequest,
   onOpenTimeline,
   onOpenInbox,
@@ -224,6 +189,12 @@ export function MobileBookingsView({
 
   const summary = useMemo(() => buildWeekSummary(visibleRequests), [visibleRequests]);
   const groups = useMemo(() => groupForDisplay(visibleRequests, displayFilter, referenceTime), [visibleRequests, displayFilter, referenceTime]);
+  const segmentItems: Array<{ value: DisplayFilter; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "upcoming", label: "Upcoming" },
+    { value: "completed", label: "Completed" },
+    { value: "canceled", label: "Canceled" },
+  ];
 
   return (
     <MobileAppShell
@@ -241,12 +212,11 @@ export function MobileBookingsView({
           subtitle="Toats booked through your handle page"
           count={displayFilter === "canceled" ? 0 : requests.length}
           controls={
-            <div style={styles.tabs}>
-              <SegmentButton active={displayFilter === "all"} onClick={() => changeDisplayFilter("all", onChangeFilter, setDisplayFilter)}>All</SegmentButton>
-              <SegmentButton active={displayFilter === "upcoming"} onClick={() => changeDisplayFilter("upcoming", onChangeFilter, setDisplayFilter)}>Upcoming</SegmentButton>
-              <SegmentButton active={displayFilter === "completed"} onClick={() => changeDisplayFilter("completed", onChangeFilter, setDisplayFilter)}>Completed</SegmentButton>
-              <SegmentButton active={displayFilter === "canceled"} onClick={() => changeDisplayFilter("canceled", onChangeFilter, setDisplayFilter)}>Canceled</SegmentButton>
-            </div>
+            <MobileSegmentedControl
+              value={displayFilter}
+              items={segmentItems}
+              onChange={(next) => changeDisplayFilter(next, onChangeFilter, setDisplayFilter)}
+            />
           }
         />
       }
@@ -265,24 +235,20 @@ export function MobileBookingsView({
           </div>
         ) : null}
 
-        {!loadingState ? (
-          <button type="button" onClick={onRefresh} style={styles.actionButton}>
-            Refresh bookings
-          </button>
-        ) : null}
-
         {loadingState ? (
-          <div style={styles.empty}>
-            <strong>Loading bookings</strong>
-            <span>Checking everything booked through your link.</span>
-          </div>
+          <MobileEmptyState icon={<CalendarIcon size={24} />} title="Loading bookings" body="Checking everything booked through your handle page." />
         ) : null}
 
         {!loadingState && groups.length === 0 ? (
-          <div style={styles.empty}>
-            <strong>{displayFilter === "canceled" ? "No canceled bookings" : "No bookings here"}</strong>
-            <span>{displayFilter === "canceled" ? "Canceled items will appear here when that state exists." : "Accepted booking requests will appear here."}</span>
-          </div>
+          <MobileEmptyState
+            icon={<CalendarIcon size={24} />}
+            title={displayFilter === "canceled" ? "No canceled bookings" : "No bookings here"}
+            body={displayFilter === "canceled" ? "Canceled bookings will live here once that state is available." : "Accepted booking requests from your handle page will collect here so your upcoming time stays easy to scan."}
+            actions={[
+              { label: "Handle settings", onClick: onOpenMenu },
+              { label: "Open Inbox", onClick: onOpenInbox, variant: "secondary" },
+            ]}
+          />
         ) : null}
 
         {groups.map((group) => (
@@ -295,31 +261,6 @@ export function MobileBookingsView({
         ))}
       </section>
     </MobileAppShell>
-  );
-}
-
-function SegmentButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        ...styles.tabButton,
-        background: active ? "#fff" : "transparent",
-        boxShadow: active ? "0 12px 28px rgba(31,41,55,0.06)" : "none",
-        color: active ? "#5b3df5" : "#6b7280",
-      }}
-    >
-      {children}
-    </button>
   );
 }
 
