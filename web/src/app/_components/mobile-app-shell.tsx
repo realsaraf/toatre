@@ -97,47 +97,47 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   intro: {
     display: "grid",
-    gap: 16,
-    marginBottom: 22,
+    gap: 10,
+    marginBottom: 16,
   },
   titleRow: {
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
     flexWrap: "wrap",
   },
   title: {
     margin: 0,
-    fontSize: "clamp(42px, 12vw, 68px)",
-    lineHeight: 0.95,
+    fontSize: "clamp(27px, 7vw, 34px)",
+    lineHeight: 1,
     fontWeight: 850,
-    letterSpacing: "-0.06em",
+    letterSpacing: "-0.035em",
     color: "#0f1b4c",
   },
   countBubble: {
-    minWidth: 42,
-    height: 42,
+    minWidth: 30,
+    height: 30,
     borderRadius: 999,
-    padding: "0 12px",
+    padding: "0 9px",
     background: "rgba(124,58,237,0.1)",
     color: "#6d28d9",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: 700,
     lineHeight: 1,
   },
   subtitle: {
     margin: 0,
-    fontSize: "clamp(16px, 4.8vw, 22px)",
-    lineHeight: 1.45,
+    fontSize: "clamp(13px, 3.4vw, 15px)",
+    lineHeight: 1.32,
     color: "#6b7280",
   },
   controls: {
     display: "flex",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   dockWrap: {
     position: "fixed",
@@ -338,7 +338,7 @@ export function MobileAppShell({
               onClick={onOpenBookings}
             />
             <DockItem
-              label="Menu"
+              label="Settings"
               icon={<SettingsIcon size={22} />}
               active={active === "menu"}
               onClick={onOpenMenu}

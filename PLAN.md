@@ -29,6 +29,11 @@
 - Moved mobile Timeline onto the same dock/menu model so primary navigation is consistent across Timeline, Inbox, Bookings, Settings, Help, and People.
 - Validation: focused ESLint on the touched mobile routes/components, `npm run typecheck`, `npm run build`, and browser spot-checks of fresh localhost pages for Timeline, Inbox, Bookings, Settings, Help, and People.
 
+### Session 2026-05-10 (mobile Settings component split) — completed
+- Split the mobile Settings drill-in flow into focused subpage components and shared iOS-style row primitives so `MobileSettingsView` only owns routing and the root menu.
+- Preserved the functional settings surface after the split: profile, phone verification, SMS Pings, handle, booking page settings, availability, booking rules, integrations with sync direction/run controls, general preferences, theme, help, connections, and sign out.
+- Validation: focused ESLint on touched web files, `npm run typecheck`, and `npm run build` clean.
+
 ### Session 2026-05-12 (desktop settings) — completed
 - Desktop Settings now uses a full four-section shell for General, Notifications, Handle, and Integrations instead of the Toat Link-only desktop view.
 - Extracted settings route behavior into composable hooks and added the desktop settings component/CSS surface aligned to the provided mockups.
