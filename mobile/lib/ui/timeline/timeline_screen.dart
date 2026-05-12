@@ -12,7 +12,6 @@ import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/ui/capture/capture_screen.dart';
 import 'package:toatre/ui/inbox/inbox_screen.dart';
-import 'package:toatre/ui/people/people_screen.dart';
 import 'package:toatre/ui/search/search_screen.dart';
 import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
@@ -52,6 +51,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final visibleToats = _filterToats(toats, _selectedRange);
     final grouped = _groupToats(visibleToats, _selectedRange);
     final upNext = _findUpNext(visibleToats);
+    final clearAfterToday = _latestTimeForToday(visibleToats);
 
     return Scaffold(
       backgroundColor: const Color(0xFF15121E),
@@ -188,11 +188,15 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       const SizedBox(height: 14),
                     ],
                     _TimelineMessage(
-                      title: visibleToats.any((t) => t.datetime != null)
-                          ? 'You\'re all clear after ${_latestTime(visibleToats)}'
+                      title: _selectedRange == _TimelineRange.week
+                          ? (clearAfterToday != null
+                                ? 'You\'re all clear after $clearAfterToday'
+                                : 'You\'re all clear today.')
                           : 'You\'re all clear.',
                       subtitle: _selectedRange == _TimelineRange.week
-                          ? 'Nothing else in the next 7 days.'
+                          ? (clearAfterToday != null
+                                ? 'Nothing else on your schedule today.'
+                                : 'Nothing on the schedule today.')
                           : 'Nothing else in someday.',
                     ),
                   ],
@@ -204,10 +208,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
       ),
       bottomNavigationBar: _TimelineTabBar(
         onTimelineTap: () {},
-        onSearchTap: _openSearch,
-        onVoiceTap: _openVoiceCapture,
-        onPeopleTap: _openPeople,
         onInboxTap: _openInbox,
+        onVoiceTap: _openVoiceCapture,
+        onSearchTap: _openSearch,
+        onSettingsTap: _openSettings,
       ),
     );
   }
@@ -264,16 +268,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final changed = await Navigator.of(
       context,
     ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const SearchScreen()));
-    if (!mounted || changed != true) {
-      return;
-    }
-    await context.read<ToatsProvider>().fetchToats();
-  }
-
-  Future<void> _openPeople() async {
-    final changed = await Navigator.of(
-      context,
-    ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const PeopleScreen()));
     if (!mounted || changed != true) {
       return;
     }
@@ -524,11 +518,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
         '${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
-  String _latestTime(List<ToatSummary> toats) {
+  String? _latestTimeForToday(List<ToatSummary> toats) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final dated = toats.where((toat) => toat.datetime != null).toList();
-    if (dated.isEmpty) return 'today';
-    dated.sort((a, b) => a.datetime!.compareTo(b.datetime!));
-    return _formatTime(dated.last.datetime!);
+    final todayToats = dated.where((toat) {
+      final date = toat.datetime!;
+      final toatDay = DateTime(date.year, date.month, date.day);
+      return toatDay == today;
+    }).toList();
+    if (todayToats.isEmpty) return null;
+    todayToats.sort((a, b) => a.datetime!.compareTo(b.datetime!));
+    return _formatTime(todayToats.last.datetime!);
   }
 
   String _formatTime(DateTime dateTime) {
@@ -1165,24 +1166,38 @@ class _MicFab extends StatelessWidget {
       child: Container(
         width: 72,
         height: 72,
+        padding: const EdgeInsets.all(5),
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
+          color: Color(0xF2FFFFFF),
           boxShadow: [
             BoxShadow(
-              color: Color(0x477C3AED),
-              blurRadius: 34,
-              offset: Offset(0, 18),
+              color: Color(0x337C3AED),
+              blurRadius: 26,
+              offset: Offset(0, 12),
             ),
           ],
         ),
         child: Semantics(
           label: 'Capture a toat',
           button: true,
-          child: Image.asset(
-            'assets/images/micicon.png',
-            width: 72,
-            height: 72,
-            fit: BoxFit.cover,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF5B23FF),
+                  Color(0xFF8F35FF),
+                  Color(0xFFFF4B90),
+                  Color(0xFFFF6B4A),
+                ],
+              ),
+            ),
+            child: const Center(
+              child: Icon(Icons.mic_rounded, color: Colors.white, size: 32),
+            ),
           ),
         ),
       ),
@@ -1672,21 +1687,15 @@ class _BottomItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Colors.white : const Color(0xBFEDE7FF);
+    final color = active ? const Color(0xFF5B23FF) : const Color(0xFF9BA3B5);
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          SizedBox(
             width: 42,
             height: 36,
-            decoration: BoxDecoration(
-              color: active
-                  ? Colors.white.withValues(alpha: 0.16)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
-            ),
             child: Icon(icon, color: color, size: 21),
           ),
           const SizedBox(height: 4),
@@ -1706,17 +1715,17 @@ class _BottomItem extends StatelessWidget {
 class _TimelineTabBar extends StatelessWidget {
   const _TimelineTabBar({
     required this.onTimelineTap,
-    required this.onSearchTap,
-    required this.onVoiceTap,
-    required this.onPeopleTap,
     required this.onInboxTap,
+    required this.onVoiceTap,
+    required this.onSearchTap,
+    required this.onSettingsTap,
   });
 
   final VoidCallback onTimelineTap;
-  final VoidCallback onSearchTap;
-  final VoidCallback onVoiceTap;
-  final VoidCallback onPeopleTap;
   final VoidCallback onInboxTap;
+  final VoidCallback onVoiceTap;
+  final VoidCallback onSearchTap;
+  final VoidCallback onSettingsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1726,14 +1735,14 @@ class _TimelineTabBar extends StatelessWidget {
         height: 86,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: const Color(0xFF20182B).withValues(alpha: 0.92),
+          color: Colors.white.withValues(alpha: 0.96),
           borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          border: Border.all(color: const Color(0x1FE1D9F7)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x66000000),
-              blurRadius: 30,
-              offset: Offset(0, 18),
+              color: Color(0x1A241852),
+              blurRadius: 32,
+              offset: Offset(0, 12),
             ),
           ],
         ),
@@ -1741,29 +1750,29 @@ class _TimelineTabBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _BottomItem(
-              icon: Icons.auto_awesome_motion_outlined,
+              icon: Icons.schedule_rounded,
               label: 'Timeline',
               active: true,
               onTap: onTimelineTap,
             ),
             _BottomItem(
-              icon: Icons.search_rounded,
-              label: 'Search',
-              onTap: onSearchTap,
+              icon: Icons.inbox_outlined,
+              label: 'Inbox',
+              onTap: onInboxTap,
             ),
             Transform.translate(
               offset: const Offset(0, -16),
               child: _MicFab(onTap: onVoiceTap),
             ),
             _BottomItem(
-              icon: Icons.people_outline_rounded,
-              label: 'People',
-              onTap: onPeopleTap,
+              icon: Icons.search_rounded,
+              label: 'Search',
+              onTap: onSearchTap,
             ),
             _BottomItem(
-              icon: Icons.inbox_outlined,
-              label: 'Inbox',
-              onTap: onInboxTap,
+              icon: Icons.wb_sunny_outlined,
+              label: 'Settings',
+              onTap: onSettingsTap,
             ),
           ],
         ),
