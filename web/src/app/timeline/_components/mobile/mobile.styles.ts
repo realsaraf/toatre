@@ -505,10 +505,6 @@ export const styles: Record<string, React.CSSProperties> = {
   },
   railTrackWrap: {
     position: "relative",
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: 10,
     overflow: "visible",
   },
   railConnector: {
@@ -517,6 +513,7 @@ export const styles: Record<string, React.CSSProperties> = {
     left: "calc(-1 * clamp(8px, 2.5vw, 12px) - 8px)",
     width: 22,
     height: 1.5,
+    transform: "translateY(-50%)",
     opacity: 0.45,
     borderRadius: 999,
   },
@@ -540,10 +537,13 @@ export const styles: Record<string, React.CSSProperties> = {
     opacity: 0.92,
   },
   railDot: {
-    position: "relative",
-    marginTop: 14,
+    position: "absolute",
+    top: 20,
+    left: "50%",
     width: 12,
     height: 12,
+    transform: "translate(-50%, -50%)",
+    boxSizing: "border-box",
     borderRadius: "50%",
     border: "2.5px solid rgba(255,255,255,0.96)",
     boxShadow: "0 4px 12px rgba(91,61,245,0.22)",
@@ -551,7 +551,7 @@ export const styles: Record<string, React.CSSProperties> = {
     zIndex: 1,
   },
   railDotCompact: {
-    marginTop: 10,
+    top: 16,
     width: 10,
     height: 10,
     borderWidth: 2,
