@@ -22,7 +22,7 @@ interface MomentGroup {
   key: string;
   title: string;
   date?: string;
-  icon: string;
+  icon?: string;
   color: string;
   toats: TimelineToat[];
 }
@@ -235,7 +235,7 @@ export function MobileTimelineView({
                     color: group.color,
                   }}
                 >
-                  <span aria-hidden>{group.icon}</span>
+                  {group.icon ? <span aria-hidden>{group.icon}</span> : null}
                   {group.title}
                 </p>
                 {group.date ? (
@@ -297,7 +297,7 @@ function buildMomentGroups(toats: TimelineToat[], range: TimelineRange, now: Dat
     return [...groups, someday].filter((g) => g.toats.length > 0).map(({ key, title, icon, color, toats: ts }) => ({ key, title, icon, color, toats: ts }));
   }
 
-  // Multi-day: group by date + time-of-day, show date label in each section
+  // Multi-day: group by date only and use the date as the section label.
   const byKey = new Map<string, MomentGroup>();
   const someday: MomentGroup = { key: "someday", title: "SOMEDAY", icon: "✦", color: "#7B61FF", toats: [] };
 
@@ -306,14 +306,13 @@ function buildMomentGroups(toats: TimelineToat[], range: TimelineRange, now: Dat
     if (!t) { someday.toats.push(toat); continue; }
     const date = new Date(t);
     const dk = dateKey(date);
-    const slot = slotOf(date.getHours());
-    const mapKey = `${dk}-${slot.slot}`;
+    const mapKey = dk;
     if (!byKey.has(mapKey)) {
       let dateLabel: string;
       if (dk === todayKey) dateLabel = "Today";
       else if (dk === tomorrowKey) dateLabel = "Tomorrow";
       else dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      byKey.set(mapKey, { key: mapKey, title: slot.title, date: dateLabel, icon: slot.icon, color: slot.color, toats: [] });
+      byKey.set(mapKey, { key: mapKey, title: dateLabel, color: "#6A35FF", toats: [] });
     }
     byKey.get(mapKey)!.toats.push(toat);
   }

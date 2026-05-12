@@ -54,47 +54,40 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final upNext = _findUpNext(visibleToats);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFBFAFF), Color(0xFFF7F5FF), Color(0xFFFBFAFF)],
-            stops: [0, 0.52, 1],
-          ),
-        ),
-        child: Stack(
-          children: [
-            const _BackgroundHalo(
-              alignment: Alignment(-1.25, -0.85),
-              color: Color(0x33F9A8D4),
-              size: 260,
-            ),
-            const _BackgroundHalo(
-              alignment: Alignment(1.25, -0.2),
-              color: Color(0x38BFDBFE),
-              size: 300,
-            ),
-            SafeArea(
-              child: RefreshIndicator(
-                onRefresh: context.read<ToatsProvider>().fetchToats,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 128),
-                  children: [
-                    Row(
-                      children: [
-                        const _AppBrand(),
-                        const Spacer(),
-                        _FindSlotButton(onTap: _openScheduleSuggest),
-                        const SizedBox(width: 10),
-                        _ProfileButton(user: auth.user, onTap: _openSettings),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Column(
+      backgroundColor: const Color(0xFF15121E),
+      extendBody: true,
+      body: Stack(
+        children: [
+          const _TimelineSkyBackdrop(),
+          SafeArea(
+            child: RefreshIndicator(
+              color: Colors.white,
+              backgroundColor: const Color(0xFF2B2438),
+              onRefresh: context.read<ToatsProvider>().fetchToats,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 126),
+                children: [
+                  Row(
+                    children: [
+                      const _AppBrand(),
+                      const Spacer(),
+                      _TopIconButton(
+                        icon: Icons.keyboard_alt_outlined,
+                        label: 'Type capture',
+                        onTap: _openTextCapture,
+                      ),
+                      const SizedBox(width: 10),
+                      _FindSlotButton(onTap: _openScheduleSuggest),
+                      const SizedBox(width: 10),
+                      _ProfileButton(user: auth.user, onTap: _openSettings),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             InkWell(
@@ -103,17 +96,22 @@ class _TimelineScreenState extends State<TimelineScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    _rangeTitle(_selectedRange),
-                                    style: TextStyles.heading1.copyWith(
-                                      fontSize: 29,
-                                      fontWeight: FontWeight.w800,
+                                  Flexible(
+                                    child: Text(
+                                      _rangeTitle(_selectedRange),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyles.heading1.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   const Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: AppColors.primary,
+                                    color: Color(0xFFFFD0E7),
                                     size: 22,
                                   ),
                                 ],
@@ -123,132 +121,93 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             Text(
                               _rangeSubtitle(_selectedRange),
                               style: TextStyles.smallMedium.copyWith(
-                                color: AppColors.textSecondary,
+                                color: const Color(0xDDEDE7FF),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    if (toatsProvider.status == ToatsStatus.loading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 80),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (toatsProvider.status == ToatsStatus.error)
-                      _TimelineMessage(
-                        title: 'Could not load your timeline.',
-                        subtitle:
-                            toatsProvider.error ?? 'Try pulling to refresh.',
-                      )
-                    else if (toats.isEmpty)
-                      _EmptyState(
-                        onCapture: _openVoiceCapture,
-                        onTextCapture: _openTextCapture,
-                      )
-                    else if (visibleToats.isEmpty)
-                      _TimelineMessage(
-                        title: 'Nothing here yet.',
-                        subtitle: 'Try another range or capture a new toat.',
-                      )
-                    else ...[
-                      if (upNext != null) ...[
-                        _UpNextCard(
-                          toat: upNext,
-                          onTap: () => _openToat(upNext),
-                          onAction: () => _runPrimaryAction(upNext),
-                          onDone: () => _markDone(upNext),
-                          removing: _removingToatId == upNext.id,
-                        ),
-                        const SizedBox(height: 18),
-                      ],
-                      for (final entry in grouped.entries) ...[
-                        if (entry.key.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: 50,
-                              bottom: 10,
-                            ),
-                            child: Text(
-                              entry.key,
-                              style: TextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                        ...entry.value.map(
-                          (toat) => _TimelineRow(
-                            toat: toat,
-                            onTap: () => _openToat(toat),
-                            onAction: () => _runPrimaryAction(toat),
-                            onDone: () => _markDone(toat),
-                            removing: _removingToatId == toat.id,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      _TimelineMessage(
-                        title: visibleToats.any((t) => t.datetime != null)
-                            ? 'You\'re all clear after ${_latestTime(visibleToats)}'
-                            : 'You\'re all clear.',
-                        subtitle: _selectedRange == _TimelineRange.week
-                            ? 'Nothing else in the next 7 days.'
-                            : 'Nothing else in someday.',
                       ),
+                      const SizedBox(width: 12),
+                      _ClearCard(count: visibleToats.length),
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (toatsProvider.status == ToatsStatus.loading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 80),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (toatsProvider.status == ToatsStatus.error)
+                    _TimelineMessage(
+                      title: 'Could not load your timeline.',
+                      subtitle:
+                          toatsProvider.error ?? 'Try pulling to refresh.',
+                    )
+                  else if (toats.isEmpty)
+                    _EmptyState(
+                      onCapture: _openVoiceCapture,
+                      onTextCapture: _openTextCapture,
+                    )
+                  else if (visibleToats.isEmpty)
+                    _TimelineMessage(
+                      title: 'Nothing here yet.',
+                      subtitle: 'Try another range or capture a new toat.',
+                    )
+                  else ...[
+                    if (upNext != null) ...[
+                      _UpNextCard(
+                        toat: upNext,
+                        onTap: () => _openToat(upNext),
+                        onAction: () => _runPrimaryAction(upNext),
+                        onDone: () => _markDone(upNext),
+                        removing: _removingToatId == upNext.id,
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+                    for (final entry in grouped.entries) ...[
+                      if (entry.key.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(left: 50, bottom: 10),
+                          child: Text(
+                            entry.key,
+                            style: TextStyles.bodyMedium.copyWith(
+                              color: const Color(0xDDEDE7FF),
+                            ),
+                          ),
+                        ),
+                      ],
+                      ...entry.value.map(
+                        (toat) => _TimelineRow(
+                          toat: toat,
+                          onTap: () => _openToat(toat),
+                          onAction: () => _runPrimaryAction(toat),
+                          onDone: () => _markDone(toat),
+                          removing: _removingToatId == toat.id,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                    _TimelineMessage(
+                      title: visibleToats.any((t) => t.datetime != null)
+                          ? 'You\'re all clear after ${_latestTime(visibleToats)}'
+                          : 'You\'re all clear.',
+                      subtitle: _selectedRange == _TimelineRange.week
+                          ? 'Nothing else in the next 7 days.'
+                          : 'Nothing else in someday.',
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      floatingActionButton: _CaptureDock(
-        onTextTap: _openTextCapture,
+      bottomNavigationBar: _TimelineTabBar(
+        onTimelineTap: () {},
+        onSearchTap: _openSearch,
         onVoiceTap: _openVoiceCapture,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x22000000),
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const _BottomItem(
-              icon: Icons.today_outlined,
-              label: 'Timeline',
-              active: true,
-            ),
-            _BottomItem(
-              icon: Icons.search_rounded,
-              label: 'Search',
-              onTap: _openSearch,
-            ),
-            _BottomItem(
-              icon: Icons.people_outline_rounded,
-              label: 'People',
-              onTap: _openPeople,
-            ),
-            _BottomItem(
-              icon: Icons.inbox_outlined,
-              label: 'Inbox',
-              onTap: _openInbox,
-            ),
-          ],
-        ),
+        onPeopleTap: _openPeople,
+        onInboxTap: _openInbox,
       ),
     );
   }
@@ -584,28 +543,152 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 }
 
-class _BackgroundHalo extends StatelessWidget {
-  const _BackgroundHalo({
-    required this.alignment,
-    required this.color,
-    required this.size,
-  });
-
-  final Alignment alignment;
-  final Color color;
-  final double size;
+class _TimelineSkyBackdrop extends StatelessWidget {
+  const _TimelineSkyBackdrop();
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
-      child: IgnorePointer(
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: color, blurRadius: size / 2)],
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF17131F), Color(0xFF241A2D), Color(0xFF15121E)],
+              stops: [0, 0.44, 1],
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Image.asset(
+            'assets/images/skybg.png',
+            height: 330,
+            fit: BoxFit.cover,
+            alignment: Alignment.topRight,
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF0E0B13).withValues(alpha: 0.04),
+                  const Color(0xFF15121E).withValues(alpha: 0.22),
+                  const Color(0xFF15121E).withValues(alpha: 0.92),
+                ],
+                stops: const [0, 0.44, 0.76],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ClearCard extends StatelessWidget {
+  const _ClearCard({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 116,
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x3A000000),
+            blurRadius: 28,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.24),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$count',
+                style: TextStyles.heading3.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            count == 0 ? 'All clear' : 'In view',
+            style: TextStyles.smallMedium.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            count == 0 ? 'Quiet for now' : '$count toats',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyles.tiny.copyWith(color: const Color(0xDDEDE7FF)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopIconButton extends StatelessWidget {
+  const _TopIconButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
           ),
         ),
       ),
@@ -815,11 +898,11 @@ class _ProfileButton extends StatelessWidget {
         height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
-          color: AppColors.bgElevated,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+          color: Colors.white.withValues(alpha: 0.16),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x1F1F2937),
+              color: Color(0x2E000000),
               blurRadius: 34,
               offset: Offset(0, 14),
             ),
@@ -897,7 +980,6 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          // Icon glow blob
           Container(
             width: 96,
             height: 96,
@@ -927,6 +1009,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'Your timeline is clear',
             style: TextStyles.heading1.copyWith(
+              color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w700,
             ),
@@ -938,14 +1021,13 @@ class _EmptyState extends StatelessWidget {
             child: Text(
               'Tap the mic and say what needs to happen.\nToatre will turn your words into toats.',
               style: TextStyles.body.copyWith(
-                color: AppColors.textSecondary,
+                color: const Color(0xDDEDE7FF),
                 height: 1.55,
               ),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 32),
-          // CTA row
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -995,9 +1077,11 @@ class _EmptyState extends StatelessWidget {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.softBorder),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.24),
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x12000000),
@@ -1011,11 +1095,16 @@ class _EmptyState extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.edit_rounded,
-                        color: AppColors.textSecondary,
+                        color: Colors.white,
                         size: 18,
                       ),
                       const SizedBox(width: 8),
-                      Text('Type', style: TextStyles.bodyMedium),
+                      Text(
+                        'Type',
+                        style: TextStyles.bodyMedium.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1023,7 +1112,6 @@ class _EmptyState extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 40),
-          // Hint chips
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
@@ -1052,12 +1140,12 @@ class _HintChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0x0C4F46E5),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x1A4F46E5)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: Text(
         text,
         style: TextStyles.small.copyWith(
-          color: AppColors.primary,
+          color: const Color(0xFFEDE7FF),
           fontStyle: FontStyle.italic,
         ),
       ),
@@ -1102,65 +1190,6 @@ class _MicFab extends StatelessWidget {
   }
 }
 
-class _CaptureDock extends StatelessWidget {
-  const _CaptureDock({required this.onTextTap, required this.onVoiceTap});
-
-  final VoidCallback onTextTap;
-  final VoidCallback onVoiceTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(44),
-        border: Border.all(color: const Color(0x33FFFFFF)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x220F172A),
-            blurRadius: 28,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Tooltip(
-            message: 'Type capture',
-            child: InkWell(
-              onTap: onTextTap,
-              borderRadius: BorderRadius.circular(30),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x140F172A),
-                      blurRadius: 18,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.keyboard_alt_outlined,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _MicFab(onTap: onVoiceTap),
-        ],
-      ),
-    );
-  }
-}
-
 class _UpNextCard extends StatelessWidget {
   const _UpNextCard({
     required this.toat,
@@ -1193,18 +1222,16 @@ class _UpNextCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  _toatColors(toat).first.withValues(alpha: 0.10),
-                  _toatColors(toat).last.withValues(alpha: 0.06),
-                ],
-              ),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: _toatColors(toat).last.withValues(alpha: 0.18),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2A000000),
+                  blurRadius: 24,
+                  offset: Offset(0, 14),
+                ),
+              ],
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1233,12 +1260,14 @@ class _UpNextCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.82),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppColors.softPurple),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.20),
+                              ),
                             ),
                             child: Text(
                               'UP NEXT',
                               style: TextStyles.tiny.copyWith(
-                                color: AppColors.primary,
+                                color: const Color(0xFF6D28D9),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1270,6 +1299,7 @@ class _UpNextCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyles.smallMedium.copyWith(
+                          color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1280,7 +1310,7 @@ class _UpNextCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyles.tiny.copyWith(
-                          color: AppColors.textSecondary,
+                          color: const Color(0xDDEDE7FF),
                         ),
                       ),
                       if (toat.datetime != null) ...[
@@ -1288,7 +1318,7 @@ class _UpNextCard extends StatelessWidget {
                         Text(
                           _timeToGo(toat.datetime!),
                           style: TextStyles.tiny.copyWith(
-                            color: _toatColors(toat).last,
+                            color: const Color(0xFFFFD0E7),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1366,6 +1396,7 @@ class _TimelineRow extends StatelessWidget {
                     Text(
                       toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
                       style: TextStyles.smallMedium.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1373,26 +1404,26 @@ class _TimelineRow extends StatelessWidget {
                       toat.datetime == null
                           ? ''
                           : _minuteSuffix(toat.datetime!),
-                      style: TextStyles.small,
+                      style: TextStyles.small.copyWith(
+                        color: const Color(0xCFEDE7FF),
+                      ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                width: 2,
-                margin: const EdgeInsets.only(top: 6),
-                color: const Color(0x22374151),
-                height: 66,
-              ),
-              const SizedBox(width: 8),
+              const _RibbonRail(height: 78),
+              const SizedBox(width: 6),
               Expanded(
                 child: GestureDetector(
                   onTap: onTap,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.bgElevated,
+                      color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x12000000),
@@ -1426,6 +1457,7 @@ class _TimelineRow extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyles.smallMedium.copyWith(
+                                  color: Colors.white,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1436,7 +1468,7 @@ class _TimelineRow extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyles.tiny.copyWith(
-                                  color: AppColors.textSecondary,
+                                  color: const Color(0xDDEDE7FF),
                                 ),
                               ),
                             ],
@@ -1451,7 +1483,7 @@ class _TimelineRow extends StatelessWidget {
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.chevron_right_rounded,
-                          color: AppColors.textMuted,
+                          color: Color(0xCCEDE7FF),
                           size: 20,
                         ),
                       ],
@@ -1478,6 +1510,25 @@ class _TimelineRow extends StatelessWidget {
   String _minuteSuffix(DateTime dateTime) => dateTime.hour >= 12 ? 'PM' : 'AM';
 }
 
+class _RibbonRail extends StatelessWidget {
+  const _RibbonRail({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: height,
+      child: Image.asset(
+        'assets/images/ribbon.png',
+        fit: BoxFit.fill,
+        alignment: Alignment.topCenter,
+      ),
+    );
+  }
+}
+
 class _DoneButton extends StatelessWidget {
   const _DoneButton({required this.done, required this.onTap});
 
@@ -1494,14 +1545,14 @@ class _DoneButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF1F5),
+            color: Colors.white.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE4E7EC)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
           ),
           child: Icon(
             done ? Icons.check_circle_rounded : Icons.check_circle_outline,
             size: 16,
-            color: AppColors.textMuted,
+            color: const Color(0xCCEDE7FF),
           ),
         ),
       ),
@@ -1574,20 +1625,29 @@ class _TimelineMessage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgElevated,
+        color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
+          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD0E7)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyles.bodyMedium),
+                Text(
+                  title,
+                  style: TextStyles.bodyMedium.copyWith(color: Colors.white),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: TextStyles.small),
+                Text(
+                  subtitle,
+                  style: TextStyles.small.copyWith(
+                    color: const Color(0xDDEDE7FF),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1612,16 +1672,101 @@ class _BottomItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.primary : AppColors.textMuted;
+    final color = active ? Colors.white : const Color(0xBFEDE7FF);
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 6),
-          Text(label, style: TextStyles.tiny.copyWith(color: color)),
+          Container(
+            width: 42,
+            height: 36,
+            decoration: BoxDecoration(
+              color: active
+                  ? Colors.white.withValues(alpha: 0.16)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: color, size: 21),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyles.tiny.copyWith(
+              color: color,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _TimelineTabBar extends StatelessWidget {
+  const _TimelineTabBar({
+    required this.onTimelineTap,
+    required this.onSearchTap,
+    required this.onVoiceTap,
+    required this.onPeopleTap,
+    required this.onInboxTap,
+  });
+
+  final VoidCallback onTimelineTap;
+  final VoidCallback onSearchTap;
+  final VoidCallback onVoiceTap;
+  final VoidCallback onPeopleTap;
+  final VoidCallback onInboxTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      child: Container(
+        height: 86,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFF20182B).withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(34),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 30,
+              offset: Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _BottomItem(
+              icon: Icons.auto_awesome_motion_outlined,
+              label: 'Timeline',
+              active: true,
+              onTap: onTimelineTap,
+            ),
+            _BottomItem(
+              icon: Icons.search_rounded,
+              label: 'Search',
+              onTap: onSearchTap,
+            ),
+            Transform.translate(
+              offset: const Offset(0, -16),
+              child: _MicFab(onTap: onVoiceTap),
+            ),
+            _BottomItem(
+              icon: Icons.people_outline_rounded,
+              label: 'People',
+              onTap: onPeopleTap,
+            ),
+            _BottomItem(
+              icon: Icons.inbox_outlined,
+              label: 'Inbox',
+              onTap: onInboxTap,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1788,22 +1933,18 @@ class _FindSlotButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.10),
+          color: Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.auto_awesome_rounded,
-              size: 15,
-              color: AppColors.primary,
-            ),
+            Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
             const SizedBox(width: 6),
             Text(
               'Find a slot',
-              style: TextStyles.smallMedium.copyWith(color: AppColors.primary),
+              style: TextStyles.smallMedium.copyWith(color: Colors.white),
             ),
           ],
         ),

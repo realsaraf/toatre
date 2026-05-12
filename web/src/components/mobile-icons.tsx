@@ -252,8 +252,8 @@ export function InboxIcon({ size = 22 }: { size?: number }) {
 export function SettingsIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M18 18l1.5 1.5M4.5 4.5 6 6M18 6l1.5-1.5M4.5 19.5 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+      <path d="M12 3.8v2.5M12 17.7v2.5M3.8 12h2.5M17.7 12h2.5M6.2 6.2l1.8 1.8M16 16l1.8 1.8M17.8 6.2 16 8M8 16l-1.8 1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -261,9 +261,8 @@ export function SettingsIcon({ size = 22 }: { size?: number }) {
 export function TimelineIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="4" y="5" width="16" height="3" rx="1.5" fill="currentColor" />
-      <rect x="4" y="10.5" width="11" height="3" rx="1.5" fill="currentColor" />
-      <rect x="4" y="16" width="14" height="3" rx="1.5" fill="currentColor" />
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 8v4.5l3 1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

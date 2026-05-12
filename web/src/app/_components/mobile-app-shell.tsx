@@ -5,6 +5,7 @@ import {
   AppBrand,
   CalendarIcon,
   InboxIcon,
+  MicIcon,
   SettingsIcon,
   TimelineIcon,
   UserAvatar,
@@ -271,30 +272,29 @@ const shellStyles: Record<string, CSSProperties> = {
   micButton: {
     position: "absolute",
     left: "50%",
-    top: -24,
+    top: -20,
     transform: "translateX(-50%)",
     width: 72,
     height: 72,
     borderRadius: "50%",
-    border: "5px solid rgba(255,255,255,1)",
-    background: "transparent",
-    color: "#fff",
+    border: "none",
+    background: "rgba(255,255,255,0.94)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    boxShadow: "0 8px 24px rgba(124,58,237,0.32), 0 2px 8px rgba(124,58,237,0.16)",
-    overflow: "hidden",
-    padding: 0,
+    boxShadow: "0 12px 30px rgba(124,58,237,0.18), 0 2px 10px rgba(36,24,82,0.08)",
+    padding: 5,
   },
-  micImage: {
+  micOrb: {
     width: "100%",
     height: "100%",
-    display: "block",
-    backgroundImage: "url('/micicon.png')",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-    backgroundSize: "cover",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "linear-gradient(135deg, #5B23FF 0%, #8F35FF 42%, #FF4B90 72%, #FF6B4A 100%)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 22px rgba(124,58,237,0.20)",
   },
 };
 
@@ -380,7 +380,9 @@ export function MobileAppShell({
               top: resolvedCompact ? -22 : shellStyles.micButton.top,
             }}
           >
-            <span aria-hidden style={shellStyles.micImage} />
+            <span aria-hidden style={shellStyles.micOrb}>
+              <MicIcon size={resolvedCompact ? 26 : 28} color="#FFFFFF" />
+            </span>
           </button>
 
           <div style={shellStyles.dockGrid}>
