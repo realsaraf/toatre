@@ -225,55 +225,55 @@ const shellStyles: Record<string, CSSProperties> = {
   dockWrap: {
     position: "fixed",
     left: "50%",
-    bottom: "max(10px, env(safe-area-inset-bottom, 0px))",
+    bottom: "max(12px, env(safe-area-inset-bottom, 0px))",
     transform: "translateX(-50%)",
-    width: "min(calc(100vw - 32px), 860px)",
+    width: "min(calc(100vw - 28px), 860px)",
     zIndex: 45,
   },
   dock: {
     position: "relative",
-    padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
-    borderRadius: 30,
-    background: "linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,255,255,0.93))",
-    border: "1px solid rgba(238,233,255,0.72)",
-    boxShadow: "0 26px 74px rgba(36,24,82,0.12)",
-    backdropFilter: "blur(22px)",
+    padding: "10px 8px calc(env(safe-area-inset-bottom, 0px) + 8px)",
+    borderRadius: 28,
+    background: "rgba(255,255,255,0.97)",
+    border: "1px solid rgba(230,225,252,0.80)",
+    boxShadow: "0 8px 32px rgba(36,24,82,0.10), 0 1px 2px rgba(36,24,82,0.04)",
+    backdropFilter: "blur(24px)",
   },
   dockGrid: {
     position: "relative",
     zIndex: 1,
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-    gap: 2,
+    gap: 0,
     alignItems: "end",
   },
   dockSpacer: {
-    minHeight: 58,
+    minHeight: 56,
   },
   navItem: {
     border: "none",
     background: "transparent",
-    padding: 0,
-    minHeight: 58,
+    padding: "0 4px",
+    minHeight: 56,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: 4,
     cursor: "pointer",
   },
   navIconWrap: {
     position: "relative",
-    width: 40,
-    height: 40,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   navLabel: {
     fontSize: 10,
-    fontWeight: 800,
+    fontWeight: 700,
+    letterSpacing: 0,
   },
   navBadge: {
     position: "absolute",
@@ -295,20 +295,21 @@ const shellStyles: Record<string, CSSProperties> = {
   micButton: {
     position: "absolute",
     left: "50%",
-    top: -22,
+    top: -24,
     transform: "translateX(-50%)",
-    width: 84,
-    height: 84,
+    width: 72,
+    height: 72,
     borderRadius: "50%",
-    border: "6px solid rgba(255,255,255,0.96)",
+    border: "5px solid rgba(255,255,255,1)",
     background: "transparent",
     color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    boxShadow: "0 24px 54px rgba(124,58,237,0.26)",
+    boxShadow: "0 8px 24px rgba(124,58,237,0.32), 0 2px 8px rgba(124,58,237,0.16)",
     overflow: "hidden",
+    padding: 0,
   },
   micImage: {
     width: "100%",
@@ -402,8 +403,8 @@ export function MobileAppShell({
             onClick={onOpenCapture}
             style={{
               ...shellStyles.micButton,
-              width: resolvedCompact ? 82 : shellStyles.micButton.width,
-              height: resolvedCompact ? 82 : shellStyles.micButton.height,
+              width: resolvedCompact ? 68 : shellStyles.micButton.width,
+              height: resolvedCompact ? 68 : shellStyles.micButton.height,
               top: resolvedCompact ? -22 : shellStyles.micButton.top,
             }}
           >
@@ -555,15 +556,13 @@ function DockItem({
       <span
         style={{
           ...shellStyles.navIconWrap,
-          background: active ? "linear-gradient(135deg, #6A35FF, #7C3AED)" : "transparent",
-          color: active ? "#fff" : "#6D758A",
-          boxShadow: active ? "0 14px 28px rgba(106,53,255,0.24)" : "none",
+          color: active ? "#5B23FF" : "#9BA3B5",
         }}
       >
         {icon}
         {badge ? <span style={shellStyles.navBadge}>{badge}</span> : null}
       </span>
-      <span style={{ ...shellStyles.navLabel, color: active ? "#6A35FF" : "#6D758A" }}>{label}</span>
+      <span style={{ ...shellStyles.navLabel, color: active ? "#5B23FF" : "#9BA3B5" }}>{label}</span>
     </button>
   );
 }
