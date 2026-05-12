@@ -85,7 +85,13 @@ export function TimelineRow({
       </div>
 
       <div style={styles.railTrackWrap}>
-        <div style={styles.railLine} />
+        <span
+          style={{
+            ...styles.railConnector,
+            ...(compact ? styles.railConnectorCompact : {}),
+            background: visual.tint,
+          }}
+        />
         <span
           style={{
             ...styles.railDot,

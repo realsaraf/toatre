@@ -472,17 +472,17 @@ export const styles: Record<string, React.CSSProperties> = {
     paddingTop: 6,
   },
   timeRailTime: {
-    fontSize: "clamp(14px, 4.3vw, 18px)",
+    fontSize: 14,
     fontWeight: 700,
     color: "#111827",
     lineHeight: 1,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   timeRailTimeCompact: {
-    fontSize: 11.5,
+    fontSize: 11,
   },
   timeRailPeriod: {
-    fontSize: "clamp(10px, 3.3vw, 13px)",
+    fontSize: 10,
     fontWeight: 500,
     color: "#6B7280",
     lineHeight: 1,
@@ -493,7 +493,21 @@ export const styles: Record<string, React.CSSProperties> = {
   railTrackWrap: {
     position: "relative",
     display: "flex",
+    alignItems: "flex-start",
     justifyContent: "center",
+    paddingTop: 10,
+  },
+  railConnector: {
+    position: "absolute",
+    top: 22,
+    left: 0,
+    right: 0,
+    height: 1.5,
+    opacity: 0.35,
+    borderRadius: 999,
+  },
+  railConnectorCompact: {
+    top: 18,
   },
   railLine: {
     display: "none",
@@ -510,18 +524,19 @@ export const styles: Record<string, React.CSSProperties> = {
     opacity: 0.92,
   },
   railDot: {
-    position: "absolute",
-    top: 28,
-    width: 14,
-    height: 14,
-    borderRadius: "50%",
-    border: "2.5px solid rgba(255,255,255,0.96)",
-    boxShadow: "0 10px 20px rgba(91,61,245,0.18)",
-  },
-  railDotCompact: {
-    top: 24,
+    position: "relative",
+    marginTop: 14,
     width: 12,
     height: 12,
+    borderRadius: "50%",
+    border: "2.5px solid rgba(255,255,255,0.96)",
+    boxShadow: "0 4px 12px rgba(91,61,245,0.22)",
+    flexShrink: 0,
+  },
+  railDotCompact: {
+    marginTop: 10,
+    width: 10,
+    height: 10,
     borderWidth: 2,
   },
   toatCard: {
@@ -556,7 +571,7 @@ export const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   cardTitle: {
-    fontSize: "clamp(12px, 3.8vw, 16px)",
+    fontSize: 13,
     fontWeight: 700,
     color: "#0F172A",
     lineHeight: 1.12,
