@@ -21,6 +21,7 @@ import { styles } from "./mobile.styles";
 interface MomentGroup {
   key: string;
   title: string;
+  date?: string;
   icon: string;
   color: string;
   toats: TimelineToat[];
@@ -85,17 +86,30 @@ export function MobileTimelineView({
     () => sortedToats.filter((toat) => isToatInRange(toat, selectedRange, now)),
     [now, selectedRange, sortedToats],
   );
-  const groupedToats: MomentGroup[] = useMemo(() => buildMomentGroups(visibleToats), [visibleToats]);
+  const groupedToats: MomentGroup[] = useMemo(
+    () => buildMomentGroups(visibleToats, selectedRange, now),
+    [visibleToats, selectedRange, now],
+  );
 
   const isLoading = authLoading || fetching;
-  const clearAfter = useMemo(() => {
-    const timed = visibleToats
+
+  // clearAfter is computed from today's toats only (or selected day for single-day view)
+  const { clearAfterText, isAllDayClear } = useMemo(() => {
+    const todayKey = dateKey(now);
+    const scopeKey = selectedRange.kind === "day" ? selectedRange.dateKey : todayKey;
+    const scopeToats = sortedToats.filter((toat) => {
+      const t = toatTime(toat);
+      if (!t) return false;
+      return dateKey(new Date(t)) === scopeKey;
+    });
+    const times = scopeToats
       .map((toat) => toatTime(toat))
-      .filter((value): value is string => Boolean(value))
-      .map((value) => new Date(value))
-      .sort((left, right) => left.getTime() - right.getTime());
-    return timed.length ? formatTime(timed[timed.length - 1]) : "today";
-  }, [visibleToats]);
+      .filter((v): v is string => Boolean(v))
+      .map((v) => new Date(v))
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (!times.length) return { clearAfterText: null, isAllDayClear: true };
+    return { clearAfterText: formatTime(times[times.length - 1]), isAllDayClear: false };
+  }, [sortedToats, selectedRange, now]);
 
   return (
     <MobileAppShell
@@ -163,10 +177,21 @@ export function MobileTimelineView({
             <div style={{ ...styles.clearHeroCheck, ...(isCompact ? styles.clearHeroCheckCompact : {}) }}>✓</div>
           </div>
           <div style={styles.clearHeroCopy}>
-            <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
-              You&apos;re all clear <br />after <span style={styles.clearHeroTime}>{clearAfter}</span>
-            </h2>
-            <p style={styles.clearHeroSubtitle}>Plan looks great! Enjoy your day.</p>
+            {isAllDayClear ? (
+              <>
+                <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
+                  You&apos;re all clear <span style={styles.clearHeroTime}>today</span>
+                </h2>
+                <p style={styles.clearHeroSubtitle}>Nothing on the schedule. A free day is yours.</p>
+              </>
+            ) : (
+              <>
+                <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
+                  You&apos;re all clear <br />after <span style={styles.clearHeroTime}>{clearAfterText}</span>
+                </h2>
+                <p style={styles.clearHeroSubtitle}>Plan looks great! Enjoy your day.</p>
+              </>
+            )}
           </div>
           <div style={styles.clearHeroSky} />
         </section>
@@ -212,6 +237,11 @@ export function MobileTimelineView({
                   <span aria-hidden>{group.icon}</span>
                   {group.title}
                 </p>
+                {group.date ? (
+                  <span style={{ ...styles.sectionDate, ...(isCompact ? styles.sectionDateCompact : {}) }}>
+                    {group.date}
+                  </span>
+                ) : null}
                 <div
                   style={{
                     ...styles.sectionRows,
@@ -238,30 +268,61 @@ export function MobileTimelineView({
   );
 }
 
-function buildMomentGroups(toats: TimelineToat[]): MomentGroup[] {
-  const definitions = [
-    { key: "morning", title: "MORNING", icon: "☼", color: "#FF8A00", test: (hour: number) => hour < 12 },
-    { key: "afternoon", title: "AFTERNOON", icon: "☀", color: "#FF2E91", test: (hour: number) => hour >= 12 && hour < 18 },
-    { key: "evening", title: "EVENING", icon: "☾", color: "#6A35FF", test: (hour: number) => hour >= 18 },
-  ];
+const TIME_SLOTS = [
+  { slot: "morning", title: "MORNING", icon: "☼", color: "#FF8A00", test: (h: number) => h < 12 },
+  { slot: "afternoon", title: "AFTERNOON", icon: "☀", color: "#FF2E91", test: (h: number) => h >= 12 && h < 18 },
+  { slot: "evening", title: "EVENING", icon: "☾", color: "#6A35FF", test: (h: number) => h >= 18 },
+] as const;
 
-  const groups = definitions.map((definition) => ({ ...definition, toats: [] as TimelineToat[] }));
+function buildMomentGroups(toats: TimelineToat[], range: TimelineRange, now: Date): MomentGroup[] {
+  const isMultiDay = range.kind !== "day";
+  const todayKey = dateKey(now);
+  const tomorrowDate = new Date(startOfLocalDay(now));
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowKey = dateKey(tomorrowDate);
+
+  const slotOf = (h: number) => TIME_SLOTS.find((s) => s.test(h)) ?? TIME_SLOTS[0];
+
+  if (!isMultiDay) {
+    // Single day: group by time-of-day only
+    const groups = TIME_SLOTS.map((s) => ({ key: s.slot, title: s.title, icon: s.icon, color: s.color, toats: [] as TimelineToat[] }));
+    const someday: MomentGroup = { key: "someday", title: "SOMEDAY", icon: "✦", color: "#7B61FF", toats: [] };
+    for (const toat of toats) {
+      const t = toatTime(toat);
+      if (!t) { someday.toats.push(toat); continue; }
+      const g = groups.find((x) => x.key === slotOf(new Date(t).getHours()).slot)!;
+      g.toats.push(toat);
+    }
+    return [...groups, someday].filter((g) => g.toats.length > 0).map(({ key, title, icon, color, toats: ts }) => ({ key, title, icon, color, toats: ts }));
+  }
+
+  // Multi-day: group by date + time-of-day, show date label in each section
+  const byKey = new Map<string, MomentGroup>();
   const someday: MomentGroup = { key: "someday", title: "SOMEDAY", icon: "✦", color: "#7B61FF", toats: [] };
 
   for (const toat of toats) {
-    const time = toatTime(toat);
-    if (!time) {
-      someday.toats.push(toat);
-      continue;
+    const t = toatTime(toat);
+    if (!t) { someday.toats.push(toat); continue; }
+    const date = new Date(t);
+    const dk = dateKey(date);
+    const slot = slotOf(date.getHours());
+    const mapKey = `${dk}-${slot.slot}`;
+    if (!byKey.has(mapKey)) {
+      let dateLabel: string;
+      if (dk === todayKey) dateLabel = "Today";
+      else if (dk === tomorrowKey) dateLabel = "Tomorrow";
+      else dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      byKey.set(mapKey, { key: mapKey, title: slot.title, date: dateLabel, icon: slot.icon, color: slot.color, toats: [] });
     }
-    const hour = new Date(time).getHours();
-    const group = groups.find((candidate) => candidate.test(hour));
-    (group ?? groups[0]).toats.push(toat);
+    byKey.get(mapKey)!.toats.push(toat);
   }
 
-  return [...groups, someday]
-    .filter((group) => group.toats.length > 0)
-    .map(({ key, title, icon, color, toats }) => ({ key, title, icon, color, toats }));
+  const sorted = [...byKey.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, g]) => g);
+
+  if (someday.toats.length > 0) sorted.push(someday);
+  return sorted;
 }
 
 function buildRangeOptions(now: Date): Array<{ key: string; label: string; meta: string; value: TimelineRange }> {
