@@ -55,36 +55,12 @@ interface MobileEmptyStateAction {
 const shellStyles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(180deg, #fbfaff 0%, #f7f5ff 52%, #fbfaff 100%)",
+    backgroundImage: "url('/mobilebg.png')",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
+    backgroundPosition: "top center",
     position: "relative",
     overflowX: "clip",
-  },
-  haloOne: {
-    position: "absolute",
-    top: -120,
-    left: -160,
-    width: 420,
-    height: 420,
-    background: "radial-gradient(circle, rgba(249,168,212,0.18), rgba(249,168,212,0))",
-    filter: "blur(20px)",
-  },
-  haloTwo: {
-    position: "absolute",
-    top: 140,
-    right: -140,
-    width: 420,
-    height: 420,
-    background: "radial-gradient(circle, rgba(191,219,254,0.24), rgba(191,219,254,0))",
-    filter: "blur(24px)",
-  },
-  haloThree: {
-    position: "absolute",
-    bottom: 120,
-    left: "18%",
-    width: 340,
-    height: 340,
-    background: "radial-gradient(circle, rgba(253,224,71,0.12), rgba(253,224,71,0))",
-    filter: "blur(24px)",
   },
   main: {
     width: "min(calc(100vw - 24px), 860px)",
@@ -364,10 +340,6 @@ export function MobileAppShell({
 
   return (
     <div style={shellStyles.page}>
-      <div style={shellStyles.haloOne} />
-      <div style={shellStyles.haloTwo} />
-      <div style={shellStyles.haloThree} />
-
       <main
         style={{
           ...shellStyles.main,
