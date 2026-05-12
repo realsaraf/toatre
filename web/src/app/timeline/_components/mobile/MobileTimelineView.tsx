@@ -225,6 +225,7 @@ export function MobileTimelineView({
           />
         ) : (
           <div style={{ ...styles.timelineFlow, ...(isCompact ? styles.timelineFlowCompact : {}) }}>
+            <span aria-hidden style={{ ...styles.timelineRibbon, ...(isCompact ? styles.timelineRibbonCompact : {}) }} />
             {groupedToats.map((group) => (
               <section key={group.key} style={styles.sectionBlock}>
                 <p
