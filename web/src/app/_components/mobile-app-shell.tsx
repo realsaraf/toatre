@@ -5,7 +5,6 @@ import {
   AppBrand,
   CalendarIcon,
   InboxIcon,
-  MicIcon,
   SettingsIcon,
   TimelineIcon,
   UserAvatar,
@@ -226,34 +225,36 @@ const shellStyles: Record<string, CSSProperties> = {
   dockWrap: {
     position: "fixed",
     left: "50%",
-    bottom: "max(6px, env(safe-area-inset-bottom, 0px))",
+    bottom: "max(10px, env(safe-area-inset-bottom, 0px))",
     transform: "translateX(-50%)",
-    width: "min(calc(100vw - 16px), 860px)",
+    width: "min(calc(100vw - 32px), 860px)",
     zIndex: 45,
   },
   dock: {
     position: "relative",
-    padding: "10px 8px calc(env(safe-area-inset-bottom, 0px) + 8px)",
-    borderRadius: 22,
-    background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))",
-    border: "1px solid rgba(255,255,255,0.88)",
-    boxShadow: "0 24px 70px rgba(31,41,55,0.12)",
-    backdropFilter: "blur(18px)",
+    padding: "12px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+    borderRadius: 30,
+    background: "linear-gradient(180deg, rgba(255,255,255,0.99), rgba(255,255,255,0.93))",
+    border: "1px solid rgba(238,233,255,0.72)",
+    boxShadow: "0 26px 74px rgba(36,24,82,0.12)",
+    backdropFilter: "blur(22px)",
   },
   dockGrid: {
+    position: "relative",
+    zIndex: 1,
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
     gap: 2,
     alignItems: "end",
   },
   dockSpacer: {
-    minHeight: 52,
+    minHeight: 58,
   },
   navItem: {
     border: "none",
     background: "transparent",
     padding: 0,
-    minHeight: 52,
+    minHeight: 58,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -263,16 +264,16 @@ const shellStyles: Record<string, CSSProperties> = {
   },
   navIconWrap: {
     position: "relative",
-    width: 32,
-    height: 32,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
   navLabel: {
-    fontSize: 9,
-    fontWeight: 600,
+    fontSize: 10,
+    fontWeight: 800,
   },
   navBadge: {
     position: "absolute",
@@ -294,20 +295,29 @@ const shellStyles: Record<string, CSSProperties> = {
   micButton: {
     position: "absolute",
     left: "50%",
-    top: -16,
+    top: -22,
     transform: "translateX(-50%)",
-    width: 76,
-    height: 76,
+    width: 84,
+    height: 84,
     borderRadius: "50%",
-    border: "4px solid rgba(255,255,255,0.95)",
-    background:
-      "radial-gradient(circle at 30% 20%, #fde68a 0%, rgba(253,230,138,0.56) 20%, rgba(253,230,138,0) 42%), linear-gradient(135deg, #5b3df5 0%, #7c3aed 38%, #ec4899 72%, #fb923c 100%)",
+    border: "6px solid rgba(255,255,255,0.96)",
+    background: "transparent",
     color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    boxShadow: "0 22px 52px rgba(124,58,237,0.22)",
+    boxShadow: "0 24px 54px rgba(124,58,237,0.26)",
+    overflow: "hidden",
+  },
+  micImage: {
+    width: "100%",
+    height: "100%",
+    display: "block",
+    backgroundImage: "url('/micicon.png')",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
   },
 };
 
@@ -362,7 +372,7 @@ export function MobileAppShell({
           ...shellStyles.main,
           width: resolvedCompact ? "min(calc(100vw - 18px), 372px)" : shellStyles.main.width,
           padding: resolvedCompact
-            ? "16px 0 calc(env(safe-area-inset-bottom, 0px) + 122px)"
+            ? "16px 0 calc(env(safe-area-inset-bottom, 0px) + 132px)"
             : shellStyles.main.padding,
         }}
       >
@@ -382,7 +392,7 @@ export function MobileAppShell({
       <div
         style={{
           ...shellStyles.dockWrap,
-          width: resolvedCompact ? "min(calc(100vw - 14px), 376px)" : shellStyles.dockWrap.width,
+          width: resolvedCompact ? "min(calc(100vw - 32px), 376px)" : shellStyles.dockWrap.width,
         }}
       >
         <div style={shellStyles.dock}>
@@ -392,24 +402,24 @@ export function MobileAppShell({
             onClick={onOpenCapture}
             style={{
               ...shellStyles.micButton,
-              width: resolvedCompact ? 72 : shellStyles.micButton.width,
-              height: resolvedCompact ? 72 : shellStyles.micButton.height,
-              top: resolvedCompact ? -14 : shellStyles.micButton.top,
+              width: resolvedCompact ? 82 : shellStyles.micButton.width,
+              height: resolvedCompact ? 82 : shellStyles.micButton.height,
+              top: resolvedCompact ? -22 : shellStyles.micButton.top,
             }}
           >
-            <MicIcon size={resolvedCompact ? 30 : 34} color="#fff" />
+            <span aria-hidden style={shellStyles.micImage} />
           </button>
 
           <div style={shellStyles.dockGrid}>
             <DockItem
               label="Timeline"
-              icon={<TimelineIcon size={22} />}
+              icon={<TimelineIcon size={23} />}
               active={active === "timeline"}
               onClick={onOpenTimeline}
             />
             <DockItem
               label="Inbox"
-              icon={<InboxIcon size={22} />}
+              icon={<InboxIcon size={23} />}
               badge={inboxCount || undefined}
               active={active === "inbox"}
               onClick={onOpenInbox}
@@ -417,13 +427,13 @@ export function MobileAppShell({
             <div aria-hidden style={shellStyles.dockSpacer} />
             <DockItem
               label="Bookings"
-              icon={<CalendarIcon size={22} />}
+              icon={<CalendarIcon size={23} />}
               active={active === "bookings"}
               onClick={onOpenBookings}
             />
             <DockItem
               label="Settings"
-              icon={<SettingsIcon size={22} />}
+              icon={<SettingsIcon size={23} />}
               active={active === "menu"}
               onClick={onOpenMenu}
             />
@@ -545,14 +555,15 @@ function DockItem({
       <span
         style={{
           ...shellStyles.navIconWrap,
-          background: active ? "rgba(91,61,245,0.12)" : "transparent",
-          color: active ? "#5b3df5" : "#6b7280",
+          background: active ? "linear-gradient(135deg, #6A35FF, #7C3AED)" : "transparent",
+          color: active ? "#fff" : "#6D758A",
+          boxShadow: active ? "0 14px 28px rgba(106,53,255,0.24)" : "none",
         }}
       >
         {icon}
         {badge ? <span style={shellStyles.navBadge}>{badge}</span> : null}
       </span>
-      <span style={{ ...shellStyles.navLabel, color: active ? "#5b3df5" : "#6b7280" }}>{label}</span>
+      <span style={{ ...shellStyles.navLabel, color: active ? "#6A35FF" : "#6D758A" }}>{label}</span>
     </button>
   );
 }
