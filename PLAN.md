@@ -34,6 +34,11 @@
 - Tightened the mobile web timeline shell, spacing, colors, hero card, dock, and row styling to better match the approved light mobile mock.
 - Validation: `npm run typecheck` and `npm run build` clean in `web/`.
 
+### Session 2026-05-16 (Flutter mobile timeline refinement) — completed
+- Reworked the Flutter Timeline screen toward the approved light mobile mock with a lighter shell, date pill header, toat count pill, clear-state hero card, lighter row cards, and a matching bottom dock treatment.
+- Updated Flutter timeline grouping and range handling so today can render as morning / afternoon / evening sections while longer ranges stay grouped by date or someday.
+- Validation: VS Code diagnostics clean for `mobile/lib/ui/timeline/timeline_screen.dart`; `flutter analyze` was blocked locally because this machine has Dart 3.5.3 while the repo requires `^3.8.1`.
+
 ### Session 2026-05-10 (mobile shell consistency) — completed
 - Moved the mobile Timeline header onto the shared web mobile page intro so Timeline, Inbox, Bookings, and Settings use the same parent title/subtitle sizing.
 - Added shared mobile segmented tabs and empty-state primitives to the app shell, then reused them for Inbox and Bookings.

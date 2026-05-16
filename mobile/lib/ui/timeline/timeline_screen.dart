@@ -30,7 +30,7 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  _TimelineRange _selectedRange = _TimelineRange.week;
+  _TimelineRange _selectedRange = _TimelineRange.day;
   String? _removingToatId;
 
   @override
@@ -50,88 +50,45 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final rangeCounts = _rangeCounts(toats);
     final visibleToats = _filterToats(toats, _selectedRange);
     final grouped = _groupToats(visibleToats, _selectedRange);
-    final upNext = _findUpNext(visibleToats);
     final clearAfterToday = _latestTimeForToday(visibleToats);
+    final selectedCount = _selectedRange == _TimelineRange.day
+        ? visibleToats.length
+        : _filterToats(toats, _TimelineRange.day).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF15121E),
+      backgroundColor: const Color(0xFFF7F1E8),
       extendBody: true,
       body: Stack(
         children: [
           const _TimelineSkyBackdrop(),
           SafeArea(
             child: RefreshIndicator(
-              color: Colors.white,
-              backgroundColor: const Color(0xFF2B2438),
+              color: const Color(0xFFBE7716),
+              backgroundColor: const Color(0xFFFCF9F4),
               onRefresh: context.read<ToatsProvider>().fetchToats,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 126),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 128),
                 children: [
                   Row(
                     children: [
                       const _AppBrand(),
                       const Spacer(),
-                      _TopIconButton(
-                        icon: Icons.keyboard_alt_outlined,
-                        label: 'Type capture',
-                        onTap: _openTextCapture,
+                      _DatePillButton(
+                        label: _selectedDatePillLabel(),
+                        onTap: () => _openRangePicker(rangeCounts),
                       ),
-                      const SizedBox(width: 10),
-                      _FindSlotButton(onTap: _openScheduleSuggest),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       _ProfileButton(user: auth.user, onTap: _openSettings),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              onTap: () => _openRangePicker(rangeCounts),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      _rangeTitle(_selectedRange),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyles.heading1.copyWith(
-                                        color: Colors.white,
-                                        fontSize: 30,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xFFFFD0E7),
-                                    size: 22,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _rangeSubtitle(_selectedRange),
-                              style: TextStyles.smallMedium.copyWith(
-                                color: const Color(0xDDEDE7FF),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _ClearCard(count: visibleToats.length),
-                    ],
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _ToatCountPill(count: selectedCount),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
+                  _ClearHeroCard(clearAfter: clearAfterToday),
+                  const SizedBox(height: 6),
                   if (toatsProvider.status == ToatsStatus.loading)
                     const Padding(
                       padding: EdgeInsets.only(top: 80),
@@ -154,24 +111,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       subtitle: 'Try another range or capture a new toat.',
                     )
                   else ...[
-                    if (upNext != null) ...[
-                      _UpNextCard(
-                        toat: upNext,
-                        onTap: () => _openToat(upNext),
-                        onAction: () => _runPrimaryAction(upNext),
-                        onDone: () => _markDone(upNext),
-                        removing: _removingToatId == upNext.id,
-                      ),
-                      const SizedBox(height: 18),
-                    ],
                     for (final entry in grouped.entries) ...[
                       if (entry.key.isNotEmpty) ...[
                         Padding(
-                          padding: const EdgeInsets.only(left: 50, bottom: 10),
+                          padding: const EdgeInsets.only(left: 96, bottom: 8),
                           child: Text(
                             entry.key,
-                            style: TextStyles.bodyMedium.copyWith(
-                              color: const Color(0xDDEDE7FF),
+                            style: TextStyles.small.copyWith(
+                              color: const Color(0xFFBE7716),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
                             ),
                           ),
                         ),
@@ -188,12 +137,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       const SizedBox(height: 14),
                     ],
                     _TimelineMessage(
-                      title: _selectedRange == _TimelineRange.week
+                      title: _selectedRange != _TimelineRange.someday
                           ? (clearAfterToday != null
                                 ? 'You\'re all clear after $clearAfterToday'
                                 : 'You\'re all clear today.')
                           : 'You\'re all clear.',
-                      subtitle: _selectedRange == _TimelineRange.week
+                      subtitle: _selectedRange != _TimelineRange.someday
                           ? (clearAfterToday != null
                                 ? 'Nothing else on your schedule today.'
                                 : 'Nothing on the schedule today.')
@@ -376,8 +325,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   ) {
     final groups = <String, List<ToatSummary>>{};
 
-    if (range == _TimelineRange.week) {
-      // Sort by datetime (overdue first, then chronological).
+    if (range == _TimelineRange.day) {
       final sorted = List<ToatSummary>.from(toats)
         ..sort((a, b) {
           final aMs = a.datetime?.millisecondsSinceEpoch ?? 0;
@@ -385,13 +333,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
           return aMs.compareTo(bMs);
         });
       for (final toat in sorted) {
-        final label = _dateBucket(toat.datetime);
+        final label = _timeBucket(toat.datetime);
         groups.putIfAbsent(label, () => <ToatSummary>[]).add(toat);
       }
     } else {
-      // Someday: flat list, no group headers.
-      if (toats.isNotEmpty) {
-        groups[''] = toats;
+      final sorted = List<ToatSummary>.from(toats)
+        ..sort((a, b) {
+          final aMs = a.datetime?.millisecondsSinceEpoch ?? 0;
+          final bMs = b.datetime?.millisecondsSinceEpoch ?? 0;
+          return aMs.compareTo(bMs);
+        });
+      for (final toat in sorted) {
+        final label = range == _TimelineRange.next7
+            ? _dateBucket(toat.datetime)
+            : '';
+        groups.putIfAbsent(label, () => <ToatSummary>[]).add(toat);
       }
     }
 
@@ -400,7 +356,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   Map<_TimelineRange, int> _rangeCounts(List<ToatSummary> toats) {
     return <_TimelineRange, int>{
-      _TimelineRange.week: _filterToats(toats, _TimelineRange.week).length,
+      _TimelineRange.day: _filterToats(toats, _TimelineRange.day).length,
+      _TimelineRange.next7: _filterToats(toats, _TimelineRange.next7).length,
       _TimelineRange.someday: _filterToats(
         toats,
         _TimelineRange.someday,
@@ -421,14 +378,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final toatDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    // Overdue (past) + today through today+6 → week.
-    if (toatDay.difference(today).inDays < 7) return _TimelineRange.week;
+    final diff = toatDay.difference(today).inDays;
+    if (diff == 0) return _TimelineRange.day;
+    if (diff < 7) return _TimelineRange.next7;
     return _TimelineRange.someday;
   }
 
   String _rangeTitle(_TimelineRange range) {
     switch (range) {
-      case _TimelineRange.week:
+      case _TimelineRange.day:
+        return 'Today';
+      case _TimelineRange.next7:
         return 'Next 7 days';
       case _TimelineRange.someday:
         return 'Someday';
@@ -438,7 +398,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
   String _rangeSubtitle(_TimelineRange range) {
     final now = DateTime.now();
     switch (range) {
-      case _TimelineRange.week:
+      case _TimelineRange.day:
+        return _formatDateLabel(now);
+      case _TimelineRange.next7:
         final end = now.add(const Duration(days: 6));
         return '${_formatDateLabel(now)} – ${_formatDateLabel(end)}';
       case _TimelineRange.someday:
@@ -446,20 +408,28 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
-  ToatSummary? _findUpNext(List<ToatSummary> toats) {
-    final now = DateTime.now();
-    final futureToats =
-        toats.where((toat) {
-            final date = toat.datetime;
-            return date != null && date.isAfter(now);
-          }).toList()
-          ..sort((a, b) => (a.datetime ?? now).compareTo(b.datetime ?? now));
-
-    if (futureToats.isNotEmpty) {
-      return futureToats.first;
+  String _selectedDatePillLabel() {
+    if (_selectedRange == _TimelineRange.day) {
+      final now = DateTime.now();
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return '${months[now.month - 1]} ${now.day}, ${weekdays[now.weekday - 1]}';
     }
 
-    return toats.isEmpty ? null : toats.first;
+    return _rangeTitle(_selectedRange);
   }
 
   String _formatDateLabel(DateTime dateTime) {
@@ -518,6 +488,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
         '${months[dateTime.month - 1]} ${dateTime.day}';
   }
 
+  String _timeBucket(DateTime? dateTime) {
+    if (dateTime == null) return 'SOMEDAY';
+    if (dateTime.hour < 12) return 'MORNING';
+    if (dateTime.hour < 18) return 'AFTERNOON';
+    return 'EVENING';
+  }
+
   String? _latestTimeForToday(List<ToatSummary> toats) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -556,8 +533,8 @@ class _TimelineSkyBackdrop extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFF17131F), Color(0xFF241A2D), Color(0xFF15121E)],
-              stops: [0, 0.44, 1],
+              colors: [Color(0xFFF7F1E8), Color(0xFFF4ECDF), Color(0xFFF8F3EB)],
+              stops: [0, 0.46, 1],
             ),
           ),
         ),
@@ -567,7 +544,7 @@ class _TimelineSkyBackdrop extends StatelessWidget {
           right: 0,
           child: Image.asset(
             'assets/images/skybg.png',
-            height: 330,
+            height: 300,
             fit: BoxFit.cover,
             alignment: Alignment.topRight,
           ),
@@ -579,11 +556,11 @@ class _TimelineSkyBackdrop extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF0E0B13).withValues(alpha: 0.04),
-                  const Color(0xFF15121E).withValues(alpha: 0.22),
-                  const Color(0xFF15121E).withValues(alpha: 0.92),
+                  const Color(0xFFFFFFFF).withValues(alpha: 0.22),
+                  const Color(0xFFF7F1E8).withValues(alpha: 0.34),
+                  const Color(0xFFF8F3EB).withValues(alpha: 0.84),
                 ],
-                stops: const [0, 0.44, 0.76],
+                stops: const [0, 0.48, 0.82],
               ),
             ),
           ),
@@ -593,67 +570,128 @@ class _TimelineSkyBackdrop extends StatelessWidget {
   }
 }
 
-class _ClearCard extends StatelessWidget {
-  const _ClearCard({required this.count});
+class _ToatCountPill extends StatelessWidget {
+  const _ToatCountPill({required this.count});
 
   final int count;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 116,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.26)),
+        color: const Color(0xFFFCF9F4),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE8DFD2)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x3A000000),
-            blurRadius: 28,
-            offset: Offset(0, 16),
+            color: Color(0x14000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Text(
+        '✦ $count toats today',
+        style: TextStyles.smallMedium.copyWith(
+          color: const Color(0xFF37302A),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _ClearHeroCard extends StatelessWidget {
+  const _ClearHeroCard({required this.clearAfter});
+
+  final String? clearAfter;
+
+  @override
+  Widget build(BuildContext context) {
+    final allClear = clearAfter == null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE8DFD2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
+          Container(
+            width: 68,
+            height: 68,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFFF8EC),
+            ),
+            child: Center(
+              child: Container(
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.24),
                   shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFBE7716), width: 3),
+                  color: const Color(0xFFFFFDF8),
                 ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: Colors.white,
-                  size: 14,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$count',
-                style: TextStyles.heading3.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                child: const Center(
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 28,
+                    color: Color(0xFFBE7716),
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            count == 0 ? 'All clear' : 'In view',
-            style: TextStyles.smallMedium.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            count == 0 ? 'Quiet for now' : '$count toats',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyles.tiny.copyWith(color: const Color(0xDDEDE7FF)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    style: TextStyles.heading1.copyWith(
+                      color: const Color(0xFF171C27),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      height: 1.05,
+                    ),
+                    children: [
+                      const TextSpan(text: 'You\'re all clear '),
+                      TextSpan(
+                        text: allClear ? 'today' : 'after $clearAfter',
+                        style: const TextStyle(color: Color(0xFFBE7716)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  allClear
+                      ? 'Your day looks open. Enjoy the quiet.'
+                      : 'Your evening looks light after that. Enjoy!',
+                  style: TextStyles.small.copyWith(
+                    color: const Color(0xFF6A6159),
+                    fontWeight: FontWeight.w500,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -697,7 +735,7 @@ class _TopIconButton extends StatelessWidget {
   }
 }
 
-enum _TimelineRange { week, someday }
+enum _TimelineRange { day, next7, someday }
 
 class _TimelineRangeDialog extends StatelessWidget {
   const _TimelineRangeDialog({
@@ -735,13 +773,21 @@ class _TimelineRangeDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _TimelineRangeOption(
-                    range: _TimelineRange.week,
+                    range: _TimelineRange.day,
+                    title: 'Today',
+                    subtitle: _dateLabel(DateTime.now()),
+                    count: counts[_TimelineRange.day] ?? 0,
+                    selected: selectedRange == _TimelineRange.day,
+                  ),
+                  const SizedBox(height: 8),
+                  _TimelineRangeOption(
+                    range: _TimelineRange.next7,
                     title: 'Next 7 days',
                     subtitle:
                         '${_dateLabel(DateTime.now())} – '
                         '${_dateLabel(DateTime.now().add(const Duration(days: 6)))}',
-                    count: counts[_TimelineRange.week] ?? 0,
-                    selected: selectedRange == _TimelineRange.week,
+                    count: counts[_TimelineRange.next7] ?? 0,
+                    selected: selectedRange == _TimelineRange.next7,
                   ),
                   const SizedBox(height: 8),
                   _TimelineRangeOption(
@@ -812,7 +858,7 @@ class _TimelineRangeOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEDE9FE) : Colors.transparent,
+          color: selected ? const Color(0xFFF2E7DA) : Colors.transparent,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Row(
@@ -828,7 +874,7 @@ class _TimelineRangeOption extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
+                      color: const Color(0xFF6A6159),
                     ),
                   ),
                 ],
@@ -838,13 +884,15 @@ class _TimelineRangeOption extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: const BoxDecoration(
-                color: Color(0xFFE8E1FF),
+                color: Color(0xFFFBF2E4),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Text(
                   '$count',
-                  style: TextStyles.heading3.copyWith(color: AppColors.primary),
+                  style: TextStyles.heading3.copyWith(
+                    color: const Color(0xFFBE7716),
+                  ),
                 ),
               ),
             ),
@@ -864,16 +912,16 @@ class _AppBrand extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           child: Image.asset(
             'assets/images/icon.png',
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             fit: BoxFit.cover,
           ),
         ),
         const SizedBox(width: 8),
-        const ToatreMark(fontSize: 24),
+        const ToatreMark(fontSize: 22),
       ],
     );
   }
@@ -895,17 +943,17 @@ class _ProfileButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 48,
-        height: 48,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-          color: Colors.white.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFEEE4D8)),
+          color: const Color(0xFFFCF9F4),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x2E000000),
-              blurRadius: 34,
-              offset: Offset(0, 14),
+              color: Color(0x12000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
             ),
           ],
         ),
@@ -969,6 +1017,60 @@ class _ProfileButton extends StatelessWidget {
   }
 }
 
+class _DatePillButton extends StatelessWidget {
+  const _DatePillButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFCF9F4),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8DFD2)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x10000000),
+              blurRadius: 16,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 16,
+              color: Color(0xFF262B37),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyles.smallMedium.copyWith(
+                color: const Color(0xFF262B37),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: Color(0xFF262B37),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.onCapture, required this.onTextCapture});
 
@@ -1010,7 +1112,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'Your timeline is clear',
             style: TextStyles.heading1.copyWith(
-              color: Colors.white,
+              color: const Color(0xFF171C27),
               fontSize: 24,
               fontWeight: FontWeight.w700,
             ),
@@ -1022,7 +1124,7 @@ class _EmptyState extends StatelessWidget {
             child: Text(
               'Tap the mic and say what needs to happen.\nToatre will turn your words into toats.',
               style: TextStyles.body.copyWith(
-                color: const Color(0xDDEDE7FF),
+                color: const Color(0xFF6A6159),
                 height: 1.55,
               ),
               textAlign: TextAlign.center,
@@ -1078,14 +1180,12 @@ class _EmptyState extends StatelessWidget {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: const Color(0xFFFCF9F4),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.24),
-                    ),
+                    border: Border.all(color: const Color(0xFFE8DFD2)),
                     boxShadow: const [
                       BoxShadow(
-                        color: Color(0x12000000),
+                        color: Color(0x14000000),
                         blurRadius: 12,
                         offset: Offset(0, 4),
                       ),
@@ -1096,14 +1196,14 @@ class _EmptyState extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.edit_rounded,
-                        color: Colors.white,
+                        color: Color(0xFFBE7716),
                         size: 18,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Type',
                         style: TextStyles.bodyMedium.copyWith(
-                          color: Colors.white,
+                          color: const Color(0xFF37302A),
                         ),
                       ),
                     ],
@@ -1169,10 +1269,10 @@ class _MicFab extends StatelessWidget {
         padding: const EdgeInsets.all(5),
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0xF2FFFFFF),
+          color: Color(0xFFFCF9F4),
           boxShadow: [
             BoxShadow(
-              color: Color(0x337C3AED),
+              color: Color(0x24BE7716),
               blurRadius: 26,
               offset: Offset(0, 12),
             ),
@@ -1400,18 +1500,20 @@ class _TimelineRow extends StatelessWidget {
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOut,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.only(bottom: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 44,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       toat.datetime == null ? '--' : _hourLabel(toat.datetime!),
                       style: TextStyles.smallMedium.copyWith(
-                        color: Colors.white,
+                        color: const Color(0xFF1B202B),
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1420,29 +1522,35 @@ class _TimelineRow extends StatelessWidget {
                           ? ''
                           : _minuteSuffix(toat.datetime!),
                       style: TextStyles.small.copyWith(
-                        color: const Color(0xCFEDE7FF),
+                        color: const Color(0xFF84786E),
+                        fontSize: 8,
                       ),
                     ),
                   ],
                 ),
               ),
-              const _RibbonRail(height: 78),
+              const _RibbonRail(height: 74),
               const SizedBox(width: 6),
               Expanded(
                 child: GestureDetector(
                   onTap: onTap,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.18),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
                       ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE8DFD2)),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x12000000),
-                          blurRadius: 18,
+                          color: Color(0x14000000),
+                          blurRadius: 20,
                           offset: Offset(0, 8),
                         ),
                       ],
@@ -1450,8 +1558,8 @@ class _TimelineRow extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: 38,
-                          height: 38,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             gradient: LinearGradient(colors: _toatColors(toat)),
@@ -1472,9 +1580,9 @@ class _TimelineRow extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyles.smallMedium.copyWith(
-                                  color: Colors.white,
+                                  color: const Color(0xFF171C27),
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -1483,24 +1591,18 @@ class _TimelineRow extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyles.tiny.copyWith(
-                                  color: const Color(0xDDEDE7FF),
+                                  color: const Color(0xFF716960),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         if (action != null) ...[
                           _ActionButton(action: action, onTap: onAction),
                           const SizedBox(width: 5),
                         ],
                         _DoneButton(done: toat.state == 'done', onTap: onDone),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xCCEDE7FF),
-                          size: 20,
-                        ),
                       ],
                     ),
                   ),
@@ -1539,6 +1641,8 @@ class _RibbonRail extends StatelessWidget {
         'assets/images/ribbon.png',
         fit: BoxFit.fill,
         alignment: Alignment.topCenter,
+        color: const Color(0xFFD8B785),
+        colorBlendMode: BlendMode.modulate,
       ),
     );
   }
@@ -1558,16 +1662,18 @@ class _DoneButton extends StatelessWidget {
         onTap: done ? null : onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            color: done ? const Color(0xFFE8F6E8) : const Color(0xFFF0F3F7),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: done ? const Color(0xFFD2ECD4) : const Color(0xFFE3E8F0),
+            ),
           ),
           child: Icon(
             done ? Icons.check_circle_rounded : Icons.check_circle_outline,
             size: 16,
-            color: const Color(0xCCEDE7FF),
+            color: done ? const Color(0xFF2E9D45) : const Color(0xFF677286),
           ),
         ),
       ),
@@ -1615,12 +1721,15 @@ class _ActionButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Container(
           constraints: BoxConstraints(maxWidth: filled ? 108 : 72),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: EdgeInsets.symmetric(
+            horizontal: filled ? 10 : 8,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
             gradient: filled ? LinearGradient(colors: colors) : null,
-            color: filled ? null : colors.first.withValues(alpha: 0.11),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.last.withValues(alpha: 0.14)),
+            color: filled ? null : colors.first.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: colors.last.withValues(alpha: 0.16)),
           ),
           child: child,
         ),
@@ -1640,13 +1749,17 @@ class _TimelineMessage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: const Color(0xFFE8DFD2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFD0E7)),
+          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFBE7716)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -1654,13 +1767,15 @@ class _TimelineMessage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyles.bodyMedium.copyWith(color: Colors.white),
+                  style: TextStyles.bodyMedium.copyWith(
+                    color: const Color(0xFF171C27),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: TextStyles.small.copyWith(
-                    color: const Color(0xDDEDE7FF),
+                    color: const Color(0xFF6A6159),
                   ),
                 ),
               ],
@@ -1687,7 +1802,7 @@ class _BottomItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFF5B23FF) : const Color(0xFF9BA3B5);
+    final color = active ? const Color(0xFFBE7716) : const Color(0xFF7F746A);
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -1731,51 +1846,59 @@ class _TimelineTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-      child: Container(
-        height: 86,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: const Color(0x1FE1D9F7)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A241852),
-              blurRadius: 32,
-              offset: Offset(0, 12),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 86,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFCF9F4),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: const Color(0xFFE8DFD2)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x14000000),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _BottomItem(
-              icon: Icons.schedule_rounded,
-              label: 'Timeline',
-              active: true,
-              onTap: onTimelineTap,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _BottomItem(
+                  icon: Icons.schedule_rounded,
+                  label: 'Timeline',
+                  active: true,
+                  onTap: onTimelineTap,
+                ),
+                _BottomItem(
+                  icon: Icons.inbox_outlined,
+                  label: 'Inbox',
+                  onTap: onInboxTap,
+                ),
+                const SizedBox(width: 72),
+                _BottomItem(
+                  icon: Icons.search_rounded,
+                  label: 'Search',
+                  onTap: onSearchTap,
+                ),
+                _BottomItem(
+                  icon: Icons.wb_sunny_outlined,
+                  label: 'Settings',
+                  onTap: onSettingsTap,
+                ),
+              ],
             ),
-            _BottomItem(
-              icon: Icons.inbox_outlined,
-              label: 'Inbox',
-              onTap: onInboxTap,
-            ),
-            Transform.translate(
-              offset: const Offset(0, -16),
-              child: _MicFab(onTap: onVoiceTap),
-            ),
-            _BottomItem(
-              icon: Icons.search_rounded,
-              label: 'Search',
-              onTap: onSearchTap,
-            ),
-            _BottomItem(
-              icon: Icons.wb_sunny_outlined,
-              label: 'Settings',
-              onTap: onSettingsTap,
-            ),
-          ],
-        ),
+          ),
+          Positioned(
+            top: -14,
+            left: 0,
+            right: 0,
+            child: Center(child: _MicFab(onTap: onVoiceTap)),
+          ),
+        ],
       ),
     );
   }
@@ -1904,11 +2027,11 @@ Uri? _externalUri(String value) {
 List<Color> _actionColors(_TimelineActionType type) {
   switch (type) {
     case _TimelineActionType.meeting:
-      return const [Color(0xFF3B82F6), Color(0xFF2563EB)];
+      return const [Color(0xFFE7F0FF), Color(0xFF3B82F6)];
     case _TimelineActionType.call:
-      return const [Color(0xFFFB7185), Color(0xFFEC4899)];
+      return const [Color(0xFFFDE8EE), Color(0xFFEC4899)];
     case _TimelineActionType.directions:
-      return const [Color(0xFF7C3AED), Color(0xFF6D28D9)];
+      return const [Color(0xFFFBF2E4), Color(0xFFBE7716)];
   }
 }
 
@@ -1942,18 +2065,24 @@ class _FindSlotButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
+          color: const Color(0xFFFCF9F4),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+          border: Border.all(color: const Color(0xFFE8DFD2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
+            const Icon(
+              Icons.auto_awesome_rounded,
+              size: 15,
+              color: Color(0xFFBE7716),
+            ),
             const SizedBox(width: 6),
             Text(
               'Find a slot',
-              style: TextStyles.smallMedium.copyWith(color: Colors.white),
+              style: TextStyles.smallMedium.copyWith(
+                color: const Color(0xFF37302A),
+              ),
             ),
           ],
         ),
