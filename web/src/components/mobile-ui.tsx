@@ -26,10 +26,10 @@ interface BottomTabItem {
 
 export function AppBrand() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.png" alt="Toatre" style={{ width: "clamp(38px, 10vw, 48px)", height: "clamp(38px, 10vw, 48px)", borderRadius: "clamp(13px, 3.5vw, 16px)", objectFit: "cover" }} />
-      <ToatreMark width={132} />
+      <img src="/icon.png" alt="Toatre" style={{ width: "clamp(34px, 9vw, 42px)", height: "clamp(34px, 9vw, 42px)", borderRadius: "clamp(12px, 3.2vw, 14px)", objectFit: "cover" }} />
+      <ToatreMark width={124} />
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
     : user?.email?.[0]?.toUpperCase() ?? "T";
 
   return (
-    <div style={{ position: "relative", width: "clamp(48px, 12vw, 56px)", height: "clamp(48px, 12vw, 56px)", flexShrink: 0 }}>
+    <div style={{ position: "relative", width: "clamp(44px, 11vw, 50px)", height: "clamp(44px, 11vw, 50px)", flexShrink: 0 }}>
       {user?.photoURL ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
@@ -88,8 +88,8 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
             height: "100%",
             borderRadius: "50%",
             objectFit: "cover",
-            boxShadow: "0 12px 26px rgba(15,23,42,0.12)",
-            border: "1px solid rgba(255,255,255,0.85)",
+            boxShadow: "0 8px 18px rgba(53,39,25,0.12)",
+            border: "1px solid rgba(255,250,243,0.9)",
           }}
         />
       ) : (
@@ -103,9 +103,9 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
             justifyContent: "center",
             background: "linear-gradient(135deg, #7C3AED, #EC4899)",
             color: "#FFFFFF",
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: 700,
-            boxShadow: "0 18px 40px rgba(124,58,237,0.2)",
+            boxShadow: "0 12px 26px rgba(124,58,237,0.18)",
           }}
         >
           {initials}
@@ -117,12 +117,12 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
           position: "absolute",
           right: -1,
           bottom: 0,
-          width: 11,
-          height: 11,
+          width: 10,
+          height: 10,
           borderRadius: "50%",
-          border: "2px solid rgba(255,255,255,0.95)",
-          background: "#D18A1D",
-          boxShadow: "0 8px 18px rgba(209,138,29,0.35)",
+          border: "2px solid rgba(255,250,243,0.95)",
+          background: "#C78325",
+          boxShadow: "0 6px 14px rgba(199,131,37,0.28)",
         }}
       />
     </div>

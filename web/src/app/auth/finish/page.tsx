@@ -50,10 +50,6 @@ export default function AuthFinishPage() {
         router.replace("/invite-preview");
         return;
       }
-      if (accessLevel === "admin") {
-        router.replace("/admin");
-        return;
-      }
       router.replace(hasHandle ? "/timeline" : "/signup");
     } catch {
       setStatus("error");

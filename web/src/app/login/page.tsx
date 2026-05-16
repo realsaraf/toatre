@@ -21,10 +21,6 @@ export default function LoginPage() {
         router.push("/invite-preview");
         return;
       }
-      if (pendingRedirect.accessLevel === "admin") {
-        router.push("/admin");
-        return;
-      }
       router.push(pendingRedirect.hasHandle ? "/timeline" : "/signup");
     }
   }, [pendingRedirect, router]);

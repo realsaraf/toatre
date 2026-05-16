@@ -37,9 +37,6 @@ export function proxy(req: NextRequest) {
       if (accessLevel === "blocked") {
         return NextResponse.redirect(new URL("/invite-preview", req.url));
       }
-      if (accessLevel === "admin") {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      }
       return NextResponse.redirect(new URL("/timeline", req.url));
     }
     // Unauthenticated: serve the landing page
@@ -49,9 +46,6 @@ export function proxy(req: NextRequest) {
   // Public auth pages — pass through (login page handles redirect after sign-in)
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     if (pathname.startsWith("/invite-preview") && hasSession && accessLevel !== "blocked") {
-      if (accessLevel === "admin") {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      }
       return NextResponse.redirect(new URL("/timeline", req.url));
     }
     return NextResponse.next();

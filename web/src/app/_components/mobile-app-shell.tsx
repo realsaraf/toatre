@@ -56,14 +56,14 @@ interface MobileEmptyStateAction {
 const shellStyles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "radial-gradient(circle at 15% 8%, rgba(255,255,255,0.98), rgba(247,244,239,0.95) 46%, rgba(245,241,235,0.9) 100%)",
+    background: "linear-gradient(180deg, #F7F1E8 0%, #F4ECDF 46%, #F8F3EB 100%)",
     position: "relative",
     overflowX: "clip",
   },
   main: {
-    width: "min(calc(100vw - 26px), 860px)",
+    width: "min(calc(100vw - 24px), 860px)",
     margin: "0 auto",
-    padding: "16px 0 calc(env(safe-area-inset-bottom, 0px) + 124px)",
+    padding: "14px 0 calc(env(safe-area-inset-bottom, 0px) + 120px)",
     position: "relative",
     zIndex: 1,
   },
@@ -199,7 +199,7 @@ const shellStyles: Record<string, CSSProperties> = {
   dockWrap: {
     position: "fixed",
     left: "50%",
-    bottom: "max(8px, env(safe-area-inset-bottom, 0px))",
+    bottom: "max(10px, env(safe-area-inset-bottom, 0px))",
     transform: "translateX(-50%)",
     width: "min(calc(100vw - 20px), 860px)",
     zIndex: 45,
@@ -207,10 +207,10 @@ const shellStyles: Record<string, CSSProperties> = {
   dock: {
     position: "relative",
     padding: "10px 8px calc(env(safe-area-inset-bottom, 0px) + 10px)",
-    borderRadius: 32,
-    background: "rgba(255,255,255,0.96)",
-    border: "1px solid rgba(235,232,226,0.95)",
-    boxShadow: "0 12px 36px rgba(36,24,82,0.08)",
+    borderRadius: 30,
+    background: "rgba(252,249,244,0.98)",
+    border: "1px solid rgba(231,222,208,0.98)",
+    boxShadow: "0 12px 26px rgba(53,39,25,0.12)",
     backdropFilter: "blur(18px)",
   },
   dockGrid: {
@@ -257,14 +257,14 @@ const shellStyles: Record<string, CSSProperties> = {
     height: 18,
     borderRadius: 999,
     padding: "0 4px",
-    background: "linear-gradient(135deg, #ec4899, #fb7185)",
+    background: "linear-gradient(135deg, #D57A7A, #E68E6E)",
     color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: 10,
     fontWeight: 700,
-    boxShadow: "0 10px 20px rgba(236,72,153,0.26)",
+    boxShadow: "0 10px 20px rgba(214,136,110,0.24)",
   },
   micButton: {
     position: "absolute",
@@ -275,12 +275,12 @@ const shellStyles: Record<string, CSSProperties> = {
     height: 80,
     borderRadius: "50%",
     border: "none",
-    background: "rgba(255,255,255,0.95)",
+    background: "rgba(255,252,247,0.98)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    boxShadow: "0 14px 32px rgba(124,58,237,0.18), 0 2px 8px rgba(36,24,82,0.07)",
+    boxShadow: "0 14px 28px rgba(190,119,22,0.18), 0 2px 8px rgba(53,39,25,0.08)",
     padding: 5,
   },
   micOrb: {
@@ -290,8 +290,8 @@ const shellStyles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #4E2DFF 0%, #8A36FF 42%, #FF4D96 70%, #FF8A3D 100%)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 22px rgba(124,58,237,0.2)",
+    background: "linear-gradient(135deg, #6B34FF 0%, #8D3CFF 42%, #FF5A9A 72%, #FF9A4A 100%)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 22px rgba(190,119,22,0.16)",
   },
 };
 
@@ -340,9 +340,9 @@ export function MobileAppShell({
       <main
         style={{
           ...shellStyles.main,
-          width: resolvedCompact ? "min(calc(100vw - 18px), 372px)" : shellStyles.main.width,
+          width: resolvedCompact ? "min(calc(100vw - 22px), 374px)" : shellStyles.main.width,
           padding: resolvedCompact
-            ? "16px 0 calc(env(safe-area-inset-bottom, 0px) + 132px)"
+            ? "12px 0 calc(env(safe-area-inset-bottom, 0px) + 126px)"
             : shellStyles.main.padding,
         }}
       >
@@ -362,7 +362,7 @@ export function MobileAppShell({
       <div
         style={{
           ...shellStyles.dockWrap,
-          width: resolvedCompact ? "min(calc(100vw - 32px), 376px)" : shellStyles.dockWrap.width,
+          width: resolvedCompact ? "min(calc(100vw - 26px), 378px)" : shellStyles.dockWrap.width,
         }}
       >
         <div style={shellStyles.dock}>
@@ -372,8 +372,8 @@ export function MobileAppShell({
             onClick={onOpenCapture}
             style={{
               ...shellStyles.micButton,
-              width: resolvedCompact ? 78 : shellStyles.micButton.width,
-              height: resolvedCompact ? 78 : shellStyles.micButton.height,
+              width: resolvedCompact ? 76 : shellStyles.micButton.width,
+              height: resolvedCompact ? 76 : shellStyles.micButton.height,
               top: resolvedCompact ? -24 : shellStyles.micButton.top,
             }}
           >
@@ -527,7 +527,7 @@ function DockItem({
       <span
         style={{
           ...shellStyles.navIconWrap,
-          color: active ? "#C27A12" : "#70798B",
+          color: active ? "#BE7716" : "#7F746A",
         }}
       >
         {icon}
@@ -536,7 +536,7 @@ function DockItem({
       <span
         style={{
           ...shellStyles.navLabel,
-          color: active ? "#C27A12" : "#5D6575",
+          color: active ? "#BE7716" : "#6E645C",
           fontWeight: active ? 700 : shellStyles.navLabel.fontWeight,
         }}
       >
@@ -550,7 +550,7 @@ function DockItem({
             width: 30,
             height: 2,
             borderRadius: 999,
-            background: "#C27A12",
+            background: "#BE7716",
           }}
         />
       ) : null}

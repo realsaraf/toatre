@@ -29,6 +29,11 @@
 - Added `/invite-preview` waitlist capture flow and `/api/access/waitlist` persistence so non-approved signed-in users can join launch notifications.
 - Validation: `npm run typecheck` clean in `web/`.
 
+### Session 2026-05-16 (admin polish + mobile web timeline refinement) — completed
+- Reworked `/admin` into a branded Toatre surface and kept admin-only access without auto-redirecting signed-in admins away from `/`.
+- Tightened the mobile web timeline shell, spacing, colors, hero card, dock, and row styling to better match the approved light mobile mock.
+- Validation: `npm run typecheck` and `npm run build` clean in `web/`.
+
 ### Session 2026-05-10 (mobile shell consistency) — completed
 - Moved the mobile Timeline header onto the shared web mobile page intro so Timeline, Inbox, Bookings, and Settings use the same parent title/subtitle sizing.
 - Added shared mobile segmented tabs and empty-state primitives to the app shell, then reused them for Inbox and Bookings.
