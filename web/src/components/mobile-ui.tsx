@@ -26,10 +26,10 @@ interface BottomTabItem {
 
 export function AppBrand() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.png" alt="Toatre" style={{ width: "clamp(32px, 9vw, 40px)", height: "clamp(32px, 9vw, 40px)", borderRadius: "clamp(12px, 3.4vw, 14px)", objectFit: "cover" }} />
-      <ToatreMark width={100} />
+      <img src="/icon.png" alt="Toatre" style={{ width: "clamp(38px, 10vw, 48px)", height: "clamp(38px, 10vw, 48px)", borderRadius: "clamp(13px, 3.5vw, 16px)", objectFit: "cover" }} />
+      <ToatreMark width={132} />
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
     : user?.email?.[0]?.toUpperCase() ?? "T";
 
   return (
-    <div style={{ position: "relative", width: "clamp(46px, 12vw, 58px)", height: "clamp(46px, 12vw, 58px)", flexShrink: 0 }}>
+    <div style={{ position: "relative", width: "clamp(48px, 12vw, 56px)", height: "clamp(48px, 12vw, 56px)", flexShrink: 0 }}>
       {user?.photoURL ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
@@ -86,9 +86,9 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
           style={{
             width: "100%",
             height: "100%",
-            borderRadius: "clamp(18px, 5vw, 22px)",
+            borderRadius: "50%",
             objectFit: "cover",
-            boxShadow: "0 18px 40px rgba(31,41,55,0.12)",
+            boxShadow: "0 12px 26px rgba(15,23,42,0.12)",
             border: "1px solid rgba(255,255,255,0.85)",
           }}
         />
@@ -97,7 +97,7 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
           style={{
             width: "100%",
             height: "100%",
-            borderRadius: "clamp(18px, 5vw, 22px)",
+            borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -115,14 +115,14 @@ export function UserAvatar({ user }: { user: AvatarUser | null | undefined }) {
         aria-hidden
         style={{
           position: "absolute",
-          right: -2,
-          bottom: -2,
-          width: 12,
-          height: 12,
+          right: -1,
+          bottom: 0,
+          width: 11,
+          height: 11,
           borderRadius: "50%",
-          border: "3px solid rgba(255,255,255,0.95)",
-          background: "linear-gradient(135deg, #7C3AED, #5B3DF5)",
-          boxShadow: "0 8px 20px rgba(124,58,237,0.28)",
+          border: "2px solid rgba(255,255,255,0.95)",
+          background: "#D18A1D",
+          boxShadow: "0 8px 18px rgba(209,138,29,0.35)",
         }}
       />
     </div>

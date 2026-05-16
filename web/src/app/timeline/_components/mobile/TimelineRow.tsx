@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { DoneIcon, SteeringWheelIcon } from "@/components/mobile-ui";
+import { DirectionsIcon, PhoneIcon, SteeringWheelIcon, VideoIcon } from "@/components/mobile-ui";
 import { getToatVisual } from "@/components/toat-visual";
 import {
   type TimelineToat,
@@ -37,6 +37,38 @@ export function TimelineRow({
     ? formatRailTime(new Date(toatTime(toat)!))
     : { time: "Any", period: "time" };
   const doneRowRef = useRef<HTMLButtonElement>(null);
+  const isDone = toat.state === "done";
+
+  const status = isDone
+    ? {
+      label: "Done",
+      color: "#2E9D45",
+      background: "#E8F6E8",
+      border: "1px solid #D2ECD4",
+    }
+    : action
+      ? {
+        label: action.label,
+        color: visual.accent,
+        background: visual.soft,
+        border: "1px solid rgba(255,255,255,0.45)",
+      }
+      : {
+        label: "Done",
+        color: "#677286",
+        background: "#F0F3F7",
+        border: "1px solid #E3E8F0",
+      };
+
+  const statusIcon = isDone
+    ? "check"
+    : status.label === "Directions"
+      ? "directions"
+      : status.label === "Join"
+        ? "join"
+        : status.label === "Call"
+          ? "call"
+          : null;
 
   const runAction = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -85,6 +117,7 @@ export function TimelineRow({
       </div>
 
       <div style={styles.railTrackWrap}>
+        <span style={{ ...styles.railLine, ...(compact ? styles.railLineCompact : {}) }} />
         <span
           style={{
             ...styles.railConnector,
@@ -133,35 +166,37 @@ export function TimelineRow({
           </div>
 
           <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
-            {action ? (
-              <button
-                type="button"
-                onClick={runAction}
-                style={{
-                  ...styles.cardActionButton,
-                  ...(compact ? styles.cardActionButtonCompact : {}),
-                  color: visual.accent,
-                  background: visual.soft,
-                }}
-              >
-                {action.label === "Directions" ? (
-                  <>
-                    <SteeringWheelIcon size={compact ? 13 : 15} /> Directions
-                  </>
-                ) : (
-                  action.label
-                )}
-              </button>
-            ) : null}
             <button
               ref={doneRowRef}
               type="button"
-              onClick={runDone}
-              disabled={doneDisabled}
-              style={{ ...styles.doneButton, ...(compact ? styles.doneButtonCompact : {}) }}
-              aria-label="Mark done"
+              onClick={action ? runAction : runDone}
+              disabled={isDone || (doneDisabled && !action)}
+              style={{
+                ...styles.statusPill,
+                ...(compact ? styles.statusPillCompact : {}),
+                color: status.color,
+                background: status.background,
+                border: status.border,
+              }}
+              aria-label={isDone ? "Toat done" : action ? `Open ${action.label}` : "Mark done"}
             >
-              <DoneIcon size={compact ? 15 : 18} />
+              {statusIcon === "directions" ? (
+                <>
+                  <DirectionsIcon size={compact ? 13 : 15} /> {status.label}
+                </>
+              ) : statusIcon === "join" ? (
+                <>
+                  <VideoIcon size={compact ? 13 : 15} /> {status.label}
+                </>
+              ) : statusIcon === "call" ? (
+                <>
+                  <PhoneIcon size={compact ? 13 : 15} /> {status.label}
+                </>
+              ) : statusIcon === "check" ? (
+                <>✓ {status.label}</>
+              ) : (
+                status.label
+              )}
             </button>
           </div>
         </div>

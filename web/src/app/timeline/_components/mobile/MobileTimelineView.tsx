@@ -78,7 +78,7 @@ export function MobileTimelineView({
   onOpenMenu,
 }: MobileTimelineViewProps) {
   const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState<TimelineRange>({ kind: "next7" });
+  const [selectedRange, setSelectedRange] = useState<TimelineRange>({ kind: "day", dateKey: dateKey(now) });
   const rangeOptions = useMemo(() => buildRangeOptions(now), [now]);
   const selectedOption = rangeOptions.find((option) => rangeEquals(option.value, selectedRange)) ?? rangeOptions[0];
   const sortedToats = useMemo(() => [...toats].sort(sortToats), [toats]);
@@ -111,6 +111,13 @@ export function MobileTimelineView({
     return { clearAfterText: formatTime(times[times.length - 1]), isAllDayClear: false };
   }, [sortedToats, selectedRange, now]);
 
+  const selectedDateKey = selectedRange.kind === "day" ? selectedRange.dateKey : dateKey(now);
+  const selectedDateCount = sortedToats.filter((toat) => {
+    const t = toatTime(toat);
+    return t ? dateKey(new Date(t)) === selectedDateKey : false;
+  }).length;
+  const toatsTodayLabel = `${selectedDateCount} toats today`;
+
   return (
     <MobileAppShell
       user={user}
@@ -133,7 +140,7 @@ export function MobileTimelineView({
               style={styles.datePill}
             >
               <CalendarIcon size={isCompact ? 15 : 17} />
-              <span>{selectedOption.label}</span>
+              <span>{selectedRange.kind === "day" ? formatDatePillLabel(selectedRange.dateKey) : selectedOption.label}</span>
               <ChevronDownIcon size={isCompact ? 14 : 16} />
             </button>
             {rangeMenuOpen ? (
@@ -172,29 +179,34 @@ export function MobileTimelineView({
         </div>
       )}
       header={(
-        <section style={{ ...styles.clearHeroCard, ...(isCompact ? styles.clearHeroCardCompact : {}) }}>
-          <div style={styles.clearHeroCheckWrap}>
-            <div style={{ ...styles.clearHeroCheck, ...(isCompact ? styles.clearHeroCheckCompact : {}) }}>✓</div>
+        <>
+          <div style={{ ...styles.toatCountWrap, ...(isCompact ? styles.toatCountWrapCompact : {}) }}>
+            <span style={styles.toatCountPill}>✦ {toatsTodayLabel}</span>
           </div>
-          <div style={styles.clearHeroCopy}>
-            {isAllDayClear ? (
-              <>
-                <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
-                  You&apos;re all clear <span style={styles.clearHeroTime}>today</span>
-                </h2>
-                <p style={styles.clearHeroSubtitle}>Nothing on the schedule. A free day is yours.</p>
-              </>
-            ) : (
-              <>
-                <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
-                  You&apos;re all clear <br />after <span style={styles.clearHeroTime}>{clearAfterText}</span>
-                </h2>
-                <p style={styles.clearHeroSubtitle}>Plan looks great! Enjoy your day.</p>
-              </>
-            )}
-          </div>
-          <div style={styles.clearHeroSky} />
-        </section>
+          <section style={{ ...styles.clearHeroCard, ...(isCompact ? styles.clearHeroCardCompact : {}) }}>
+            <div style={styles.clearHeroCheckWrap}>
+              <div style={{ ...styles.clearHeroCheck, ...(isCompact ? styles.clearHeroCheckCompact : {}) }}>✓</div>
+            </div>
+            <div style={styles.clearHeroCopy}>
+              {isAllDayClear ? (
+                <>
+                  <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
+                    You&apos;re all clear <span style={styles.clearHeroTime}>today</span>
+                  </h2>
+                  <p style={styles.clearHeroSubtitle}>Your day looks open. Enjoy the quiet.</p>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ ...styles.clearHeroTitle, ...(isCompact ? styles.clearHeroTitleCompact : {}) }}>
+                    You&apos;re all clear <br />after <span style={styles.clearHeroTime}>{clearAfterText}</span>
+                  </h2>
+                  <p style={styles.clearHeroSubtitle}>Your evening looks light after dinner. Enjoy!</p>
+                </>
+              )}
+            </div>
+            <div style={styles.clearHeroSky} />
+          </section>
+        </>
       )}
     >
         {/* Loading state */}
@@ -269,9 +281,19 @@ export function MobileTimelineView({
   );
 }
 
+function formatDatePillLabel(dateValue: string): string {
+  const date = new Date(`${dateValue}T12:00:00`);
+  const monthDay = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+  return `${monthDay}, ${weekday}`;
+}
+
 const TIME_SLOTS = [
-  { slot: "morning", title: "MORNING", icon: "☼", color: "#FF8A00", test: (h: number) => h < 12 },
-  { slot: "afternoon", title: "AFTERNOON", icon: "☀", color: "#FF2E91", test: (h: number) => h >= 12 && h < 18 },
+  { slot: "morning", title: "MORNING", icon: "☼", color: "#C27A12", test: (h: number) => h < 12 },
+  { slot: "afternoon", title: "AFTERNOON", icon: "☀", color: "#C27A12", test: (h: number) => h >= 12 && h < 18 },
   { slot: "evening", title: "EVENING", icon: "☾", color: "#6A35FF", test: (h: number) => h >= 18 },
 ] as const;
 
