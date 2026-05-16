@@ -29,5 +29,7 @@ export async function getCollections() {
     audit: db.collection("audit"),
     bookingSettings: db.collection("booking_settings"),
     bookingRequests: db.collection("booking_requests"),
+    approvedUsers: db.collection("approved_users"),
+    waitlist: db.collection("waitlist"),
   };
 }

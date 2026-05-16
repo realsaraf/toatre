@@ -11,7 +11,7 @@ export async function ensureIndexes(): Promise<void> {
   if (ensured) return;
   ensured = true;
 
-  const { users, toats, captures, people, connections, acl, settings, reminders, deviceTokens, calendarSyncTokens, calendarSyncStates, bookingSettings, bookingRequests } =
+  const { users, toats, captures, people, connections, acl, settings, reminders, deviceTokens, calendarSyncTokens, calendarSyncStates, bookingSettings, bookingRequests, approvedUsers, waitlist } =
     await getCollections();
 
   // users
@@ -73,4 +73,10 @@ export async function ensureIndexes(): Promise<void> {
   await bookingRequests.createIndex({ ownerId: 1, state: 1 });
   await bookingRequests.createIndex({ bookerUserId: 1, state: 1 }, { sparse: true });
   await bookingRequests.createIndex({ slotStart: 1, slotEnd: 1 });
+
+  // pre-launch access control
+  await approvedUsers.createIndex({ email: 1 }, { unique: true });
+  await approvedUsers.createIndex({ isActive: 1, updatedAt: -1 });
+  await waitlist.createIndex({ email: 1 }, { unique: true });
+  await waitlist.createIndex({ createdAt: -1 });
 }

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { getCollections } from "@/lib/mongo/collections";
+import { resolveAccessLevel } from "@/lib/auth/access-policy";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "toatre_session";
+const ACCESS_COOKIE_NAME = "toatre_access";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 function normalizeTimezone(input: unknown): string | null {
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const hasHandle = !!(mongoUser?.handle);
+    const accessLevel = await resolveAccessLevel(decoded.email ?? null);
 
     // Set httpOnly session cookie
     const cookieStore = await cookies();
@@ -69,7 +72,15 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
     });
 
-    return NextResponse.json({ ok: true, hasHandle });
+    cookieStore.set(ACCESS_COOKIE_NAME, accessLevel, {
+      maxAge: SESSION_MS / 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      sameSite: "lax",
+    });
+
+    return NextResponse.json({ ok: true, hasHandle, accessLevel });
   } catch (err) {
     console.error("[auth/session] error:", err);
     return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });

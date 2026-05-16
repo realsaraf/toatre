@@ -9,7 +9,7 @@ function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-async function createSession(user: User): Promise<{ hasHandle: boolean }> {
+async function createSession(user: User): Promise<{ hasHandle: boolean; accessLevel: "blocked" | "approved" | "admin" }> {
   const idToken = await user.getIdToken();
   const res = await fetch("/api/auth/session", {
     method: "POST",
@@ -21,8 +21,11 @@ async function createSession(user: User): Promise<{ hasHandle: boolean }> {
     throw new Error("Session creation failed");
   }
 
-  const data = (await res.json()) as { ok: boolean; hasHandle: boolean };
-  return { hasHandle: data.hasHandle ?? false };
+  const data = (await res.json()) as { ok: boolean; hasHandle: boolean; accessLevel?: "blocked" | "approved" | "admin" };
+  return {
+    hasHandle: data.hasHandle ?? false,
+    accessLevel: data.accessLevel ?? "approved",
+  };
 }
 
 export default function AuthFinishPage() {
@@ -42,7 +45,15 @@ export default function AuthFinishPage() {
       const result = await signInWithEmailLink(auth, emailAddress, window.location.href);
       window.localStorage.removeItem("toatre_email_for_link");
 
-      const { hasHandle } = await createSession(result.user);
+      const { hasHandle, accessLevel } = await createSession(result.user);
+      if (accessLevel === "blocked") {
+        router.replace("/invite-preview");
+        return;
+      }
+      if (accessLevel === "admin") {
+        router.replace("/admin");
+        return;
+      }
       router.replace(hasHandle ? "/timeline" : "/signup");
     } catch {
       setStatus("error");

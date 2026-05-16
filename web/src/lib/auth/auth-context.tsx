@@ -16,7 +16,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   /** Pending redirect-sign-in outcome consumed by the login page after a redirect. */
-  pendingRedirect: { hasHandle: boolean } | null;
+  pendingRedirect: { hasHandle: boolean; accessLevel: "blocked" | "approved" | "admin" } | null;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
@@ -29,7 +29,7 @@ function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-async function createSession(user: User): Promise<{ hasHandle: boolean }> {
+async function createSession(user: User): Promise<{ hasHandle: boolean; accessLevel: "blocked" | "approved" | "admin" }> {
   const idToken = await user.getIdToken();
   const res = await fetch("/api/auth/session", {
     method: "POST",
@@ -37,14 +37,17 @@ async function createSession(user: User): Promise<{ hasHandle: boolean }> {
     body: JSON.stringify({ idToken, timezone: browserTimezone() }),
   });
   if (!res.ok) throw new Error("Session creation failed");
-  const data = (await res.json()) as { ok: boolean; hasHandle: boolean };
-  return { hasHandle: data.hasHandle ?? false };
+  const data = (await res.json()) as { ok: boolean; hasHandle: boolean; accessLevel?: "blocked" | "approved" | "admin" };
+  return {
+    hasHandle: data.hasHandle ?? false,
+    accessLevel: data.accessLevel ?? "approved",
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingRedirect, setPendingRedirect] = useState<{ hasHandle: boolean } | null>(null);
+  const [pendingRedirect, setPendingRedirect] = useState<{ hasHandle: boolean; accessLevel: "blocked" | "approved" | "admin" } | null>(null);
   const sessionUidRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -68,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           if (sessionUidRef.current !== firebaseUser.uid) {
-            const { hasHandle } = await createSession(firebaseUser);
+            const { hasHandle, accessLevel } = await createSession(firebaseUser);
             sessionUidRef.current = firebaseUser.uid;
-            if (!cancelled) setPendingRedirect({ hasHandle });
+            if (!cancelled) setPendingRedirect({ hasHandle, accessLevel });
           }
         } catch (error) {
           console.error("[auth] session creation failed", error);

@@ -15,12 +15,19 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-05-12
+**Last updated:** 2026-05-16
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; STT+edit review+email reminders+defaultTier+account deletion+schedule suggest shipped; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-16 (invite-only web access + admin allowlist) — completed
+- Added invite-only web access control backed by Mongo `approved_users` and `waitlist` collections, with new indexes and a shared access-policy helper.
+- Added `/admin` (Google sign-in for `realsaraf@gmail.com` only) with approve/inactivate/remove controls by email via `/api/admin/approved-users`.
+- Added blocked-user handling end-to-end: `/api/auth/session` now returns access level, proxy routes blocked users to `/invite-preview`, and protected APIs reject non-approved users.
+- Added `/invite-preview` waitlist capture flow and `/api/access/waitlist` persistence so non-approved signed-in users can join launch notifications.
+- Validation: `npm run typecheck` clean in `web/`.
 
 ### Session 2026-05-10 (mobile shell consistency) — completed
 - Moved the mobile Timeline header onto the shared web mobile page intro so Timeline, Inbox, Bookings, and Settings use the same parent title/subtitle sizing.

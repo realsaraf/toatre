@@ -17,6 +17,14 @@ export default function LoginPage() {
   // After a sign-in redirect returns, the AuthProvider exposes the result here.
   useEffect(() => {
     if (pendingRedirect) {
+      if (pendingRedirect.accessLevel === "blocked") {
+        router.push("/invite-preview");
+        return;
+      }
+      if (pendingRedirect.accessLevel === "admin") {
+        router.push("/admin");
+        return;
+      }
       router.push(pendingRedirect.hasHandle ? "/timeline" : "/signup");
     }
   }, [pendingRedirect, router]);

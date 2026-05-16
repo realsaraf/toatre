@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { getCollections } from "@/lib/mongo/collections";
+import { resolveAccessLevel } from "@/lib/auth/access-policy";
 
 export interface AuthenticatedUser {
   uid: string;           // Firebase UID
   email: string | null;
   mongoId: string;       // MongoDB _id as string
+  signInProvider: string | null;
 }
 
 function requestedTimezone(request: NextRequest): string | null {
@@ -99,11 +101,28 @@ export async function requireUser(
     };
   }
 
+  const accessLevel = await resolveAccessLevel(decodedToken.email ?? null);
+  if (accessLevel === "blocked") {
+    return {
+      user: null,
+      errorResponse: NextResponse.json(
+        {
+          error: "invite_only_preview",
+          message: "Toatre is currently invite-only preview.",
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
   return {
     user: {
       uid: decodedToken.uid,
       email: decodedToken.email ?? null,
       mongoId: mongoUser!._id.toString(),
+      signInProvider: typeof decodedToken.firebase?.sign_in_provider === "string"
+        ? decodedToken.firebase.sign_in_provider
+        : null,
     },
     errorResponse: null,
   };
