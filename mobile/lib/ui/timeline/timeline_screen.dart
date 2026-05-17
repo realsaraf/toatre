@@ -1916,7 +1916,7 @@ class _StatusPill extends StatelessWidget {
   });
 
   final bool done;
-  final _ToatAction? action;
+  final _TimelineAction? action;
   final VoidCallback? onTap;
 
   @override
