@@ -5,7 +5,7 @@ import 'package:toatre/models/toat_summary.dart';
 import 'package:toatre/providers/capture_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/api_service.dart';
-import 'package:toatre/ui/timeline/timeline_screen.dart';
+import 'package:toatre/ui/shell/main_shell.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
@@ -364,7 +364,7 @@ class _ReviewStateState extends State<_ReviewState> {
       widget.capture.reset();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const TimelineScreen()),
+        MaterialPageRoute<void>(builder: (_) => const MainShell()),
         (_) => false,
       );
     } catch (e) {

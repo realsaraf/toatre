@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/ui/auth/handle_screen.dart';
-import 'package:toatre/ui/timeline/timeline_screen.dart';
+import 'package:toatre/ui/shell/main_shell.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final Widget? destination = switch (status) {
       AuthStatus.needsHandle => const HandleScreen(),
-      AuthStatus.authenticated => const TimelineScreen(),
+      AuthStatus.authenticated => const MainShell(),
       _ => null,
     };
 

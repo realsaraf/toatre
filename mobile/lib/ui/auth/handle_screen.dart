@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:toatre/providers/auth_provider.dart';
-import 'package:toatre/ui/timeline/timeline_screen.dart';
+import 'package:toatre/ui/shell/main_shell.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
@@ -38,7 +38,7 @@ class _HandleScreenState extends State<HandleScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const TimelineScreen()),
+        MaterialPageRoute<void>(builder: (_) => const MainShell()),
       );
     });
   }

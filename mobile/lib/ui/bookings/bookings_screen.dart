@@ -63,7 +63,9 @@ class _Booking {
 enum _BookingFilter { upcoming, past }
 
 class BookingsScreen extends StatefulWidget {
-  const BookingsScreen({super.key});
+  const BookingsScreen({super.key, this.asTab = false});
+
+  final bool asTab;
 
   @override
   State<BookingsScreen> createState() => _BookingsScreenState();
@@ -123,16 +125,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
           backgroundColor: const Color(0xFFFCF9F4),
           onRefresh: _fetch,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
+            padding: EdgeInsets.fromLTRB(20, 14, 20, widget.asTab ? 120 : 40),
             children: [
               // Header
               Row(
                 children: [
-                  _CircleButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
+                  if (!widget.asTab) ...[  
+                    _CircleButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: Text('Bookings', style: TextStyles.heading2),
                   ),

@@ -11,10 +11,8 @@ import 'package:toatre/providers/schedule_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/ui/capture/capture_screen.dart';
-import 'package:toatre/ui/inbox/inbox_screen.dart';
-import 'package:toatre/ui/bookings/bookings_screen.dart';
 import 'package:toatre/ui/search/search_screen.dart';
-import 'package:toatre/ui/settings/settings_screen.dart';
+import 'package:toatre/ui/toat/share_toat_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/confetti.dart';
@@ -24,7 +22,9 @@ import 'package:toatre/widgets/toat_detail/toat_detail_utils.dart'
     show detailEnrichmentKey, toatSmartIcon;
 
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key});
+  const TimelineScreen({super.key, this.onSwitchToSettings});
+
+  final VoidCallback? onSwitchToSettings;
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -74,7 +74,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
       extendBody: true,
       body: Stack(
         children: [
-          const _TimelineSkyBackdrop(),
           SafeArea(
             child: RefreshIndicator(
               color: const Color(0xFFBE7716),
@@ -165,6 +164,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                           onTap: () => _openToat(toat),
                           onAction: () => _runPrimaryAction(toat),
                           onDone: () => _markDone(toat),
+                          onShare: () => _shareToat(toat),
                           removing: _removingToatId == toat.id,
                         ),
                       ),
@@ -189,13 +189,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _TimelineTabBar(
-        onTimelineTap: () {},
-        onInboxTap: _openInbox,
-        onVoiceTap: _openVoiceCapture,
-        onBookingsTap: _openBookings,
-        onSettingsTap: _openSettings,
-      ),
+
     );
   }
 
@@ -224,13 +218,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _openSettings() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
-    if (!mounted) {
-      return;
-    }
-    await context.read<ToatsProvider>().fetchToats();
+    widget.onSwitchToSettings?.call();
   }
 
   Future<void> _openScheduleSuggest() async {
@@ -257,16 +245,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
     await context.read<ToatsProvider>().fetchToats();
   }
 
-  Future<void> _openBookings() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const BookingsScreen()));
-  }
 
-  Future<void> _openInbox() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const InboxScreen()));
+  Future<void> _shareToat(ToatSummary toat) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ShareToatScreen(toat: toat)),
+    );
   }
 
   Future<void> _openRangePicker(Map<_TimelineRange, int> counts) async {
@@ -674,55 +657,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 }
 
-class _TimelineSkyBackdrop extends StatelessWidget {
-  const _TimelineSkyBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFF7F1E8), Color(0xFFF4ECDF), Color(0xFFF8F3EB)],
-              stops: [0, 0.46, 1],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Image.asset(
-            'assets/images/skybg.png',
-            height: 300,
-            fit: BoxFit.cover,
-            alignment: Alignment.topRight,
-          ),
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.22),
-                  const Color(0xFFF7F1E8).withValues(alpha: 0.34),
-                  const Color(0xFFF8F3EB).withValues(alpha: 0.84),
-                ],
-                stops: const [0, 0.48, 0.82],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _ToatCountPill extends StatelessWidget {
   const _ToatCountPill({required this.count});
 
@@ -765,13 +699,7 @@ class _ClearHeroCard extends StatelessWidget {
     final allClear = clearAfter == null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
-        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE8DFD2)),
         boxShadow: const [
@@ -782,71 +710,129 @@ class _ClearHeroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFFFF8EC),
-            ),
-            child: Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Warm gradient card background
+            Positioned.fill(
               child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFBE7716), width: 3),
-                  color: const Color(0xFFFFFDF8),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.check_rounded,
-                    size: 28,
-                    color: Color(0xFFBE7716),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    style: TextStyles.heading1.copyWith(
-                      color: const Color(0xFF171C27),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      height: 1.05,
-                    ),
-                    children: [
-                      const TextSpan(text: 'You\'re all clear '),
-                      TextSpan(
-                        text: allClear ? 'today' : 'after $clearAfter',
-                        style: const TextStyle(color: Color(0xFFBE7716)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  allClear
-                      ? 'Your day looks open. Enjoy the quiet.'
-                      : 'Your evening looks light after that. Enjoy!',
-                  style: TextStyles.small.copyWith(
-                    color: const Color(0xFF6A6159),
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
-                  ),
-                ),
-              ],
+            // Sky image confined to the right side of the card
+            Positioned(
+              top: 0,
+              right: 0,
+              bottom: 0,
+              child: Image.asset(
+                'assets/images/skybg.png',
+                width: 160,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
             ),
-          ),
-        ],
+            // Gradient overlay: left-to-right, fades sky into card background
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      const Color(0xFFFEFBF6),
+                      const Color(0xFFFEFBF6).withValues(alpha: 0.92),
+                      const Color(0xFFFEFBF6).withValues(alpha: 0.30),
+                      Colors.transparent,
+                    ],
+                    stops: const [0, 0.40, 0.68, 1],
+                  ),
+                ),
+              ),
+            ),
+            // Card content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFFFF8EC),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFBE7716),
+                            width: 3,
+                          ),
+                          color: const Color(0xFFFFFDF8),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 28,
+                            color: Color(0xFFBE7716),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            style: TextStyles.heading1.copyWith(
+                              color: const Color(0xFF171C27),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              height: 1.05,
+                            ),
+                            children: [
+                              const TextSpan(text: 'You\'re all clear '),
+                              TextSpan(
+                                text: allClear ? 'today' : 'after $clearAfter',
+                                style: const TextStyle(
+                                  color: Color(0xFFBE7716),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          allClear
+                              ? 'Your day looks open. Enjoy the quiet.'
+                              : 'Your evening looks light after that. Enjoy!',
+                          style: TextStyles.small.copyWith(
+                            color: const Color(0xFF6A6159),
+                            fontWeight: FontWeight.w500,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1432,57 +1418,6 @@ class _HintChip extends StatelessWidget {
   }
 }
 
-class _MicFab extends StatelessWidget {
-  const _MicFab({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        height: 72,
-        padding: const EdgeInsets.all(5),
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFFFCF9F4),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x24BE7716),
-              blurRadius: 26,
-              offset: Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Semantics(
-          label: 'Capture a toat',
-          button: true,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF5B23FF),
-                  Color(0xFF8F35FF),
-                  Color(0xFFFF4B90),
-                  Color(0xFFFF6B4A),
-                ],
-              ),
-            ),
-            child: const Center(
-              child: Icon(Icons.mic_rounded, color: Colors.white, size: 32),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _UpNextCard extends StatelessWidget {
   const _UpNextCard({
     required this.toat,
@@ -1656,6 +1591,7 @@ class _TimelineRow extends StatelessWidget {
     required this.onTap,
     required this.onAction,
     required this.onDone,
+    required this.onShare,
     this.removing = false,
   });
 
@@ -1663,6 +1599,7 @@ class _TimelineRow extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onAction;
   final VoidCallback onDone;
+  final VoidCallback onShare;
   final bool removing;
 
   @override
@@ -1782,6 +1719,19 @@ class _TimelineRow extends StatelessWidget {
                           done: isDone,
                           onTap: action != null ? onAction : onDone,
                         ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => _showOverflow(context),
+                          child: const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: Icon(
+                              Icons.more_horiz_rounded,
+                              color: Color(0xFF9E9087),
+                              size: 18,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1789,6 +1739,88 @@ class _TimelineRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showOverflow(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFFCF9F4),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFCDC5BC),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Text(
+              toat.title,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF171C27),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _OverflowRow(
+              icon: Icons.share_outlined,
+              label: 'Share',
+              onTap: () {
+                Navigator.of(context).pop();
+                onShare();
+              },
+            ),
+            _OverflowRow(
+              icon: Icons.copy_outlined,
+              label: 'Copy link',
+              onTap: () {
+                final link = 'https://toatre.com/t/${toat.id}';
+                Clipboard.setData(ClipboardData(text: link));
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Link copied to clipboard.')),
+                );
+              },
+            ),
+            _OverflowRow(
+              icon: Icons.link_rounded,
+              label: 'Add link',
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Open the toat to add links.')),
+                );
+              },
+            ),
+            _OverflowRow(
+              icon: Icons.attach_file_rounded,
+              label: 'Add attachment',
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Open the toat to add attachments.'),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -1827,16 +1859,56 @@ class _RibbonRail extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.action,
-    required this.done,
+// ──────────────────────────────────────────────────────────────────────────────
+// Overflow row — used in toat card bottom sheet
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _OverflowRow extends StatelessWidget {
+  const _OverflowRow({
+    required this.icon,
+    required this.label,
     required this.onTap,
   });
 
-  final _TimelineAction? action;
-  final bool done;
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFFF0EAE0),
+              ),
+              child: Icon(icon, size: 20, color: const Color(0xFF5C4B36)),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF171C27),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
@@ -2033,133 +2105,6 @@ class _TimelineMessage extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomItem extends StatelessWidget {
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    this.active = false,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active ? const Color(0xFFBE7716) : const Color(0xFF7F746A);
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 42,
-            height: 36,
-            child: Icon(icon, color: color, size: 21),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyles.tiny.copyWith(
-              color: color,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: active ? 28 : 0,
-            height: 2,
-            decoration: BoxDecoration(
-              color: const Color(0xFFBE7716),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimelineTabBar extends StatelessWidget {
-  const _TimelineTabBar({
-    required this.onTimelineTap,
-    required this.onInboxTap,
-    required this.onVoiceTap,
-    required this.onBookingsTap,
-    required this.onSettingsTap,
-  });
-
-  final VoidCallback onTimelineTap;
-  final VoidCallback onInboxTap;
-  final VoidCallback onVoiceTap;
-  final VoidCallback onBookingsTap;
-  final VoidCallback onSettingsTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            height: 86,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFCF9F4),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: const Color(0xFFE8DFD2)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _BottomItem(
-                  icon: Icons.schedule_rounded,
-                  label: 'Timeline',
-                  active: true,
-                  onTap: onTimelineTap,
-                ),
-                _BottomItem(
-                  icon: Icons.inbox_outlined,
-                  label: 'Inbox',
-                  onTap: onInboxTap,
-                ),
-                const SizedBox(width: 72),
-                _BottomItem(
-                  icon: Icons.event_note_rounded,
-                  label: 'Bookings',
-                  onTap: onBookingsTap,
-                ),
-                _BottomItem(
-                  icon: Icons.wb_sunny_outlined,
-                  label: 'Settings',
-                  onTap: onSettingsTap,
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: -14,
-            left: 0,
-            right: 0,
-            child: Center(child: _MicFab(onTap: onVoiceTap)),
           ),
         ],
       ),

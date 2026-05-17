@@ -7,7 +7,7 @@ import 'package:toatre/ui/auth/handle_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/ui/auth/login_screen.dart';
-import 'package:toatre/ui/timeline/timeline_screen.dart';
+import 'package:toatre/ui/shell/main_shell.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -60,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
           await settingsProvider.loadSettings();
         } catch (_) {}
         if (!mounted) return;
-        dest = const TimelineScreen();
+        dest = const MainShell();
         break;
       case AuthStatus.needsHandle:
         dest = const HandleScreen();
