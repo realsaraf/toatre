@@ -39,7 +39,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await context.read<ToatsProvider>().fetchToats();
+      final provider = context.read<ToatsProvider>();
+      if (provider.status == ToatsStatus.idle) {
+        await provider.fetchToats();
+      }
       await AnalyticsService.logTimelineViewed();
     });
   }
@@ -1450,14 +1453,18 @@ class _UpNextCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xE8FFFFFF), Color(0xDAFFF7FF)],
+              ),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+              border: Border.all(color: const Color(0xB8F8D4FF)),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x2A000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 14),
+                  color: Color(0x14000000),
+                  blurRadius: 32,
+                  offset: Offset(0, 10),
                 ),
               ],
             ),
@@ -1527,7 +1534,7 @@ class _UpNextCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyles.smallMedium.copyWith(
-                          color: Colors.white,
+                          color: const Color(0xFF1F2937),
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1538,7 +1545,7 @@ class _UpNextCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyles.tiny.copyWith(
-                          color: const Color(0xDDEDE7FF),
+                          color: const Color(0xFF6B7280),
                         ),
                       ),
                       if (toat.datetime != null) ...[
@@ -1546,7 +1553,7 @@ class _UpNextCard extends StatelessWidget {
                         Text(
                           _timeToGo(toat.datetime!),
                           style: TextStyles.tiny.copyWith(
-                            color: const Color(0xFFFFD0E7),
+                            color: _toatColors(toat).first,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1645,7 +1652,7 @@ class _TimelineRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const _RibbonRail(height: 74),
+              _RibbonRail(height: 74, dotColor: _toatColors(toat).first),
               const SizedBox(width: 6),
               Expanded(
                 child: GestureDetector(
@@ -1839,24 +1846,66 @@ class _TimelineRow extends StatelessWidget {
 }
 
 class _RibbonRail extends StatelessWidget {
-  const _RibbonRail({required this.height});
+  const _RibbonRail({required this.height, required this.dotColor});
 
   final double height;
+  final Color dotColor;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 20,
       height: height,
-      child: Image.asset(
-        'assets/images/ribbon.png',
-        fit: BoxFit.fill,
-        alignment: Alignment.topCenter,
-        color: const Color(0xFFD8B785),
-        colorBlendMode: BlendMode.modulate,
+      child: CustomPaint(
+        painter: _RailPainter(dotColor: dotColor),
       ),
     );
   }
+}
+
+class _RailPainter extends CustomPainter {
+  const _RailPainter({required this.dotColor});
+
+  final Color dotColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    const dotY = 22.0;
+
+    // Vertical line with gradient fade
+    final lineRect = Rect.fromLTWH(cx - 1, 0, 2, size.height);
+    final linePaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          Color(0x38BE7716),
+          Color(0x38BE7716),
+          Colors.transparent,
+        ],
+        stops: [0.0, 0.25, 0.75, 1.0],
+      ).createShader(lineRect);
+    canvas.drawRect(lineRect, linePaint);
+
+    // White outer ring
+    canvas.drawCircle(
+      Offset(cx, dotY),
+      7.0,
+      Paint()..color = const Color(0xFFFCF9F4),
+    );
+
+    // Colored dot
+    canvas.drawCircle(
+      Offset(cx, dotY),
+      5.0,
+      Paint()..color = dotColor,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RailPainter oldDelegate) => dotColor != oldDelegate.dotColor;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

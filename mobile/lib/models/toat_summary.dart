@@ -11,6 +11,8 @@ class ToatSummary {
     required this.updatedAt,
     this.source,
     this.bookingRequestId,
+    this.attachmentCount = 0,
+    this.linkCount = 0,
   });
 
   final String id;
@@ -32,6 +34,12 @@ class ToatSummary {
   final DateTime? updatedAt;
   final String? source;
   final String? bookingRequestId;
+
+  /// Number of file attachments on this toat.
+  final int attachmentCount;
+
+  /// Number of links on this toat.
+  final int linkCount;
 
   // ── Convenience accessors ────────────────────────────────────────────────
 
@@ -118,6 +126,8 @@ class ToatSummary {
       updatedAt: _parseDate(json['updatedAt']),
       source: json['source'] as String?,
       bookingRequestId: json['bookingRequestId'] as String?,
+      attachmentCount: (json['attachments'] as List?)?.length ?? 0,
+      linkCount: (json['links'] as List?)?.length ?? 0,
     );
   }
 
@@ -135,6 +145,8 @@ class ToatSummary {
     DateTime? updatedAt,
     String? source,
     String? bookingRequestId,
+    int? attachmentCount,
+    int? linkCount,
   }) {
     return ToatSummary(
       id: id ?? this.id,
@@ -148,6 +160,8 @@ class ToatSummary {
       updatedAt: updatedAt ?? this.updatedAt,
       source: source ?? this.source,
       bookingRequestId: bookingRequestId ?? this.bookingRequestId,
+      attachmentCount: attachmentCount ?? this.attachmentCount,
+      linkCount: linkCount ?? this.linkCount,
     );
   }
 

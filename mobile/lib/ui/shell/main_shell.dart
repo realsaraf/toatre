@@ -175,6 +175,7 @@ class _TabItem extends StatelessWidget {
     final color = active ? const Color(0xFFBE7716) : const Color(0xFF7F746A);
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
