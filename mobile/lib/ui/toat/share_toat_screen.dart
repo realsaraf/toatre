@@ -115,7 +115,7 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                     const SizedBox(height: 28),
                     const Divider(color: Color(0xFFE6E6F0)),
                     const SizedBox(height: 24),
-                    Text('Or share via link', style: TextStyles.heading3),
+                    Text('Public link', style: TextStyles.heading3),
                     const SizedBox(height: 18),
                     _ShareLinkCard(onTap: _shareViaLink),
                     const SizedBox(height: 28),
@@ -556,10 +556,10 @@ class _ShareLinkCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Share link', style: TextStyles.heading3),
+                  Text('Copy public link', style: TextStyles.heading3),
                   const SizedBox(height: 6),
                   Text(
-                    'Anyone with the link can view',
+                    'Anyone with this link can view',
                     style: TextStyles.body.copyWith(
                       color: AppColors.textSecondary,
                     ),

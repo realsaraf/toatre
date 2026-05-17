@@ -116,14 +116,17 @@ export function ShareToatModal({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onCreateLink}
-          style={buttonStyles.secondaryButton}
-          disabled={Boolean(busy)}
-        >
-          {busy === "link" ? "Creating link\u2026" : "Create share link"}
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <button
+            type="button"
+            onClick={onCreateLink}
+            style={buttonStyles.secondaryButton}
+            disabled={Boolean(busy)}
+          >
+            {busy === "link" ? "Copying link\u2026" : "Copy public link"}
+          </button>
+          <p style={{ margin: 0, fontSize: 11.5, color: "#9CA3AF" }}>Anyone with this link can view</p>
+        </div>
         <button
           type="button"
           onClick={onSend}
