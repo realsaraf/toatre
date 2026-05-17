@@ -115,12 +115,6 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                     const SizedBox(height: 28),
                     const Divider(color: Color(0xFFE6E6F0)),
                     const SizedBox(height: 24),
-                    Text('Public link', style: TextStyles.heading3),
-                    const SizedBox(height: 18),
-                    _ShareLinkCard(onTap: _shareViaLink),
-                    const SizedBox(height: 28),
-                    const Divider(color: Color(0xFFE6E6F0)),
-                    const SizedBox(height: 24),
                     Text('Permission', style: TextStyles.heading3),
                     const SizedBox(height: 16),
                     _PermissionSwitch(
@@ -165,6 +159,22 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Color(0xFFE6E6F0))),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'or',
+                            style: TextStyles.small.copyWith(color: AppColors.textMuted),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Color(0xFFE6E6F0))),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _ShareLinkCard(onTap: _shareViaLink),
                   ],
                 ),
               ),

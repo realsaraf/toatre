@@ -116,17 +116,6 @@ export function ShareToatModal({
           </button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <button
-            type="button"
-            onClick={onCreateLink}
-            style={buttonStyles.secondaryButton}
-            disabled={Boolean(busy)}
-          >
-            {busy === "link" ? "Copying link\u2026" : "Copy public link"}
-          </button>
-          <p style={{ margin: 0, fontSize: 11.5, color: "#9CA3AF" }}>Anyone with this link can view</p>
-        </div>
         <button
           type="button"
           onClick={onSend}
@@ -137,6 +126,46 @@ export function ShareToatModal({
           disabled={Boolean(busy) || selectedConnectionIds.length === 0}
         >
           {busy === "send" ? "Sending\u2026" : "Send invite"}
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "2px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+          <span style={{ fontSize: 11, color: "#C4C4D4", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={onCreateLink}
+          disabled={Boolean(busy)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+            padding: "12px 16px",
+            borderRadius: 16,
+            border: "1px solid rgba(0,0,0,0.07)",
+            background: "#F9F9FB",
+            cursor: busy ? "default" : "pointer",
+            textAlign: "left",
+          }}
+        >
+          <span style={{
+            width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+            background: "rgba(109,40,217,0.09)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18,
+          }}>🔗</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#111827" }}>
+              {busy === "link" ? "Copying\u2026" : "Copy public link"}
+            </span>
+            <span style={{ display: "block", fontSize: 12, color: "#9CA3AF", marginTop: 1 }}>
+              Anyone with this link can view
+            </span>
+          </span>
+          <span style={{ fontSize: 16, color: "#D1D5DB", flexShrink: 0 }}>›</span>
         </button>
       </section>
     </div>
