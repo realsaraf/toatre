@@ -5,11 +5,13 @@ import type { CSSProperties } from "react";
 
 interface OpenInAppHandoffProps {
   token: string;
+  /** Optional visual gradient — matches the toat's colour scheme. */
+  gradient?: string;
 }
 
 const MOBILE_USER_AGENT = /Android|iPhone|iPad|iPod/i;
 
-export function OpenInAppHandoff({ token }: OpenInAppHandoffProps) {
+export function OpenInAppHandoff({ token, gradient }: OpenInAppHandoffProps) {
   const appHref = useMemo(() => `toatre://j/${encodeURIComponent(token)}`, [token]);
 
   useEffect(() => {
@@ -24,36 +26,40 @@ export function OpenInAppHandoff({ token }: OpenInAppHandoffProps) {
     return () => window.clearTimeout(timer);
   }, [appHref]);
 
+  const bg =
+    gradient ??
+    "linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end))";
+
   return (
     <div style={styles.wrap}>
-      <a href={appHref} style={styles.button}>Open in Toatre app</a>
-      <p style={styles.caption}>
-        If Toatre is installed, your phone should switch into the app. If it stays here,
-        you can keep using the web preview below.
-      </p>
+      <a
+        href={appHref}
+        style={{ ...styles.button, background: bg }}
+      >
+        Open in Toatre app
+      </a>
     </div>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
   wrap: {
-    margin: "0 0 16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 0,
   },
   button: {
-    display: "inline-flex",
+    display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "14px 18px",
-    borderRadius: 16,
-    background: "linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-end))",
+    width: "100%",
+    padding: "16px 20px",
+    borderRadius: 18,
     color: "#FFFFFF",
     fontWeight: 800,
+    fontSize: 16,
     textDecoration: "none",
-  },
-  caption: {
-    margin: "12px 0 0",
-    color: "var(--color-text-secondary)",
-    fontSize: 14,
-    lineHeight: 1.5,
+    letterSpacing: "-0.01em",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
   },
 };
