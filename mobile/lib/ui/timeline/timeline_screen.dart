@@ -1900,6 +1900,97 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
+/// Compact action chip rendered on the dark gradient of the Up-Next card.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.action,
+    required this.filled,
+    required this.onTap,
+  });
+
+  final _TimelineAction action;
+  final bool filled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: filled ? 0.22 : 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(action.icon, size: 12, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              action.label,
+              style: TextStyles.tiny.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Done / mark-done chip rendered on the dark gradient of the Up-Next card.
+class _DoneButton extends StatelessWidget {
+  const _DoneButton({required this.done, required this.onTap});
+
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: done ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: done
+              ? Colors.white.withValues(alpha: 0.30)
+              : Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (done)
+              const Text(
+                '✓',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              )
+            else
+              const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              done ? 'Done' : 'Mark done',
+              style: TextStyles.tiny.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TimelineMessage extends StatelessWidget {
   const _TimelineMessage({required this.title, required this.subtitle});
 
