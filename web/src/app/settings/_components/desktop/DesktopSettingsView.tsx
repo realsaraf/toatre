@@ -8,9 +8,10 @@ import { BookingDashboardShell } from "@/app/_components/booking-dashboard";
 import type { UseSettingsResult } from "../../_hooks/useSettings";
 import type { SettingsTab, SyncConnection, SyncDirection } from "../../_utils/settings-helpers";
 import { formatSyncDate } from "../../_utils/settings-helpers";
+import { ConnectionsTab } from "../mobile/ConnectionsTab";
 import { desktopSettingsCss } from "./desktop-settings.css";
 
-type DesktopSection = "profile" | "pings" | "toatlink" | "sync";
+type DesktopSection = "profile" | "pings" | "toatlink" | "sync" | "connections";
 type NotificationTab = "delivery" | "reminders" | "bookings";
 type HandleTab = "handle" | "page" | "availability" | "rules";
 type IntegrationTab = "calendars" | "rules" | "conflicts";
@@ -18,6 +19,7 @@ type IntegrationTab = "calendars" | "rules" | "conflicts";
 const SECTION_ITEMS: Array<{ id: DesktopSection; title: string; helper?: string; icon: ReactNode }> = [
   { id: "profile", title: "General", icon: <PersonIcon /> },
   { id: "pings", title: "Notifications", icon: <BellIcon /> },
+  { id: "connections", title: "Connections", helper: "People you share toats with", icon: <PeopleIcon /> },
   { id: "toatlink", title: "Handle", helper: "Reserve your handle & booking page", icon: <AtIcon /> },
   { id: "sync", title: "Integrations", helper: "Connect your calendars and apps", icon: <CalendarIcon /> },
 ];
@@ -44,6 +46,7 @@ export function DesktopSettingsView(props: UseSettingsResult) {
           {props.loadingState && !props.settingsData ? <LoadingCard /> : null}
           {!props.loadingState && props.settingsData && activeSection === "profile" ? <GeneralPanel {...props} /> : null}
           {!props.loadingState && props.settingsData && activeSection === "pings" ? <NotificationsPanel {...props} /> : null}
+          {!props.loadingState && props.settingsData && activeSection === "connections" ? <ConnectionsPanel {...props} /> : null}
           {!props.loadingState && props.settingsData && activeSection === "toatlink" ? <HandlePanel {...props} /> : null}
           {!props.loadingState && props.settingsData && activeSection === "sync" ? <IntegrationsPanel {...props} /> : null}
         </section>
@@ -53,7 +56,7 @@ export function DesktopSettingsView(props: UseSettingsResult) {
 }
 
 function toDesktopSection(tab: SettingsTab): DesktopSection {
-  if (tab === "pings" || tab === "toatlink" || tab === "sync") return tab;
+  if (tab === "pings" || tab === "toatlink" || tab === "sync" || tab === "connections") return tab;
   return "profile";
 }
 
@@ -102,6 +105,14 @@ function GeneralPanel(props: UseSettingsResult) {
         </div>
         <div className="desktop-social-row">
           <span className="desktop-provider-chip"><span className="desktop-google-mark">G</span> Signed in with {props.providerLabels[0] ?? "Google"}</span>
+          <button
+            type="button"
+            className="desktop-signout-btn"
+            onClick={() => void props.handleSignOut()}
+            disabled={props.savingKey === "signout"}
+          >
+            {props.savingKey === "signout" ? "Signing out…" : "Sign out"}
+          </button>
         </div>
       </Card>
 
@@ -140,6 +151,28 @@ function GeneralPanel(props: UseSettingsResult) {
       </Card>
       <SavedIndicator />
     </>
+  );
+}
+
+function ConnectionsPanel(props: UseSettingsResult) {
+  return (
+    <Card>
+      <div className="desktop-card-pad">
+        <h2 className="desktop-card-title">Connections</h2>
+        <p className="desktop-account-bio" style={{ marginBottom: 22 }}>People you can share toats with. Add their details to invite them from the share modal.</p>
+        <ConnectionsTab
+          connections={props.connections}
+          connectionDraft={props.connectionDraft}
+          setConnectionDraft={props.setConnectionDraft}
+          editingConnectionId={props.editingConnectionId}
+          savingKey={props.savingKey}
+          saveConnection={props.saveConnection}
+          deleteConnection={props.deleteConnection}
+          editConnection={props.editConnection}
+          resetConnectionDraft={props.resetConnectionDraft}
+        />
+      </div>
+    </Card>
   );
 }
 
@@ -487,6 +520,7 @@ function Svg({ children }: { children: ReactNode }) { return <svg width="20" hei
 function BellIcon() { return <Svg><path d="M6.5 16.5h11l-1.2-1.4a3.2 3.2 0 0 1-.8-2.1V10a4.5 4.5 0 0 0-9 0v3a3.2 3.2 0 0 1-.8 2.1L4.5 16.5h2Z" stroke="currentColor" strokeWidth="1.8"/><path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
 function CalendarIcon() { return <Svg><rect x="4" y="6" width="16" height="14" rx="4" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3.5V8M16 3.5V8M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
 function PersonIcon() { return <Svg><circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.8"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
+function PeopleIcon() { return <Svg><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3 20a6 6 0 0 1 12 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 7a3 3 0 1 1 0 0.01M22 20a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
 function AtIcon() { return <Svg><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8"/><path d="M15 12a3 3 0 1 1-1.2-2.4V12a1.8 1.8 0 0 0 3.6 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
 function GearIcon() { return <Svg><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M18 18l1.5 1.5M4.5 4.5 6 6M18 6l1.5-1.5M4.5 19.5 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }
 function SearchIcon() { return <Svg><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8"/><path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></Svg>; }

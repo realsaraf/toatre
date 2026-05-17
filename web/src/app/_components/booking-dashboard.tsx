@@ -159,7 +159,7 @@ export const bookingDashboardCss = `
   .request-actions { display: flex; align-items: center; gap: 10px; grid-column: 3; }
   .request-actions button, .request-actions a { min-width: 66px; min-height: 34px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
   .decline-button { border: 1px solid #e1e5ef; background: #fff; color: #52607e; }
-  .accept-button { border: 0; background: linear-gradient(135deg, #6942ff, #5428e8); color: #fff; box-shadow: 0 10px 20px rgba(91, 45, 255, 0.20); }
+  .accept-button { border: 0; background: linear-gradient(135deg, #6366F1, #4F46E5); color: #fff; box-shadow: 0 10px 20px rgba(91, 45, 255, 0.20); }
   .shared-avatar { background: linear-gradient(135deg, #efe9ff, #f8f5ff); color: #5b2dff; }
   .shared-toat-card { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
   .inbox-open-link { padding: 0 16px; }

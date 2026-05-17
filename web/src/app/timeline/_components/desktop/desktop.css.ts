@@ -1,7 +1,7 @@
 export const desktopTimelineCss = `
   .desktop-timeline-page {
     min-height: 100vh;
-    background: #fbfbfe;
+    background: #F5F4FF;
     color: #080f2d;
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
@@ -50,13 +50,13 @@ export const desktopTimelineCss = `
   .desktop-sidebar-nav:hover,
   .desktop-sidebar-link:hover { background: #f6f3ff; }
   .desktop-sidebar-nav.active,
-  .desktop-sidebar-link.active { background: linear-gradient(135deg, #f3efff, #faf8ff); color: #6126ff; }
+  .desktop-sidebar-link.active { background: linear-gradient(135deg, #f3efff, #faf8ff); color: #4F46E5; }
   .desktop-sidebar-nav.compact { min-height: 42px; color: #17224d; font-size: 14px; }
   .desktop-sidebar-nav-icon,
   .desktop-sidebar-mini-icon { width: 20px; flex-shrink: 0; display: inline-flex; justify-content: center; color: currentColor; }
   .desktop-sidebar-badge,
   .desktop-sidebar-count { margin-left: auto; min-width: 26px; height: 26px; border-radius: 999px; background: #f0f2f7; color: #17224d; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
-  .desktop-sidebar-nav.active .desktop-sidebar-badge { background: #ffffff; color: #6126ff; }
+  .desktop-sidebar-nav.active .desktop-sidebar-badge { background: #ffffff; color: #4F46E5; }
 
   .desktop-link-card,
   .desktop-usage-card {
@@ -68,17 +68,17 @@ export const desktopTimelineCss = `
     padding: 16px;
     display: grid;
     gap: 10px;
-    color: #6126ff;
+    color: #4F46E5;
   }
 
   .desktop-link-card span,
-  .desktop-usage-card span { font-size: 13px; color: #6126ff; }
+  .desktop-usage-card span { font-size: 13px; color: #4F46E5; }
   .desktop-link-card strong,
   .desktop-usage-card strong { font-size: 13px; color: #17224d; font-weight: 600; }
   .desktop-link-card svg { position: absolute; right: 14px; bottom: 15px; }
   .desktop-usage-card { background: #ffffff; border-color: #e8ebf4; color: #17224d; }
   .desktop-usage-track { height: 8px; border-radius: 999px; background: #f1eef9; overflow: hidden; }
-  .desktop-usage-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6426ff, #8b5cf6); }
+  .desktop-usage-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4F46E5, #8b5cf6); }
 
   .desktop-app-main { min-width: 0; display: grid; grid-template-rows: 92px auto minmax(0, 1fr); }
   .desktop-app-topbar { border-bottom: 1px solid #e8ebf4; background: rgba(255,255,255,0.86); display: grid; grid-template-columns: minmax(260px, 396px) minmax(360px, 1fr) auto; align-items: center; gap: 28px; padding: 0 28px; }
@@ -97,7 +97,7 @@ export const desktopTimelineCss = `
   .desktop-square-button.icon-only { width: 44px; height: 44px; font-size: 15px; }
   .desktop-date-button { border: none; background: transparent; color: #080f2d; font: inherit; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; white-space: nowrap; }
   .desktop-bell-button { position: relative; width: 42px; height: 42px; border: none; background: transparent; color: #17224d; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-  .desktop-bell-button span { position: absolute; right: 4px; top: 2px; min-width: 18px; height: 18px; border-radius: 999px; background: #6426ff; color: #ffffff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .desktop-bell-button span { position: absolute; right: 4px; top: 2px; min-width: 18px; height: 18px; border-radius: 999px; background: #4F46E5; color: #ffffff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
   .desktop-user-button { border: none; background: transparent; color: #17224d; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
   .desktop-user-button > div { width: 48px !important; height: 48px !important; }
 
@@ -115,7 +115,7 @@ export const desktopTimelineCss = `
   .desktop-board-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .desktop-filter-chip,
   .desktop-filter-button { height: 38px; padding: 0 16px; border: 1px solid #e5e8f2; background: #ffffff; color: #17224d; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-  .desktop-filter-chip.active { background: #f3efff; border-color: #e4d8ff; color: #6126ff; }
+  .desktop-filter-chip.active { background: #f3efff; border-color: #e4d8ff; color: #4F46E5; }
   .desktop-filter-button { margin-left: auto; }
 
   .desktop-timeline-list { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0; padding: 0; }
@@ -137,12 +137,12 @@ export const desktopTimelineCss = `
   .desktop-toat-copy strong { font-size: 15px; font-weight: 800; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #080f2d; }
   .desktop-toat-copy span { color: #53617f; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .desktop-toat-tags { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-  .desktop-toat-chip { min-height: 30px; border-radius: 9px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; background: #f3efff; border: 1px solid #e7ddff; color: #6126ff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .desktop-toat-chip { min-height: 30px; border-radius: 9px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; background: #f3efff; border: 1px solid #e7ddff; color: #4F46E5; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .desktop-toat-chip.action { background: #fff4ec; border-color: #ffd8bd; color: #f05a16; }
   .desktop-toat-chip.plain { background: #effaf3; border-color: #d9f2df; color: #15843d; }
 
   .desktop-end-card { margin: auto 190px 0 0; min-height: 100px; border: 1px solid #ece2ff; border-radius: 18px; background: radial-gradient(circle at 76% 63%, rgba(245,158,11,0.42), transparent 13%), linear-gradient(135deg, #ffffff, #fbf7ff 62%, #fff1ea); box-shadow: 0 20px 52px rgba(18,26,61,0.06); display: grid; grid-template-columns: 52px minmax(0, 1fr) 170px; align-items: center; gap: 18px; padding: 20px 24px; overflow: hidden; }
-  .desktop-end-icon { width: 48px; height: 48px; border-radius: 999px; background: #ffffff; color: #6426ff; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 14px 32px rgba(100,38,255,0.12); }
+  .desktop-end-icon { width: 48px; height: 48px; border-radius: 999px; background: #ffffff; color: #4F46E5; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 14px 32px rgba(100,38,255,0.12); }
   .desktop-end-card h2 { margin: 0 0 8px; font-size: 17px; color: #080f2d; }
   .desktop-end-card p { margin: 0; color: #53617f; font-size: 14px; }
   .desktop-end-art { position: relative; height: 74px; }
@@ -150,8 +150,8 @@ export const desktopTimelineCss = `
   .desktop-end-art span { position: absolute; right: -24px; bottom: 3px; width: 170px; height: 26px; border-radius: 50%; background: linear-gradient(90deg, rgba(124,58,237,0.13), rgba(236,72,153,0.2)); transform: rotate(-4deg); }
 
   .desktop-floating-capture { position: absolute; right: 32px; bottom: 36px; width: 156px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid #edf0f7; box-shadow: 0 22px 56px rgba(18,26,61,0.15); display: flex; align-items: center; justify-content: space-between; padding: 8px; z-index: 5; }
-  .desktop-keyboard-capture { width: 54px; height: 54px; border-radius: 999px; border: none; background: #f5f2ff; color: #6426ff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-  .desktop-mic-capture { width: 62px; height: 62px; border-radius: 999px; border: none; background: radial-gradient(circle at 30% 20%, #fde68a 0%, rgba(253,230,138,0.45) 22%, transparent 42%), linear-gradient(135deg, #6426ff 0%, #8b5cf6 42%, #ec4899 74%, #fb7185 100%); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 12px 28px rgba(236,72,153,0.28); }
+  .desktop-keyboard-capture { width: 54px; height: 54px; border-radius: 999px; border: none; background: #f5f2ff; color: #4F46E5; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .desktop-mic-capture { width: 62px; height: 62px; border-radius: 999px; border: none; background: radial-gradient(circle at 30% 20%, #fde68a 0%, rgba(253,230,138,0.45) 22%, transparent 42%), linear-gradient(135deg, #4F46E5 0%, #8b5cf6 42%, #ec4899 74%, #fb7185 100%); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 12px 28px rgba(236,72,153,0.28); }
 
   .desktop-detail-hero,
   .desktop-action-row,
@@ -164,7 +164,7 @@ export const desktopTimelineCss = `
   .desktop-detail-hero-copy h2 { margin: 0; font-size: 21px; line-height: 1.2; color: #080f2d; letter-spacing: 0; }
   .desktop-detail-hero-copy p { margin: 0; color: #53617f; font-size: 14px; }
   .desktop-detail-time-pill { width: fit-content; min-height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,0.86); border: 1px solid rgba(100,38,255,0.08); color: #17224d; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-  .desktop-detail-primary { grid-column: 2; justify-self: end; align-self: end; min-height: 42px; padding: 0 20px; border-radius: 10px; color: #ffffff; text-decoration: none; background: linear-gradient(135deg, #6426ff, #7c3aed); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; box-shadow: 0 14px 30px rgba(100,38,255,0.22); }
+  .desktop-detail-primary { grid-column: 2; justify-self: end; align-self: end; min-height: 42px; padding: 0 20px; border-radius: 10px; color: #ffffff; text-decoration: none; background: linear-gradient(135deg, #4F46E5, #7c3aed); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; box-shadow: 0 14px 30px rgba(100,38,255,0.22); }
   .desktop-action-row { padding: 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .desktop-quick-action { border: none; background: transparent; min-width: 0; min-height: 72px; border-radius: 14px; color: #53617f; font: inherit; font-size: 12px; font-weight: 700; display: grid; place-items: center; gap: 7px; cursor: pointer; }
   .desktop-quick-action span { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; }
@@ -172,7 +172,7 @@ export const desktopTimelineCss = `
   .desktop-quick-action.done span { background: #eaf9ef; }
   .desktop-quick-action.delay { color: #2563eb; }
   .desktop-quick-action.delay span { background: #eef5ff; }
-  .desktop-quick-action.schedule { color: #6426ff; }
+  .desktop-quick-action.schedule { color: #4F46E5; }
   .desktop-quick-action.schedule span { background: #f2edff; }
   .desktop-quick-action.copy span { background: #f3f5f9; }
   .desktop-quick-action:disabled { opacity: 0.5; cursor: default; }
@@ -183,10 +183,10 @@ export const desktopTimelineCss = `
   .desktop-field-row { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: 13px; }
   .desktop-field-row span { color: #53617f; }
   .desktop-field-row strong { color: #17224d; font-size: 13px; font-weight: 600; min-width: 0; }
-  .desktop-field-row strong i { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 8px; background: #6426ff; }
+  .desktop-field-row strong i { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 8px; background: #4F46E5; }
   .desktop-field-row button,
   .desktop-field-row a,
-  .desktop-ping-card button { border: none; background: transparent; color: #6426ff; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .desktop-ping-card button { border: none; background: transparent; color: #4F46E5; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .desktop-people-card { gap: 13px; }
   .desktop-people-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .desktop-avatar-stack { display: flex; align-items: center; }
@@ -206,7 +206,7 @@ export const desktopTimelineCss = `
   .desktop-file-card span { color: #53617f; font-size: 12px; }
   .desktop-file-card button { border: none; background: transparent; color: #53617f; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
   .desktop-ping-card { display: flex; align-items: center; justify-content: space-between; }
-  .desktop-ping-card > div { display: flex; align-items: center; gap: 12px; color: #6426ff; }
+  .desktop-ping-card > div { display: flex; align-items: center; gap: 12px; color: #4F46E5; }
   .desktop-ping-card h3 { margin-bottom: 6px; }
   .desktop-detail-archive { height: 40px; border-radius: 12px; border: 1px solid #f4d3d3; color: #dc2626; background: #fff8f8; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .desktop-detail-archive:disabled { opacity: 0.5; cursor: default; }
@@ -325,7 +325,7 @@ export const desktopTimelineCss = `
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    color: #6426ff;
+    color: #4F46E5;
     font-size: 14px;
     font-weight: 750;
   }
@@ -375,7 +375,7 @@ export const desktopTimelineCss = `
   }
 
   .desktop-capture-ring.one {
-    background: conic-gradient(from 180deg, #6426ff, #8b5cf6, #ec4899, #ff6b4a, #6426ff);
+    background: conic-gradient(from 180deg, #4F46E5, #8b5cf6, #ec4899, #ff6b4a, #4F46E5);
     box-shadow: 0 18px 42px rgba(100, 38, 255, 0.12), 0 20px 58px rgba(236, 72, 153, 0.16);
   }
 
@@ -415,7 +415,7 @@ export const desktopTimelineCss = `
   .desktop-capture-visual-bars span {
     width: 7px;
     border-radius: 999px;
-    background: linear-gradient(180deg, #6426ff, #ec4899, #ff5f57);
+    background: linear-gradient(180deg, #4F46E5, #ec4899, #ff5f57);
     animation: desktopCaptureBars 1.12s ease-in-out infinite;
   }
 
@@ -446,7 +446,7 @@ export const desktopTimelineCss = `
   .desktop-capture-side-wave span:nth-child(3n) { animation-delay: -0.38s; }
 
   .desktop-capture-timer {
-    color: #6426ff;
+    color: #4F46E5;
     font-size: 16px;
     font-weight: 850;
     font-variant-numeric: tabular-nums;
@@ -465,7 +465,7 @@ export const desktopTimelineCss = `
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #6426ff;
+    color: #4F46E5;
     font-size: 12px;
     font-weight: 800;
     margin-bottom: 10px;
@@ -475,7 +475,7 @@ export const desktopTimelineCss = `
     width: 7px;
     height: 7px;
     border-radius: 99px;
-    background: #6426ff;
+    background: #4F46E5;
     box-shadow: 0 0 0 4px rgba(100, 38, 255, 0.12);
   }
 
@@ -499,7 +499,7 @@ export const desktopTimelineCss = `
   }
 
   .desktop-type-capture-card > span {
-    color: #6426ff;
+    color: #4F46E5;
     font-size: 12px;
     font-weight: 850;
     text-transform: uppercase;
@@ -544,7 +544,7 @@ export const desktopTimelineCss = `
     padding: 0 13px;
     border-radius: 999px;
     background: #f1ebff;
-    color: #6426ff;
+    color: #4F46E5;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -561,7 +561,7 @@ export const desktopTimelineCss = `
     display: flex;
     align-items: flex-start;
     gap: 11px;
-    color: #6426ff;
+    color: #4F46E5;
     margin-bottom: 22px;
   }
 
@@ -618,7 +618,7 @@ export const desktopTimelineCss = `
     height: 82px;
     border-radius: 999px;
     border: 4px solid #ffffff;
-    background: radial-gradient(circle at 32% 20%, #fde68a 0%, rgba(253, 230, 138, 0.45) 22%, transparent 42%), linear-gradient(135deg, #6426ff 0%, #8b5cf6 36%, #ec4899 68%, #ff5f57 100%);
+    background: radial-gradient(circle at 32% 20%, #fde68a 0%, rgba(253, 230, 138, 0.45) 22%, transparent 42%), linear-gradient(135deg, #4F46E5 0%, #8b5cf6 36%, #ec4899 68%, #ff5f57 100%);
     color: #ffffff;
     display: inline-flex;
     align-items: center;
@@ -638,7 +638,7 @@ export const desktopTimelineCss = `
     min-height: 50px;
     border-radius: 14px;
     border: none;
-    background: linear-gradient(135deg, #6426ff, #8b5cf6 56%, #ec4899);
+    background: linear-gradient(135deg, #4F46E5, #8b5cf6 56%, #ec4899);
     color: #ffffff;
     font: inherit;
     font-size: 14px;

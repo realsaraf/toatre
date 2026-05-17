@@ -73,7 +73,7 @@ export const desktopSettingsCss = `
 
   .desktop-app-nav-item.active {
     background: #f0e9ff;
-    color: #5b21ff;
+    color: #4F46E5;
   }
 
   .desktop-app-nav-item:hover:not(.active) {
@@ -161,7 +161,7 @@ export const desktopSettingsCss = `
     min-width: 17px;
     height: 17px;
     border-radius: 999px;
-    background: #5b21ff;
+    background: #4F46E5;
     color: white;
     font-size: 10px;
     font-weight: 800;
@@ -231,7 +231,7 @@ export const desktopSettingsCss = `
 
   .desktop-section-nav-item.active {
     background: #f0e9ff;
-    color: #5b21ff;
+    color: #4F46E5;
   }
 
   .desktop-section-nav-item.active span {
@@ -339,6 +339,28 @@ export const desktopSettingsCss = `
     font-size: 14px;
   }
 
+  .desktop-signout-btn {
+    min-height: 34px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(255, 255, 255, 0.9);
+    color: #dc2626;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 760;
+    cursor: pointer;
+  }
+
+  .desktop-signout-btn:hover {
+    background: #fff5f5;
+  }
+
+  .desktop-signout-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
   .desktop-google-mark,
   .desktop-provider-mark {
     width: 28px;
@@ -423,7 +445,7 @@ export const desktopSettingsCss = `
   }
 
   .desktop-segmented button.active {
-    color: #5b21ff;
+    color: #4F46E5;
     background: #f2eaff;
     box-shadow: inset 0 0 0 1px #b99cff;
     border-radius: 8px;
@@ -475,7 +497,7 @@ export const desktopSettingsCss = `
   }
 
   .desktop-switch.active {
-    background: #6d28ff;
+    background: #4F46E5;
     justify-content: flex-end;
   }
 
@@ -505,21 +527,21 @@ export const desktopSettingsCss = `
   }
 
   .desktop-ghost-btn {
-    color: #5b21ff;
+    color: #4F46E5;
     background: white;
     border: 1px solid #dfe6f1;
   }
 
   .desktop-soft-btn {
-    color: #5b21ff;
+    color: #4F46E5;
     background: #f3ebff;
     border: 1px solid #cebfff;
   }
 
   .desktop-primary-btn {
     color: white;
-    background: #6d28ff;
-    border: 1px solid #6d28ff;
+    background: #4F46E5;
+    border: 1px solid #4F46E5;
   }
 
   .desktop-ghost-btn:disabled,
@@ -550,8 +572,8 @@ export const desktopSettingsCss = `
   }
 
   .desktop-tabs button.active {
-    color: #5b21ff;
-    border-bottom-color: #6d28ff;
+    color: #4F46E5;
+    border-bottom-color: #4F46E5;
   }
 
   .desktop-handle-field {
@@ -597,7 +619,7 @@ export const desktopSettingsCss = `
   }
 
   .desktop-channel-pill {
-    color: #5b21ff;
+    color: #4F46E5;
     background: #f1e9ff;
   }
 
@@ -776,7 +798,7 @@ export const desktopSettingsCss = `
   .desktop-provider-option.active {
     border-color: #a78bfa;
     background: #f3ebff;
-    color: #5b21ff;
+    color: #4F46E5;
   }
 
   .desktop-saved-indicator {
