@@ -4,7 +4,7 @@ const COOKIE_NAME = "toatre_session";
 const ACCESS_COOKIE_NAME = "toatre_access";
 
 // Paths that don't require auth
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos", "/toats", "/.well-known", "/apple-app-site-association", "/invite-preview"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/privacy", "/tos", "/toats", "/.well-known", "/apple-app-site-association", "/invite-preview", "/s"];
 const RESERVED_APP_PATHS = new Set(["admin", "bookings", "capture", "help", "inbox", "j", "people", "settings", "timeline"]);
 
 function isPublicHandlePath(pathname: string): boolean {
