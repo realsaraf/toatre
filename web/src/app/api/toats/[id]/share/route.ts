@@ -77,7 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   return NextResponse.json({
-    shareUrl: `${appUrl()}/j/${linkToken}`,
+    shareUrl: `${appUrl()}/s/${linkToken}`,
     token: linkToken,
     sharedWith: selectedConnections.map((connection) => ({
       id: connection._id.toString(),
