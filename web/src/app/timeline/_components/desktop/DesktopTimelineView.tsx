@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getToatVisual } from "@/components/toat-visual";
 import {
   type TimelineToat,
+  type TimelineRange,
+  type MomentGroup,
+  type RangeOption,
   toatTime,
   toatEndTime,
   toatLocation,
@@ -11,6 +14,12 @@ import {
   mapHref,
   getPrimaryAction,
   sortToats,
+  dateKey,
+  rangeEquals,
+  isToatInRange,
+  getPreferredRange,
+  buildRangeOptions,
+  buildMomentGroups,
 } from "../../_utils/timeline-helpers";
 import { desktopTimelineCss } from "./desktop.css";
 import { DesktopAppSidebar } from "./DesktopAppSidebar";
@@ -65,52 +74,36 @@ export function DesktopTimelineView({
   archivingToatId,
   removingToatId,
 }: DesktopTimelineViewProps) {
-  const todayKey = new Date(now).toLocaleDateString("en-CA");
+  const rangeOptions = useMemo(() => buildRangeOptions(now), [now]);
+  const sortedToats = useMemo(() => [...toats].sort(sortToats), [toats]);
+  const preferredRange = useMemo(() => getPreferredRange(sortedToats, now), [sortedToats, now]);
 
-  const groupedToats = useMemo(() => {
-    const grouped = new Map<string, TimelineToat[]>();
-    for (const toat of toats) {
-      const timestamp = toatTime(toat);
-      if (!timestamp) continue;
-      const key = new Date(timestamp).toLocaleDateString("en-CA");
-      const existing = grouped.get(key) ?? [];
-      existing.push(toat);
-      grouped.set(key, existing);
-    }
-    return grouped;
-  }, [toats]);
-
-  const timelineDates = useMemo(
-    () => Array.from(groupedToats.keys()).sort((left, right) => left.localeCompare(right)),
-    [groupedToats],
-  );
-
-  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
+  const [selectedRange, setSelectedRange] = useState<TimelineRange>({ kind: "day", dateKey: dateKey(now) });
+  const [hasManualRangeSelection, setHasManualRangeSelection] = useState(false);
   const [selectedToatId, setSelectedToatId] = useState<string | null>(null);
   const [captureModalOpen, setCaptureModalOpen] = useState(false);
   const [captureModalMode, setCaptureModalMode] = useState<"voice" | "type">("voice");
 
-  const resolvedSelectedDateKey = timelineDates.includes(selectedDateKey)
-    ? selectedDateKey
-    : timelineDates.includes(todayKey)
-      ? todayKey
-      : (timelineDates[0] ?? todayKey);
+  useEffect(() => {
+    if (hasManualRangeSelection) return;
+    if (rangeEquals(selectedRange, preferredRange)) return;
+    setSelectedRange(preferredRange);
+  }, [hasManualRangeSelection, preferredRange, selectedRange]);
 
-  const selectedDateToats = (groupedToats.get(resolvedSelectedDateKey) ?? []).slice().sort(sortToats);
+  const visibleToats = useMemo(
+    () => sortedToats.filter((toat) => isToatInRange(toat, selectedRange, now)),
+    [sortedToats, selectedRange, now],
+  );
 
-  const selectedToat =
-    selectedDateToats.find((toat) => toat.id === selectedToatId) ??
-    selectedDateToats[0] ??
-    null;
-  const selectedDateIndex = timelineDates.findIndex((value) => value === resolvedSelectedDateKey);
-  const selectedDate = new Date(`${resolvedSelectedDateKey}T00:00:00`);
+  const momentGroups: MomentGroup[] = useMemo(
+    () => buildMomentGroups(visibleToats, selectedRange, now),
+    [visibleToats, selectedRange, now],
+  );
+
+  const selectedToat = visibleToats.find((t) => t.id === selectedToatId) ?? visibleToats[0] ?? null;
 
   const bookingCount = useMemo(
-    () =>
-      toats.filter((toat) => {
-        const extra = toat as TimelineToat & { bookingRequestId?: string | null };
-        return Boolean(extra.bookingRequestId);
-      }).length,
+    () => toats.filter((toat) => Boolean((toat as TimelineToat & { bookingRequestId?: string | null }).bookingRequestId)).length,
     [toats],
   );
 
@@ -155,21 +148,13 @@ export function DesktopTimelineView({
       <div className="desktop-app-main">
         <DesktopTopbar
           user={user}
-          selectedDate={selectedDate}
-          selectedDateIndex={selectedDateIndex}
-          timelineDatesLength={timelineDates.length}
-          onPrev={() =>
-            setSelectedDateKey(
-              timelineDates[Math.max(0, selectedDateIndex - 1)] ?? resolvedSelectedDateKey,
-            )
-          }
-          onNext={() =>
-            setSelectedDateKey(
-              timelineDates[Math.min(timelineDates.length - 1, selectedDateIndex + 1)] ??
-                resolvedSelectedDateKey,
-            )
-          }
-          onToday={() => setSelectedDateKey(todayKey)}
+          selectedRange={selectedRange}
+          rangeOptions={rangeOptions}
+          onRangeChange={(range) => {
+            setHasManualRangeSelection(true);
+            setSelectedRange(range);
+            setSelectedToatId(null);
+          }}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
         />
@@ -181,7 +166,7 @@ export function DesktopTimelineView({
 
         <div className="desktop-content-grid">
           <DesktopTimelineBoard
-            selectedDateToats={selectedDateToats}
+            momentGroups={momentGroups}
             selectedToatId={selectedToat?.id ?? null}
             removingToatId={removingToatId}
             captureModalOpen={captureModalOpen}

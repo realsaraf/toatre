@@ -1,7 +1,14 @@
 "use client";
 
-import { SearchIcon, UserAvatar } from "@/components/mobile-ui";
+import { useState } from "react";
+import { CalendarIcon, SearchIcon, UserAvatar } from "@/components/mobile-ui";
 import { BellIcon, CaretDownIcon } from "./desktop-icons";
+import {
+  type TimelineRange,
+  type RangeOption,
+  rangeEquals,
+  formatRangePillLabel,
+} from "../../_utils/timeline-helpers";
 
 interface DesktopUserSummary {
   photoURL?: string | null;
@@ -11,33 +18,22 @@ interface DesktopUserSummary {
 
 interface DesktopTopbarProps {
   user: DesktopUserSummary | null | undefined;
-  selectedDate: Date;
-  selectedDateIndex: number;
-  timelineDatesLength: number;
-  onPrev: () => void;
-  onNext: () => void;
-  onToday: () => void;
+  selectedRange: TimelineRange;
+  rangeOptions: RangeOption[];
+  onRangeChange: (range: TimelineRange) => void;
   onOpenSearch: () => void;
   onOpenSettings: () => void;
 }
 
 export function DesktopTopbar({
   user,
-  selectedDate,
-  selectedDateIndex,
-  timelineDatesLength,
-  onPrev,
-  onNext,
-  onToday,
+  selectedRange,
+  rangeOptions,
+  onRangeChange,
   onOpenSearch,
   onOpenSettings,
 }: DesktopTopbarProps) {
-  const dateText = selectedDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="desktop-app-topbar">
@@ -49,29 +45,40 @@ export function DesktopTopbar({
         <span className="desktop-keycap">⌘ K</span>
       </button>
 
-      <div className="desktop-date-nav" aria-label="Date navigation">
+      <div className="desktop-range-menu-wrap">
         <button
           type="button"
-          className="desktop-square-button"
-          disabled={selectedDateIndex <= 0}
-          onClick={onPrev}
-          aria-label="Previous day"
+          className="desktop-range-pill"
+          aria-label="Choose timeline range"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
         >
-          ‹
-        </button>
-        <button type="button" className="desktop-date-button" onClick={onToday}>
-          <span>{dateText}</span>
+          <CalendarIcon size={16} />
+          <span>{formatRangePillLabel(selectedRange, rangeOptions)}</span>
           <CaretDownIcon size={14} />
         </button>
-        <button
-          type="button"
-          className="desktop-square-button"
-          disabled={selectedDateIndex < 0 || selectedDateIndex >= timelineDatesLength - 1}
-          onClick={onNext}
-          aria-label="Next day"
-        >
-          ›
-        </button>
+        {menuOpen && (
+          <div className="desktop-range-menu" role="menu">
+            {rangeOptions.map((option) => {
+              const selected = rangeEquals(option.value, selectedRange);
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="menuitem"
+                  className={`desktop-range-item${selected ? " active" : ""}`}
+                  onClick={() => {
+                    onRangeChange(option.value);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <span>{option.label}</span>
+                  <small>{option.meta}</small>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="desktop-topbar-right">

@@ -238,3 +238,137 @@ export function getUpNext(toats: TimelineToat[], now: Date): TimelineToat | null
   }
   return toats[0] ?? null;
 }
+
+// ── Timeline range ────────────────────────────────────────────────────────────
+
+export type TimelineRange =
+  | { kind: "next7" }
+  | { kind: "next30" }
+  | { kind: "next3months" }
+  | { kind: "day"; dateKey: string };
+
+export interface MomentGroup {
+  key: string;
+  title: string;
+  date?: string;
+  icon?: string;
+  color: string;
+  toats: TimelineToat[];
+}
+
+export interface RangeOption {
+  key: string;
+  label: string;
+  meta: string;
+  value: TimelineRange;
+}
+
+export function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function rangeEquals(left: TimelineRange, right: TimelineRange): boolean {
+  return left.kind === right.kind && (left.kind !== "day" || (right.kind === "day" && left.dateKey === right.dateKey));
+}
+
+export function isToatInRange(toat: TimelineToat, range: TimelineRange, now: Date): boolean {
+  const value = toatTime(toat);
+  if (!value) return range.kind !== "day";
+  const date = new Date(value);
+  const start = startOfDay(now);
+  const end = new Date(start);
+  if (range.kind === "day") return dateKey(date) === range.dateKey;
+  if (range.kind === "next7") end.setDate(start.getDate() + 7);
+  if (range.kind === "next30") end.setDate(start.getDate() + 30);
+  if (range.kind === "next3months") end.setMonth(start.getMonth() + 3);
+  return date >= start && date < end;
+}
+
+export function getPreferredRange(toats: TimelineToat[], now: Date): TimelineRange {
+  const dk = dateKey(now);
+  const todayCount = toats.filter((toat) => {
+    const value = toatTime(toat);
+    return value ? dateKey(new Date(value)) === dk : false;
+  }).length;
+  return todayCount < 3 ? { kind: "next7" } : { kind: "day", dateKey: dk };
+}
+
+export function buildRangeOptions(now: Date): RangeOption[] {
+  const start = startOfDay(now);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      key: `day-${dateKey(date)}`,
+      label: index === 0 ? "Today" : date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      meta: date.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
+      value: { kind: "day", dateKey: dateKey(date) } as TimelineRange,
+    };
+  });
+  return [
+    { key: "next7", label: "Next 7 days", meta: "Today through the week", value: { kind: "next7" } },
+    { key: "next30", label: "Next 30 days", meta: "Everything coming up", value: { kind: "next30" } },
+    { key: "next3months", label: "Next 3 months", meta: "Longer horizon", value: { kind: "next3months" } },
+    ...days,
+  ];
+}
+
+export function formatRangePillLabel(range: TimelineRange, options: RangeOption[]): string {
+  if (range.kind === "day") {
+    const date = new Date(`${range.dateKey}T12:00:00`);
+    const monthDay = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `${monthDay}, ${weekday}`;
+  }
+  return options.find((o) => o.value.kind === range.kind)?.label ?? "Next 7 days";
+}
+
+const TIME_SLOTS = [
+  { slot: "morning", title: "MORNING", icon: "☼", color: "#C27A12", test: (h: number) => h < 12 },
+  { slot: "afternoon", title: "AFTERNOON", icon: "☀", color: "#C27A12", test: (h: number) => h >= 12 && h < 18 },
+  { slot: "evening", title: "EVENING", icon: "☾", color: "#6A35FF", test: (h: number) => h >= 18 },
+] as const;
+
+export function buildMomentGroups(toats: TimelineToat[], range: TimelineRange, now: Date): MomentGroup[] {
+  const isMultiDay = range.kind !== "day";
+  const todayK = dateKey(now);
+  const tomorrowDate = new Date(startOfDay(now));
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowK = dateKey(tomorrowDate);
+  const slotOf = (h: number) => TIME_SLOTS.find((s) => s.test(h)) ?? TIME_SLOTS[0];
+
+  if (!isMultiDay) {
+    const groups = TIME_SLOTS.map((s) => ({ key: s.slot, title: s.title, icon: s.icon, color: s.color, toats: [] as TimelineToat[] }));
+    const someday: MomentGroup = { key: "someday", title: "SOMEDAY", icon: "✦", color: "#7B61FF", toats: [] };
+    for (const toat of toats) {
+      const t = toatTime(toat);
+      if (!t) { someday.toats.push(toat); continue; }
+      const g = groups.find((x) => x.key === slotOf(new Date(t).getHours()).slot)!;
+      g.toats.push(toat);
+    }
+    return [...groups, someday].filter((g) => g.toats.length > 0).map(({ key, title, icon, color, toats: ts }) => ({ key, title, icon, color, toats: ts }));
+  }
+
+  const byKey = new Map<string, MomentGroup>();
+  const someday: MomentGroup = { key: "someday", title: "SOMEDAY", icon: "✦", color: "#7B61FF", toats: [] };
+
+  for (const toat of toats) {
+    const t = toatTime(toat);
+    if (!t) { someday.toats.push(toat); continue; }
+    const date = new Date(t);
+    const dk = dateKey(date);
+    if (!byKey.has(dk)) {
+      let dateLabel: string;
+      if (dk === todayK) dateLabel = "Today";
+      else if (dk === tomorrowK) dateLabel = "Tomorrow";
+      else dateLabel = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      byKey.set(dk, { key: dk, title: dateLabel, color: "#6A35FF", toats: [] });
+    }
+    byKey.get(dk)!.toats.push(toat);
+  }
+
+  const sorted = [...byKey.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, g]) => g);
+  if (someday.toats.length > 0) sorted.push(someday);
+  return sorted;
+}
+
