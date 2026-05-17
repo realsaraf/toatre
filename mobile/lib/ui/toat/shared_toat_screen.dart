@@ -130,10 +130,12 @@ class _SharedToatView extends StatelessWidget {
     final datetimeLabel = _datetimeLabel(toat);
     final location = toat.location;
     final notes = toat.notes?.trim();
+    final people = toat.people;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       children: [
+        // ── Hero card ─────────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -205,6 +207,41 @@ class _SharedToatView extends StatelessWidget {
             ],
           ),
         ),
+        // ── Detail rows ───────────────────────────────────────────────────
+        if (people.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _DetailCard(
+            title: 'People',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: people
+                  .map(
+                    (name) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0x0C4F46E5),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: const Color(0x1A4F46E5),
+                        ),
+                      ),
+                      child: Text(
+                        name,
+                        style: TextStyles.smallMedium.copyWith(
+                          color: const Color(0xFF4F46E5),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
         if (notes != null && notes.isNotEmpty) ...[
           const SizedBox(height: 18),
           _DetailCard(
@@ -218,36 +255,62 @@ class _SharedToatView extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 18),
-        _DetailCard(
-          title: 'Open elsewhere',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'If you need the full browser flow, you can keep going on the web version of this shared toat.',
-                style: TextStyles.body.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.tonal(
-                onPressed: onOpenInBrowser,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.softPurple,
-                  foregroundColor: AppColors.primaryDark,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+        // ── Open in browser CTA ───────────────────────────────────────────
+        const SizedBox(height: 24),
+        GestureDetector(
+          onTap: onOpenInBrowser,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F9FB),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0x12000000)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0x177C3AED),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.open_in_browser_rounded,
+                    color: Color(0xFF7C3AED),
+                    size: 20,
                   ),
                 ),
-                child: const Text('Open in browser'),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Open in browser',
+                        style: TextStyles.bodyMedium.copyWith(
+                          color: const Color(0xFF111827),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'View the full page on toatre.com',
+                        style: TextStyles.small.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFFD1D5DB),
+                  size: 22,
+                ),
+              ],
+            ),
           ),
         ),
       ],

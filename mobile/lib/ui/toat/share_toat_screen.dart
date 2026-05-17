@@ -143,21 +143,9 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
                       ],
                     ),
                     const SizedBox(height: 36),
-                    SizedBox(
-                      height: 58,
-                      child: ElevatedButton.icon(
-                        onPressed: _busy ? null : _sendShare,
-                        icon: const Icon(Icons.send_rounded),
-                        label: Text(_busy ? 'Sharing…' : 'Send'),
-                        style: ElevatedButton.styleFrom(
-                          textStyle: TextStyles.heading3.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                      ),
+                    _GradientSendButton(
+                      busy: _busy,
+                      onTap: _busy ? null : _sendShare,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -256,6 +244,62 @@ class _ShareToatScreenState extends State<ShareToatScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+}
+
+class _GradientSendButton extends StatelessWidget {
+  const _GradientSendButton({required this.busy, required this.onTap});
+
+  final bool busy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: onTap == null
+                ? const LinearGradient(
+                    colors: [Color(0xFFB0A3E0), Color(0xFFA5AEE0)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF7C3AED), Color(0xFF5B3DF5)],
+                  ),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    busy ? 'Sending…' : 'Send invite',
+                    style: TextStyles.heading3.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -533,45 +577,44 @@ class _ShareLinkCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE7E7F0)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x100F172A),
-              blurRadius: 24,
-              offset: Offset(0, 10),
-            ),
-          ],
+          color: const Color(0xFFF9F9FB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0x12000000)),
         ),
         child: Row(
           children: [
             Container(
-              width: 58,
-              height: 58,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF4F0FF),
-                shape: BoxShape.circle,
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0x177C3AED),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.link_rounded,
-                color: AppColors.primary,
-                size: 32,
+              alignment: Alignment.center,
+              child: const Text(
+                '🔗',
+                style: TextStyle(fontSize: 18),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Copy public link', style: TextStyles.heading3),
-                  const SizedBox(height: 6),
+                  Text(
+                    'Copy public link',
+                    style: TextStyles.bodyMedium.copyWith(
+                      color: const Color(0xFF111827),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
                   Text(
                     'Anyone with this link can view',
-                    style: TextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
+                    style: TextStyles.small.copyWith(
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
@@ -579,8 +622,8 @@ class _ShareLinkCard extends StatelessWidget {
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textMuted,
-              size: 34,
+              color: Color(0xFFD1D5DB),
+              size: 22,
             ),
           ],
         ),
