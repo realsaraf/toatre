@@ -10,6 +10,8 @@ import {
   syncToatPushReminders,
 } from "@/lib/pings/compute";
 import { notifyUserDevices } from "@/lib/pings/notify-devices";
+import { deleteFromSpaces } from "@/lib/storage/spaces";
+import type { ToatAttachment } from "@/types";
 
 // â”€â”€â”€ GET /api/toats/[id] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(
@@ -122,12 +124,24 @@ export async function DELETE(
   }
 
   const { toats } = await getCollections();
-  const result = await toats.deleteOne({
+  const toatDoc = await toats.findOne({
     _id: new ObjectId(id),
     ownerId: new ObjectId(user.mongoId),
   });
+  if (!toatDoc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const result = await toats.deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Clean up any attachments stored in DO Spaces
+  if (Array.isArray(toatDoc.attachments) && toatDoc.attachments.length > 0) {
+    await Promise.all(
+      (toatDoc.attachments as ToatAttachment[]).map((a) =>
+        deleteFromSpaces(a.key).catch(() => undefined)
+      )
+    );
+  }
+
   await deleteToatPushReminders({ userId: user.mongoId, toatId: id });
   void notifyUserDevices(user.mongoId, { action: "deleted" });
   return NextResponse.json({ ok: true });
@@ -140,6 +154,27 @@ function serializeToat(doc: any) {
     ? doc.enrichments
     : migrateTemplateData(doc);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attachments = Array.isArray(doc.attachments)
+    ? (doc.attachments as any[]).map((a: any) => ({
+        id: a.id,
+        label: a.label,
+        mimeType: a.mimeType,
+        size: a.size,
+        createdAt: (a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)).toISOString(),
+      }))
+    : [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const links = Array.isArray(doc.links)
+    ? (doc.links as any[]).map((l: any) => ({
+        id: l.id,
+        url: l.url,
+        label: l.label,
+        createdAt: (l.createdAt instanceof Date ? l.createdAt : new Date(l.createdAt)).toISOString(),
+      }))
+    : [];
+
   return {
     id: doc._id.toString(),
     tier: doc.tier ?? "regular",
@@ -148,6 +183,8 @@ function serializeToat(doc: any) {
     notes: doc.notes ?? null,
     enrichments,
     captureId: doc.captureId?.toString() ?? null,
+    attachments,
+    links,
     createdAt: (doc.createdAt as Date).toISOString(),
     updatedAt: (doc.updatedAt as Date).toISOString(),
   };

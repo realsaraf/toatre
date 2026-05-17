@@ -47,7 +47,7 @@ export function ToatreMark({ width = 120, className = "" }: ToatreMarkProps) {
         fontFamily="Inter, -apple-system, sans-serif"
         fontWeight="600"
         fontSize="28"
-        fill="url(#toatre-mark-gradient)"
+        fill="#1A1714"
         letterSpacing="-0.5"
       >
         toatre

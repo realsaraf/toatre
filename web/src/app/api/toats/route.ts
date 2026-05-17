@@ -114,6 +114,27 @@ export function serializeToat(doc: any) {
     ? doc.enrichments
     : migrateTemplateData(doc);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attachments = Array.isArray(doc.attachments)
+    ? (doc.attachments as any[]).map((a: any) => ({
+        id: a.id,
+        label: a.label,
+        mimeType: a.mimeType,
+        size: a.size,
+        createdAt: (a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)).toISOString(),
+      }))
+    : [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const links = Array.isArray(doc.links)
+    ? (doc.links as any[]).map((l: any) => ({
+        id: l.id,
+        url: l.url,
+        label: l.label,
+        createdAt: (l.createdAt instanceof Date ? l.createdAt : new Date(l.createdAt)).toISOString(),
+      }))
+    : [];
+
   return {
     id: doc._id.toString(),
     tier: doc.tier ?? "regular",
@@ -124,6 +145,8 @@ export function serializeToat(doc: any) {
     captureId: doc.captureId?.toString() ?? null,
     source: doc.source ?? null,
     bookingRequestId: doc.bookingRequestId?.toString() ?? null,
+    attachments,
+    links,
     createdAt: (doc.createdAt as Date).toISOString(),
     updatedAt: (doc.updatedAt as Date).toISOString(),
   };

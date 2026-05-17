@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { User } from "firebase/auth";
 import {
   CalendarIcon,
@@ -79,9 +79,18 @@ export function MobileTimelineView({
 }: MobileTimelineViewProps) {
   const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState<TimelineRange>({ kind: "day", dateKey: dateKey(now) });
+  const [hasManualRangeSelection, setHasManualRangeSelection] = useState(false);
   const rangeOptions = useMemo(() => buildRangeOptions(now), [now]);
-  const selectedOption = rangeOptions.find((option) => rangeEquals(option.value, selectedRange)) ?? rangeOptions[0];
   const sortedToats = useMemo(() => [...toats].sort(sortToats), [toats]);
+  const preferredRange = useMemo(() => getPreferredRange(sortedToats, now), [sortedToats, now]);
+
+  useEffect(() => {
+    if (hasManualRangeSelection) return;
+    if (rangeEquals(selectedRange, preferredRange)) return;
+    setSelectedRange(preferredRange);
+  }, [hasManualRangeSelection, preferredRange, selectedRange]);
+
+  const selectedOption = rangeOptions.find((option) => rangeEquals(option.value, selectedRange)) ?? rangeOptions[0];
   const visibleToats = useMemo(
     () => sortedToats.filter((toat) => isToatInRange(toat, selectedRange, now)),
     [now, selectedRange, sortedToats],
@@ -152,6 +161,7 @@ export function MobileTimelineView({
                       key={option.key}
                       type="button"
                       onClick={() => {
+                        setHasManualRangeSelection(true);
                         setSelectedRange(option.value);
                         setRangeMenuOpen(false);
                       }}
@@ -237,7 +247,6 @@ export function MobileTimelineView({
           />
         ) : (
           <div style={{ ...styles.timelineFlow, ...(isCompact ? styles.timelineFlowCompact : {}) }}>
-            <span aria-hidden style={{ ...styles.timelineRibbon, ...(isCompact ? styles.timelineRibbonCompact : {}) }} />
             {groupedToats.map((group) => (
               <section key={group.key} style={styles.sectionBlock}>
                 <p
@@ -380,6 +389,20 @@ function isToatInRange(toat: TimelineToat, range: TimelineRange, now: Date): boo
   if (range.kind === "next30") end.setDate(start.getDate() + 30);
   if (range.kind === "next3months") end.setMonth(start.getMonth() + 3);
   return date >= start && date < end;
+}
+
+function getPreferredRange(toats: TimelineToat[], now: Date): TimelineRange {
+  const todayKey = dateKey(now);
+  const todayCount = toats.filter((toat) => {
+    const value = toatTime(toat);
+    return value ? dateKey(new Date(value)) === todayKey : false;
+  }).length;
+
+  if (todayCount < 3) {
+    return { kind: "next7" };
+  }
+
+  return { kind: "day", dateKey: todayKey };
 }
 
 function rangeEquals(left: TimelineRange, right: TimelineRange): boolean {

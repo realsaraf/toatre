@@ -21,6 +21,7 @@ import {
   CarGlyph,
   CartGlyph,
   CheckGlyph,
+  FlightGlyph,
   ForkGlyph,
   MedGlyph,
   MessageGlyph,
@@ -100,6 +101,13 @@ export const TOAT_VISUAL: Record<string, ToatVisual> = {
     chipBg: "#EDE9FE", chipColor: "#4338CA",
     Icon: SchoolGlyph,
   },
+  flight: {
+    label: "Flight", emoji: "✈️",
+    gradient: "linear-gradient(135deg, #38BDF8, #0284C7)",
+    tint: "#38BDF8", accent: "#0284C7", soft: "rgba(56,189,248,0.12)",
+    chipBg: "#E0F2FE", chipColor: "#0284C7",
+    Icon: FlightGlyph,
+  },
   transport: {
     label: "Drive", emoji: "🚗",
     gradient: "linear-gradient(135deg, #0EA5E9, #0284C7)",
@@ -142,6 +150,9 @@ export const TOAT_VISUAL: Record<string, ToatVisual> = {
  * Enrichment-based dispatch takes priority; title keywords are the fallback.
  */
 export function resolveVisualKey(title: string, enrichments: Enrichments | undefined): string {
+  const t = title.toLowerCase();
+  // Flight keywords always win — LLM often uses event enrichment for flights
+  if (/\b(flight|fly(ing)?|airplane|\bplane\b|airfare)\b/.test(t)) return "flight";
   if (enrichments) {
     if (enrichments.communication?.channel === "call" || (enrichments.communication?.phone && !enrichments.communication?.joinUrl))
       return "communication_call";
@@ -152,7 +163,7 @@ export function resolveVisualKey(title: string, enrichments: Enrichments | undef
     if (enrichments.action?.type === "errand") return "errand";
     if (enrichments.thought) return "thought";
   }
-  const t = title.toLowerCase();
+  // title.toLowerCase() already computed as `t` above
   // Communication
   if (/\b(call|phone|ring|dial)\b/.test(t)) return "communication_call";
   if (/\b(zoom|google meet|teams|webex|standup|stand.?up|video.?call|video chat|scrum|1.?on.?1)\b/.test(t)) return "communication_meeting";

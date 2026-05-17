@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { requireUser } from "@/lib/auth/require-user";
 import { getCollections } from "@/lib/mongo/collections";
 import { getAdminAuth } from "@/lib/firebase/admin";
+import { deleteFromSpaces } from "@/lib/storage/spaces";
 
 /**
  * DELETE /api/users/me
@@ -43,6 +44,19 @@ export async function DELETE(request: NextRequest) {
 
   // Delete all user data in parallel. Errors in individual collections are
   // tolerated — we continue and still delete the user + Firebase account.
+
+  // First, clean up any attachments stored in DO Spaces (fire-and-forget per key).
+  // We project only the attachments field to keep the query light.
+  const toatsWithAttachments = await toats
+    .find({ ownerId, "attachments.0": { $exists: true } }, { projection: { attachments: 1 } })
+    .toArray();
+  if (toatsWithAttachments.length > 0) {
+    const keys: string[] = toatsWithAttachments.flatMap(
+      (t) => (Array.isArray(t.attachments) ? (t.attachments as Array<{ key: string }>) : []).map((a) => a.key)
+    );
+    await Promise.allSettled(keys.map((key) => deleteFromSpaces(key)));
+  }
+
   const deletions = await Promise.allSettled([
     toats.deleteMany({ ownerId }),
     captures.deleteMany({ userId: mongoId }),

@@ -1,5 +1,6 @@
 import type { Enrichments } from "@/types";
 import type { ToatVisual } from "@/components/toat-visual";
+import type { SerializedAttachment, SerializedLink } from "@/types/documents";
 export type { ToatVisual as DetailVisual };
 
 export type ToatTier = "urgent" | "important" | "regular";
@@ -12,6 +13,8 @@ export interface ToatDetail {
   title: string;
   notes: string | null;
   enrichments: Enrichments | null;
+  attachments?: SerializedAttachment[];
+  links?: SerializedLink[];
   captureId: string | null;
   createdAt: string;
   updatedAt: string;

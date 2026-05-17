@@ -10,8 +10,10 @@ import {
   DoneIcon,
   DuplicateIcon,
   EditIcon,
+  LinkIcon,
   LocationIcon,
   MoreIcon,
+  PaperclipIcon,
   RescheduleIcon,
   ShareIcon,
   SnoozeIcon,
@@ -37,15 +39,17 @@ import {
   buttonStyles,
 } from "./_styles";
 import { ActionStripButton } from "./_components/ActionStripButton";
+import { AddLinkModal } from "./_components/AddLinkModal";
+import { AttachmentBar, type AttachmentBarHandle } from "@/app/timeline/_components/mobile/AttachmentBar";
 import { ChecklistSection } from "./_components/ChecklistSection";
 import { DetailBadge } from "./_components/DetailBadge";
+import { LinksSection } from "./_components/LinksSection";
 import { LocationSearchModal } from "./_components/LocationSearchModal";
 import { MeetingSection } from "./_components/MeetingSection";
 import { MenuAction } from "./_components/MenuAction";
 import { RescheduleModal } from "./_components/RescheduleModal";
 import { SectionCard } from "./_components/SectionCard";
 import { ShareToatModal } from "./_components/ShareToatModal";
-import { TicketInputModal } from "./_components/TicketInputModal";
 import { WhenWhereCard } from "./_components/WhenWhereCard";
 import { fireConfetti, captureOrigin } from "@/lib/fire-confetti";
 
@@ -89,7 +93,8 @@ export default function ToatDetailPage() {
   const [locationSuggestions, setLocationSuggestions] = useState<
     Array<{ placeId: string; description: string }>
   >([]);
-  const [ticketInputOpen, setTicketInputOpen] = useState(false);
+  const [addLinkOpen, setAddLinkOpen] = useState(false);
+  const attachmentBarRef = useRef<AttachmentBarHandle>(null);
 
   const now = new Date();
 
@@ -223,6 +228,38 @@ export default function ToatDetailPage() {
       throw new Error(data?.error ?? "Could not delete this toat.");
     }
     router.replace("/timeline");
+  };
+
+  const addLink = async (url: string, label: string) => {
+    if (!user || !toat) return;
+    await runMutation("add-link", async () => {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/toats/${toat.id}/links`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ url, ...(label ? { label } : {}) }),
+      });
+      const data = (await res.json().catch(() => null)) as { link?: { id: string; url: string; label: string; createdAt: string }; error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "Could not add link.");
+      if (data?.link) {
+        setToat((prev) => prev ? { ...prev, links: [...(prev.links ?? []), data.link!] } : prev);
+      }
+      setAddLinkOpen(false);
+    });
+  };
+
+  const removeLink = async (linkId: string) => {
+    if (!user || !toat) return;
+    const token = await user.getIdToken();
+    const res = await fetch(`/api/toats/${toat.id}/links/${linkId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      setFlash("Could not remove link.");
+      return;
+    }
+    setToat((prev) => prev ? { ...prev, links: (prev.links ?? []).filter((l) => l.id !== linkId) } : prev);
   };
 
   const duplicateToat = async () => {
@@ -399,9 +436,8 @@ export default function ToatDetailPage() {
                 <div style={menuStyles.menuCard}>
                   <MenuAction label="Add location" icon={<LocationIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setLocationSearchOpen(true); }} />
                   <MenuAction label="Add notes" icon={<EditIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setShowNotes(true); }} />
-                  {isEvent ? (
-                    <MenuAction label={ticketUrl ? "Update ticket link" : "Add ticket link"} icon={<TicketGlyph size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setTicketInputOpen(true); }} />
-                  ) : null}
+                  <MenuAction label="Add link" icon={<LinkIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setAddLinkOpen(true); }} />
+                  <MenuAction label="Add attachment" icon={<PaperclipIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); attachmentBarRef.current?.triggerUpload(); }} />
                   <MenuAction label="Delete" icon={<TrashIcon size={20} />} tone="#DC2626" onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
                 </div>
               ) : null}
@@ -491,6 +527,12 @@ export default function ToatDetailPage() {
           </SectionCard>
         ) : null}
 
+        {(toat.links ?? []).length > 0 ? (
+          <LinksSection links={toat.links ?? []} onRemove={(id) => void removeLink(id)} accent={visual.accent} />
+        ) : null}
+
+        <AttachmentBar ref={attachmentBarRef} toatId={toat.id} initialAttachments={toat.attachments ?? []} />
+
         {!isMeeting ? (
           <section style={tipCardStyles.tipCard}>
             <span style={tipCardStyles.tipSpark}><SparkleIcon size={20} /></span>
@@ -513,8 +555,8 @@ export default function ToatDetailPage() {
         <LocationSearchModal query={locationQuery} suggestions={locationSuggestions} onQueryChange={async (q) => { setLocationQuery(q); if (!q.trim()) { setLocationSuggestions([]); return; } try { const res = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(q)}`); const data = (await res.json()) as { predictions?: Array<{ place_id: string; description: string }> }; setLocationSuggestions((data.predictions ?? []).map((p) => ({ placeId: p.place_id, description: p.description }))); } catch { setLocationSuggestions([]); } }} onSelect={(description) => void runMutation("location", async () => { await patchToat({ "enrichments.place": { address: description } }); setLocationSearchOpen(false); setLocationQuery(""); setLocationSuggestions([]); })} onClose={() => { setLocationSearchOpen(false); setLocationQuery(""); setLocationSuggestions([]); }} />
       ) : null}
 
-      {ticketInputOpen ? (
-        <TicketInputModal onSave={(url) => void runMutation("ticket-url", async () => { await patchToat({ "enrichments.event": { ...toat.enrichments?.event, ticketUrl: url } }); setTicketInputOpen(false); })} onClose={() => setTicketInputOpen(false)} />
+      {addLinkOpen ? (
+        <AddLinkModal busy={actionState === "add-link"} onSave={(url, label) => void addLink(url, label)} onClose={() => setAddLinkOpen(false)} />
       ) : null}
     </div>
   );

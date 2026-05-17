@@ -15,6 +15,37 @@ export interface UserDoc {
   updatedAt: Date;
 }
 
+export interface ToatAttachment {
+  id: string;       // crypto.randomUUID()
+  key: string;      // DO Spaces object key
+  label: string;    // AI-generated short label
+  mimeType: string;
+  size: number;     // bytes
+  createdAt: Date;
+}
+
+export interface SerializedAttachment {
+  id: string;
+  label: string;
+  mimeType: string;
+  size: number;
+  createdAt: string; // ISO
+}
+
+export interface ToatLink {
+  id: string;    // crypto.randomUUID()
+  url: string;
+  label: string; // user-provided or auto-derived from URL hostname
+  createdAt: Date;
+}
+
+export interface SerializedLink {
+  id: string;
+  url: string;
+  label: string;
+  createdAt: string; // ISO
+}
+
 export interface ToatDoc {
   _id: ObjectId;
   ownerId: ObjectId;
@@ -24,6 +55,8 @@ export interface ToatDoc {
   title: string;
   notes: string | null;
   enrichments: Enrichments;
+  attachments?: ToatAttachment[];
+  links?: ToatLink[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -181,6 +214,8 @@ export interface SerializedToat {
   notes: string | null;
   enrichments: Enrichments;
   captureId: string | null;
+  attachments?: SerializedAttachment[];
+  links?: SerializedLink[];
   createdAt: string;
   updatedAt: string;
 }

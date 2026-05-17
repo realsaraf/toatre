@@ -5,7 +5,6 @@ import {
   AppBrand,
   CalendarIcon,
   InboxIcon,
-  MicIcon,
   SettingsIcon,
   TimelineIcon,
   UserAvatar,
@@ -275,13 +274,13 @@ const shellStyles: Record<string, CSSProperties> = {
     height: 80,
     borderRadius: "50%",
     border: "none",
-    background: "rgba(255,252,247,0.98)",
+    background: "transparent",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    boxShadow: "0 14px 28px rgba(190,119,22,0.18), 0 2px 8px rgba(53,39,25,0.08)",
-    padding: 5,
+    boxShadow: "none",
+    padding: 0,
   },
   micOrb: {
     width: "100%",
@@ -378,7 +377,8 @@ export function MobileAppShell({
             }}
           >
             <span aria-hidden style={shellStyles.micOrb}>
-              <MicIcon size={resolvedCompact ? 26 : 28} color="#FFFFFF" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/micicon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </span>
           </button>
 
@@ -542,18 +542,6 @@ function DockItem({
       >
         {label}
       </span>
-      {active ? (
-        <span
-          aria-hidden
-          style={{
-            marginTop: 2,
-            width: 30,
-            height: 2,
-            borderRadius: 999,
-            background: "#BE7716",
-          }}
-        />
-      ) : null}
     </button>
   );
 }

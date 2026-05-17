@@ -8,6 +8,7 @@ import {
   deleteToatPushReminders,
   syncToatPushReminders,
 } from "@/lib/pings/compute";
+import { deleteFromSpaces } from "@/lib/storage/spaces";
 
 /**
  * POST /api/captures/[id]/commit
@@ -85,6 +86,16 @@ export async function POST(
         userId: user.mongoId,
         toatId: unselectedId.toString(),
       });
+    }
+    // Clean up any Spaces attachments on the deleted toats (fire-and-forget per key)
+    const unselectedWithAttachments = captureToats.filter(
+      (t) => !selectedSet.has(t._id.toString()) && Array.isArray(t.attachments) && (t.attachments as unknown[]).length > 0
+    );
+    if (unselectedWithAttachments.length > 0) {
+      const keys: string[] = unselectedWithAttachments.flatMap(
+        (t) => (t.attachments as Array<{ key: string }>).map((a) => a.key)
+      );
+      void Promise.allSettled(keys.map((key) => deleteFromSpaces(key)));
     }
   }
 
