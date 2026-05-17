@@ -35,8 +35,9 @@ export function ToatreMark({ width = 120, className = "" }: ToatreMarkProps) {
           y2="0"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#4F46E5" />
-          <stop offset="100%" stopColor="#F59E0B" />
+          <stop offset="0%" stopColor="#5B3DF5" />
+          <stop offset="55%" stopColor="#E01E85" />
+          <stop offset="100%" stopColor="#F58020" />
         </linearGradient>
       </defs>
 

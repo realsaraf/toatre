@@ -3,13 +3,14 @@
 /* ─── Single source of truth: Toatre brand colours ───────────────────────── */
 /* NEVER hardcode these hex values outside this file.                          */
 :root {
-  /* Brand gradient (matches design screenshots) */
-  --color-gradient-start: #6366F1; /* indigo-500 */
-  --color-gradient-end:   #F59E0B; /* amber-400  */
+  /* Brand gradient (matches app icon: blue-violet → hot-pink → warm-orange) */
+  --color-gradient-start: #5B3DF5; /* brand blue-violet */
+  --color-gradient-mid:   #E01E85; /* brand hot-pink    */
+  --color-gradient-end:   #F58020; /* brand warm-orange */
 
   /* Mic / capture gradient */
-  --color-mic-start: #8B5CF6;  /* violet-500 */
-  --color-mic-end:   #EC4899;  /* pink-500   */
+  --color-mic-start: #5B3DF5;  /* brand blue-violet */
+  --color-mic-end:   #E01E85;  /* brand hot-pink    */
 
   /* Backgrounds — light lavender theme (matches screenshots) */
   --color-bg:          #F5F4FF;
@@ -28,9 +29,9 @@
   --color-border-strong: rgba(99, 102, 241, 0.25);
 
   /* Brand primary */
-  --color-primary:       #4F46E5;
-  --color-primary-hover: #4338CA;
-  --color-primary-light: #EDE9FE;
+  --color-primary:       #5B3DF5;
+  --color-primary-hover: #4D30D8;
+  --color-primary-light: #EEE9FE;
 
   /* Status */
   --color-success: #22C55E;

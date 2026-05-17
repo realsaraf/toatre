@@ -21,16 +21,18 @@ export const s: Record<string, CSSProperties> = {
     height: 60,
     background: "#FFFFFF",
     backgroundClip: "padding-box",
-    boxShadow: "0 1px 0 0 rgba(99,102,241,0.12), 0 2px 12px rgba(0,0,0,0.05)",
+    boxShadow: "0 1px 0 0 rgba(91,61,245,0.12), 0 2px 12px rgba(0,0,0,0.05)",
   },
   navBrand: {
     display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
     textDecoration: "none",
   },
   navCta: {
     padding: "7px 16px",
     borderRadius: 99,
-    background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+    background: "linear-gradient(135deg, #5B3DF5, #E01E85, #F58020)",
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: 700,
@@ -249,8 +251,8 @@ export const s: Record<string, CSSProperties> = {
   },
   attBtnSave: {
     border: "none",
-    background: "rgba(99,102,241,0.10)",
-    color: "#4338CA",
+    background: "rgba(91,61,245,0.10)",
+    color: "#5B3DF5",
   },
 
   // ── CTA block
@@ -285,11 +287,11 @@ export const s: Record<string, CSSProperties> = {
     alignItems: "center",
     padding: "9px 20px",
     borderRadius: 99,
-    background: "linear-gradient(135deg, #EDE9FE, #E0E7FF)",
-    border: "1px solid rgba(99,102,241,0.18)",
+    background: "linear-gradient(135deg, #5B3DF5, #E01E85, #F58020)",
+    border: "none",
     fontSize: 13,
     fontWeight: 700,
-    color: "#4F46E5",
+    color: "#FFFFFF",
     textDecoration: "none",
   },
 };
