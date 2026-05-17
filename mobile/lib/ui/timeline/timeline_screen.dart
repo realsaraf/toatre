@@ -1909,6 +1909,15 @@ class _OverflowRow extends StatelessWidget {
 }
 
 class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.done,
+    required this.action,
+    required this.onTap,
+  });
+
+  final bool done;
+  final _ToatAction? action;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
