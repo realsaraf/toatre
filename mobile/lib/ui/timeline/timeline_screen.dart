@@ -12,6 +12,7 @@ import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/ui/capture/capture_screen.dart';
 import 'package:toatre/ui/inbox/inbox_screen.dart';
+import 'package:toatre/ui/bookings/bookings_screen.dart';
 import 'package:toatre/ui/search/search_screen.dart';
 import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
@@ -66,6 +67,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final selectedCount = _selectedRange == _TimelineRange.day
         ? visibleToats.length
         : _filterToats(toats, _TimelineRange.day).length;
+    final upNext = _upNextToat(visibleToats);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F1E8),
@@ -123,6 +125,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       subtitle: 'Try another range or capture a new toat.',
                     )
                   else ...[
+                    if (upNext != null) ...[
+                      const SizedBox(height: 8),
+                      _UpNextCard(
+                        toat: upNext,
+                        onTap: () => _openToat(upNext),
+                        onAction: () => _runPrimaryAction(upNext),
+                        onDone: () => _markDone(upNext),
+                        removing: _removingToatId == upNext.id,
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     for (final entry in grouped.entries) ...[
                       if (entry.key.isNotEmpty) ...[
                         Padding(
@@ -180,7 +193,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
         onTimelineTap: () {},
         onInboxTap: _openInbox,
         onVoiceTap: _openVoiceCapture,
-        onSearchTap: _openSearch,
+        onBookingsTap: _openBookings,
         onSettingsTap: _openSettings,
       ),
     );
@@ -242,6 +255,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return;
     }
     await context.read<ToatsProvider>().fetchToats();
+  }
+
+  Future<void> _openBookings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const BookingsScreen()));
   }
 
   Future<void> _openInbox() async {
@@ -378,12 +397,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   Map<_TimelineRange, int> _rangeCounts(List<ToatSummary> toats) {
     return <_TimelineRange, int>{
-      _TimelineRange.day: _filterToats(toats, _TimelineRange.day).length,
-      _TimelineRange.next7: _filterToats(toats, _TimelineRange.next7).length,
-      _TimelineRange.someday: _filterToats(
-        toats,
-        _TimelineRange.someday,
-      ).length,
+      for (final r in _TimelineRange.values)
+        r: _filterToats(toats, r).length,
     };
   }
 
@@ -405,6 +420,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final toatDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
     final diff = toatDay.difference(today).inDays;
 
+    final dayOffset = _rangeToOffset(range);
+    if (dayOffset != null) {
+      return diff == dayOffset;
+    }
     switch (range) {
       case _TimelineRange.day:
         return diff == 0;
@@ -412,6 +431,27 @@ class _TimelineScreenState extends State<TimelineScreen> {
         return diff >= 0 && diff < 7;
       case _TimelineRange.someday:
         return diff >= 7;
+      default:
+        return false;
+    }
+  }
+
+  /// Returns the day-offset (0 = today, 1 = tomorrow…) for individual-day
+  /// ranges; null for aggregate ranges.
+  int? _rangeToOffset(_TimelineRange range) {
+    switch (range) {
+      case _TimelineRange.day1:
+        return 1;
+      case _TimelineRange.day2:
+        return 2;
+      case _TimelineRange.day3:
+        return 3;
+      case _TimelineRange.day4:
+        return 4;
+      case _TimelineRange.day5:
+        return 5;
+      default:
+        return null;
     }
   }
 
@@ -440,7 +480,19 @@ class _TimelineScreenState extends State<TimelineScreen> {
         return 'Next 7 days';
       case _TimelineRange.someday:
         return 'Someday';
+      default:
+        final offset = _rangeToOffset(range)!;
+        final d = DateTime.now().add(Duration(days: offset));
+        return _shortWeekday(d);
     }
+  }
+
+  String _shortWeekday(DateTime d) {
+    const days = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+      'Friday', 'Saturday', 'Sunday',
+    ];
+    return days[d.weekday - 1];
   }
 
   String _rangeSubtitle(_TimelineRange range) {
@@ -453,10 +505,23 @@ class _TimelineScreenState extends State<TimelineScreen> {
         return '${_formatDateLabel(now)} – ${_formatDateLabel(end)}';
       case _TimelineRange.someday:
         return 'Whenever you get to it';
+      default:
+        final offset = _rangeToOffset(range)!;
+        return _formatDateLabel(now.add(Duration(days: offset)));
     }
   }
 
   String _selectedDatePillLabel() {
+    final offset = _rangeToOffset(_selectedRange);
+    if (offset != null) {
+      final d = DateTime.now().add(Duration(days: offset));
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return '${months[d.month - 1]} ${d.day}, ${weekdays[d.weekday - 1]}';
+    }
     if (_selectedRange == _TimelineRange.day) {
       final now = DateTime.now();
       const months = [
@@ -580,6 +645,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (todayToats.isEmpty) return null;
     todayToats.sort((a, b) => a.datetime!.compareTo(b.datetime!));
     return _formatTime(todayToats.last.datetime!);
+  }
+
+  ToatSummary? _upNextToat(List<ToatSummary> toats) {
+    final now = DateTime.now();
+    final upcoming = toats
+        .where(
+          (t) =>
+              t.state == 'open' &&
+              t.datetime != null &&
+              t.datetime!.isAfter(now.subtract(const Duration(minutes: 1))),
+        )
+        .toList();
+    if (upcoming.isEmpty) return null;
+    upcoming.sort((a, b) => a.datetime!.compareTo(b.datetime!));
+    return upcoming.first;
   }
 
   String _formatTime(DateTime dateTime) {
@@ -808,7 +888,7 @@ class _TopIconButton extends StatelessWidget {
   }
 }
 
-enum _TimelineRange { day, next7, someday }
+enum _TimelineRange { day, next7, someday, day1, day2, day3, day4, day5 }
 
 class _TimelineRangeDialog extends StatelessWidget {
   const _TimelineRangeDialog({
@@ -852,6 +932,23 @@ class _TimelineRangeDialog extends StatelessWidget {
                     count: counts[_TimelineRange.day] ?? 0,
                     selected: selectedRange == _TimelineRange.day,
                   ),
+                  ...List.generate(5, (i) {
+                    final offset = i + 1;
+                    final r = _TimelineRange.values.firstWhere(
+                      (v) => v.name == 'day$offset',
+                    );
+                    final d = DateTime.now().add(Duration(days: offset));
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _TimelineRangeOption(
+                        range: r,
+                        title: offset == 1 ? 'Tomorrow' : _weekdayName(d),
+                        subtitle: _dateLabel(d),
+                        count: counts[r] ?? 0,
+                        selected: selectedRange == r,
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 8),
                   _TimelineRangeOption(
                     range: _TimelineRange.next7,
@@ -877,6 +974,14 @@ class _TimelineRangeDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _weekdayName(DateTime dateTime) {
+    const weekdays = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+      'Friday', 'Saturday', 'Sunday',
+    ];
+    return weekdays[dateTime.weekday - 1];
   }
 
   String _dateLabel(DateTime dateTime) {
@@ -1899,14 +2004,14 @@ class _TimelineTabBar extends StatelessWidget {
     required this.onTimelineTap,
     required this.onInboxTap,
     required this.onVoiceTap,
-    required this.onSearchTap,
+    required this.onBookingsTap,
     required this.onSettingsTap,
   });
 
   final VoidCallback onTimelineTap;
   final VoidCallback onInboxTap;
   final VoidCallback onVoiceTap;
-  final VoidCallback onSearchTap;
+  final VoidCallback onBookingsTap;
   final VoidCallback onSettingsTap;
 
   @override
@@ -1947,9 +2052,9 @@ class _TimelineTabBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 72),
                 _BottomItem(
-                  icon: Icons.search_rounded,
-                  label: 'Search',
-                  onTap: onSearchTap,
+                  icon: Icons.event_note_rounded,
+                  label: 'Bookings',
+                  onTap: onBookingsTap,
                 ),
                 _BottomItem(
                   icon: Icons.wb_sunny_outlined,

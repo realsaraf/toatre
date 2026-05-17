@@ -172,19 +172,26 @@ class _ToatreAppState extends State<ToatreApp> {
     }
 
     if (uri.scheme == 'toatre') {
+      // toatre://s/<token>  (canonical)
+      if (uri.host == 's' && uri.pathSegments.isNotEmpty) {
+        return uri.pathSegments.first;
+      }
+      // toatre://j/<token>  (legacy)
       if (uri.host == 'j' && uri.pathSegments.isNotEmpty) {
         return uri.pathSegments.first;
       }
-
-      if (uri.pathSegments.length >= 2 && uri.pathSegments.first == 'j') {
+      // toatre:///s/<token> path-only forms
+      if (uri.pathSegments.length >= 2 &&
+          (uri.pathSegments.first == 's' || uri.pathSegments.first == 'j')) {
         return uri.pathSegments[1];
       }
     }
 
-    if ((uri.scheme == 'https' || uri.scheme == 'http') &&
-        uri.pathSegments.length >= 2 &&
-        uri.pathSegments.first == 'j') {
-      return uri.pathSegments[1];
+    if (uri.scheme == 'https' || uri.scheme == 'http') {
+      if (uri.pathSegments.length >= 2 &&
+          (uri.pathSegments.first == 's' || uri.pathSegments.first == 'j')) {
+        return uri.pathSegments[1];
+      }
     }
 
     return null;

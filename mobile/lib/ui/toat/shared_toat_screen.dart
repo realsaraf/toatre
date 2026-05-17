@@ -47,7 +47,7 @@ class _SharedToatScreenState extends State<SharedToatScreen> {
 
   Future<void> _openInBrowser() async {
     final opened = await launchUrl(
-      AppConfig.apiUri('/j/${widget.token}'),
+      AppConfig.apiUri('/s/${widget.token}'),
       mode: LaunchMode.externalApplication,
     );
 
