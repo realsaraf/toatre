@@ -15,13 +15,35 @@ function isLikelySpacesRegion(value: string | undefined): value is string {
   return Boolean(value && /^(ams|blr|fra|lon|nyc|sfo|sgp|syd|tor)\d$/i.test(value));
 }
 
+function defaultEndpoint(region: string): string {
+  return `https://${region}.digitaloceanspaces.com`;
+}
+
 function normalizeEndpoint(value: string | undefined, region: string): string {
-  if (!value) return `https://${region}.digitaloceanspaces.com`;
+  if (!value) return defaultEndpoint(region);
 
   const trimmed = value.replace(/\/+$/, "");
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.endsWith(".digitaloceanspaces.com")) return `https://${trimmed}`;
-  return `https://${region}.digitaloceanspaces.com`;
+  const candidate = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : trimmed.endsWith(".digitaloceanspaces.com")
+      ? `https://${trimmed}`
+      : defaultEndpoint(region);
+
+  try {
+    const url = new URL(candidate);
+    const parts = url.hostname.split(".");
+    if (
+      parts.length === 3 &&
+      url.hostname.endsWith(".digitaloceanspaces.com") &&
+      isLikelySpacesRegion(parts[0])
+    ) {
+      return `${url.protocol}//${url.hostname}`;
+    }
+  } catch {
+    // Fall through to the regional default.
+  }
+
+  return defaultEndpoint(region);
 }
 
 function regionFromEndpoint(endpoint: string): string | undefined {
