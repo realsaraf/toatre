@@ -35,7 +35,7 @@ export function ShareContent({
   proxyBase,
 }: ShareContentProps) {
   return (
-    <section style={s.card}>
+    <section className="share-card" style={s.card}>
       {/* ── Card header: badges, emoji, title, subtitle ── */}
       <div style={s.cardHeader}>
         <div style={s.cardBadgeRow}>
@@ -51,7 +51,7 @@ export function ShareContent({
         <h1 style={s.cardTitle}>{title}</h1>
         {subtitle && <p style={s.cardSubtitle}>{subtitle}</p>}
       </div>
-      <div style={s.cardDivider} aria-hidden />
+      <div className="share-card-divider" style={s.cardDivider} aria-hidden />
 
       {/* ── When ── */}
       {startDate && <DetailRow icon="📅" text={formatDateRange(startDate, endDate)} />}
@@ -61,7 +61,7 @@ export function ShareContent({
         <>
           <DetailRow icon="📍" text={location} />
           <div style={{ padding: "0 0 4px" }}>
-            <div style={s.mapWrap}>
+            <div className="share-map-wrap" style={s.mapWrap}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/places/staticmap?q=${encodeURIComponent(location)}`}
@@ -84,8 +84,8 @@ export function ShareContent({
 
       {/* ── Note ── */}
       {notes && (
-        <div style={s.section}>
-          <div style={s.notes}>
+        <div className="share-section" style={s.section}>
+          <div className="share-notes" style={s.notes}>
             <p style={{ margin: 0, fontSize: 14.5, color: "#374151", lineHeight: 1.75 }}>{notes}</p>
           </div>
         </div>
@@ -93,14 +93,14 @@ export function ShareContent({
 
       {/* ── Links ── */}
       {links.length > 0 && (
-        <div style={s.section}>
+        <div className="share-section" style={s.section}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {links.map((link) => {
               const hasOg = link.ogTitle ?? link.ogDescription ?? link.ogImage;
               if (hasOg) {
                 const hostname = safeHostname(link.url);
                 return (
-                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={s.ogCard}>
+                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="share-link-card" style={s.ogCard}>
                     {link.ogImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={link.ogImage} alt="" style={s.ogThumb} />
@@ -116,7 +116,7 @@ export function ShareContent({
                 );
               }
               return (
-                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={s.linkRow}>
+                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="share-link-card" style={s.linkRow}>
                   <span style={{ fontSize: 15, flexShrink: 0 }}>🔗</span>
                   <span style={s.linkLabel}>{link.label}</span>
                   <span style={s.linkArrow}>›</span>
@@ -129,7 +129,7 @@ export function ShareContent({
 
       {/* ── Attachments ── */}
       {attachments.length > 0 && (
-        <div style={s.section}>
+        <div className="share-section" style={s.section}>
           <p style={s.sectionLabel}>
             Attachments
             <span style={{ fontWeight: 400, opacity: 0.55 }}> ({attachments.length})</span>
@@ -140,7 +140,7 @@ export function ShareContent({
               const viewUrl = `${proxyBase}/${att.id}`;
               const dlUrl = `${proxyBase}/${att.id}?download=1`;
               return (
-                <div key={att.id} style={s.attCard}>
+                <div key={att.id} className="share-attachment-card" style={s.attCard}>
                   {isImage && (
                     <a href={viewUrl} target="_blank" rel="noopener noreferrer" aria-label={`View ${att.label} full size`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -171,7 +171,7 @@ export function ShareContent({
 
 function DetailRow({ icon, text }: { icon: string; text: string }) {
   return (
-    <div style={s.detailRow}>
+    <div className="share-detail-row" style={s.detailRow}>
       <span style={s.detailIcon} aria-hidden>{icon}</span>
       <span style={s.detailText}>{text}</span>
     </div>

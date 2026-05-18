@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getCollections } from "@/lib/mongo/collections";
-import { getBytesFromSpaces } from "@/lib/storage/spaces";
+import { getSignedSpacesUrl } from "@/lib/storage/spaces";
 
 export async function GET(
   req: NextRequest,
@@ -43,31 +43,30 @@ export async function GET(
     return NextResponse.json({ error: "Attachment not found." }, { status: 404 });
   }
 
-  let bytes: Uint8Array;
-  let contentType: string | undefined;
+  const forceDownload = req.nextUrl.searchParams.get("download") === "1";
+  const safeLabel = attachment.label.replace(/[^\w\s.-]/g, "_").trim() || "attachment";
+  const mimeType = attachment.mimeType ?? "application/octet-stream";
+  const filename =
+    mimeType === "application/pdf" && !safeLabel.toLowerCase().endsWith(".pdf")
+      ? `${safeLabel}.pdf`
+      : safeLabel;
+
+  let signedUrl: string;
   try {
-    ({ bytes, contentType } = await getBytesFromSpaces(attachment.key));
+    signedUrl = await getSignedSpacesUrl(attachment.key, {
+      expiresIn: 900,
+      contentType: mimeType,
+      contentDisposition: forceDownload ? "attachment" : "inline",
+      filename,
+    });
   } catch {
     return NextResponse.json({ error: "File unavailable." }, { status: 502 });
   }
 
-  const forceDownload = req.nextUrl.searchParams.get("download") === "1";
-  // Sanitise label to a safe filename (strip non-ASCII + special chars)
-  const safeLabel = attachment.label.replace(/[^\w\s.-]/g, "_").trim() || "attachment";
-  const isPdf = (contentType ?? attachment.mimeType) === "application/pdf";
-  const ext = isPdf ? ".pdf" : "";
-
-  const headers = new Headers();
-  headers.set("Content-Type", contentType ?? attachment.mimeType ?? "application/octet-stream");
-  headers.set("Content-Length", String(bytes.byteLength));
-  headers.set(
-    "Content-Disposition",
-    forceDownload
-      ? `attachment; filename="${safeLabel}${ext}"`
-      : "inline"
-  );
-  // Token is the security gate — allow CDN/browser caching for 1 hour
-  headers.set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
-
-  return new Response(bytes as unknown as BodyInit, { status: 200, headers });
+  return NextResponse.redirect(signedUrl, {
+    status: 307,
+    headers: {
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+    },
+  });
 }

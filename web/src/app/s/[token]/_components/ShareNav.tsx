@@ -4,7 +4,7 @@ import { s } from "./_styles";
 
 export function ShareNav() {
   return (
-    <nav style={s.nav}>
+    <nav className="share-nav" style={s.nav}>
       <a href="https://toatre.com" style={s.navBrand} aria-label="Toatre home">
         <Image
           src="/icon.png"

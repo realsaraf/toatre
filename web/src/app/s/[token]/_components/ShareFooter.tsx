@@ -4,7 +4,7 @@ import { s } from "./_styles";
 
 export function ShareFooter() {
   return (
-    <footer style={s.footer}>
+    <footer className="share-footer" style={s.footer}>
       <a
         href="https://toatre.com"
         target="_blank"

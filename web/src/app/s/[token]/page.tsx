@@ -10,7 +10,6 @@ import { getCollections } from "@/lib/mongo/collections";
 import { migrateTemplateData, type Enrichments } from "@/types";
 import { TOAT_VISUAL, resolveVisualKey } from "@/components/toat-visual";
 import { ShareNav } from "./_components/ShareNav";
-import { ShareHero } from "./_components/ShareHero";
 import { ShareContent } from "./_components/ShareContent";
 import { ShareFooter } from "./_components/ShareFooter";
 import { ShareNotFound } from "./_components/ShareNotFound";
@@ -25,7 +24,6 @@ interface PageProps {
 }
 
 interface SharedToatPageData {
-  ownerName: string;
   title: string;
   tier: string;
   notes: string | null;
@@ -57,7 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const description = buildShareDescription(sharedToat);
-  const imageUrl = getShareOpenGraphImage(token, sharedToat.attachments);
+  const imageUrl = getShareOpenGraphImage();
 
   return {
     title: sharedToat.title,
@@ -70,7 +68,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [
         {
           url: imageUrl,
-          alt: `${sharedToat.title} on Toatre`,
+          alt: "Toatre app preview",
         },
       ],
     },
@@ -90,7 +88,6 @@ export default async function SharedToatPage({ params }: PageProps) {
   if (!sharedToat) return <ShareNotFound />;
 
   const {
-    ownerName,
     title,
     tier,
     notes,
@@ -114,15 +111,53 @@ export default async function SharedToatPage({ params }: PageProps) {
       <style>{`
         @media (max-width: 720px) {
           .share-line-art { display: none !important; }
+          .share-root {
+            padding: 10px 0 24px !important;
+          }
           .share-shell {
-            margin: 0 12px !important;
-            border-radius: 24px !important;
+            margin: 0 !important;
+            max-width: none !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+          }
+          .share-nav {
+            margin: 0 10px 12px !important;
+            padding: 18px 16px 12px !important;
+            border-radius: 22px !important;
+            border: 1px solid rgba(223,206,182,0.36) !important;
+            box-shadow: 0 12px 28px rgba(189,139,63,0.10), 0 2px 8px rgba(76,55,24,0.04) !important;
+            background: rgba(255,252,247,0.94) !important;
           }
           .share-main {
-            padding: 0 14px 28px !important;
+            max-width: none !important;
+            padding: 0 10px 24px !important;
           }
-          .share-cta-row {
-            flex-direction: column !important;
+          .share-card {
+            border: 1px solid rgba(231,222,208,0.74) !important;
+            box-shadow: 0 12px 28px rgba(53,39,25,0.08), 0 1px 3px rgba(53,39,25,0.03) !important;
+          }
+          .share-card-divider,
+          .share-detail-row {
+            border-color: rgba(231,222,208,0.28) !important;
+          }
+          .share-section {
+            border-top: none !important;
+            padding-top: 14px !important;
+          }
+          .share-map-wrap,
+          .share-notes,
+          .share-link-card,
+          .share-attachment-card {
+            border: 1px solid rgba(231,222,208,0.28) !important;
+            box-shadow: inset 0 0 0 1px rgba(231,222,208,0.28) !important;
+          }
+          .share-footer {
+            margin: 0 10px !important;
+            padding: 12px 16px 4px !important;
+            border-top: none !important;
           }
         }
       `}</style>
@@ -142,7 +177,6 @@ export default async function SharedToatPage({ params }: PageProps) {
 
       <div className="share-shell" style={s.shell}>
         <ShareNav />
-        <br/>
 
         <main className="share-main" style={s.main}>
           <ShareContent
@@ -195,25 +229,13 @@ export default async function SharedToatPage({ params }: PageProps) {
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 async function getSharedToatPageData(token: string): Promise<SharedToatPageData | null> {
-  const { acl, toats, users } = await getCollections();
+  const { acl, toats } = await getCollections();
 
   const share = await acl.findOne({ token });
   const toatId = share?.toatId instanceof ObjectId ? share.toatId : null;
   const toat = toatId ? await toats.findOne({ _id: toatId }) : null;
 
   if (!share || !toat) return null;
-
-  const ownerId =
-    share.ownerId instanceof ObjectId
-      ? share.ownerId
-      : ObjectId.isValid(String(share.ownerId))
-        ? new ObjectId(String(share.ownerId))
-        : null;
-  const owner = ownerId ? await users.findOne({ _id: ownerId }) : null;
-  const ownerName =
-    (typeof owner?.displayName === "string" && owner.displayName) ||
-    (typeof owner?.email === "string" && owner.email.split("@")[0]) ||
-    "Someone";
 
   const enrichments: Enrichments = toat.enrichments ?? migrateTemplateData(toat);
   const title = typeof toat.title === "string" ? toat.title : "Untitled toat";
@@ -242,7 +264,6 @@ async function getSharedToatPageData(token: string): Promise<SharedToatPageData 
   const people: string[] = Array.isArray(enrichments.people) ? enrichments.people : [];
 
   return {
-    ownerName,
     title,
     tier,
     notes,
@@ -265,10 +286,8 @@ function parseDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function getShareOpenGraphImage(token: string, attachments: ToatAttachment[]): string {
-  const imageAttachment = attachments.find((attachment) => attachment.mimeType.startsWith("image/"));
-  if (!imageAttachment) return "/opengraph-image";
-  return `/api/share/${encodeURIComponent(token)}/attachments/${encodeURIComponent(imageAttachment.id)}`;
+function getShareOpenGraphImage(): string {
+  return "/opengraph-image";
 }
 
 function buildShareDescription(sharedToat: SharedToatPageData): string {
@@ -283,8 +302,8 @@ function buildShareDescription(sharedToat: SharedToatPageData): string {
     );
   }
 
-  const fallback = [`Shared by ${sharedToat.ownerName} on Toatre.`, ...detailParts].join(" • ");
-  return truncateText(fallback, 160);
+  const fallback = [...detailParts, "Open this shared toat in Toatre."].filter(Boolean).join(" • ");
+  return truncateText(fallback || "Open this shared toat in Toatre.", 160);
 }
 
 function formatShareDateForMetadata(startDate: Date | null, endDate: Date | null): string | null {

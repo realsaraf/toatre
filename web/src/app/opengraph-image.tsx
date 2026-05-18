@@ -22,11 +22,11 @@ export default async function OpenGraphImage() {
           height: "100%",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          padding: "72px 84px",
+          justifyContent: "center",
+          padding: "42px",
           background:
-            "radial-gradient(circle at top left, rgba(244,114,182,0.30), transparent 32%), radial-gradient(circle at bottom right, rgba(59,130,246,0.24), transparent 38%), linear-gradient(135deg, #faf7ff 0%, #f7f4ff 48%, #eef3ff 100%)",
-          color: "#0f172a",
+            "radial-gradient(circle at top left, rgba(255,226,186,0.55), transparent 34%), radial-gradient(circle at bottom right, rgba(224,214,255,0.42), transparent 36%), linear-gradient(135deg, #fffdf8 0%, #fff8ef 52%, #fff3e4 100%)",
+          color: "#1c1630",
           fontFamily: "sans-serif",
         }}
       >
@@ -34,70 +34,155 @@ export default async function OpenGraphImage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            maxWidth: 660,
+            width: "100%",
+            height: "100%",
+            borderRadius: 34,
+            border: "1px solid rgba(216,194,166,0.62)",
+            background: "rgba(255,252,247,0.90)",
+            boxShadow: "0 26px 80px rgba(190,119,22,0.12)",
+            overflow: "hidden",
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 16,
-              marginBottom: 28,
-              fontSize: 28,
-              fontWeight: 700,
-              color: "#5b3df5",
+              justifyContent: "space-between",
+              padding: "30px 34px",
+              borderBottom: "1px solid rgba(231,222,208,0.82)",
+              background: "linear-gradient(180deg, rgba(255,253,249,0.92) 0%, rgba(255,250,243,0.78) 100%)",
             }}
           >
-            <span
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+              }}
+            >
+              <img
+                src={iconSrc}
+                alt="toatre app icon"
+                width={68}
+                height={68}
+                style={{ borderRadius: 18 }}
+              />
+              <div
+                style={{
+                  fontSize: 46,
+                  fontWeight: 800,
+                  color: "#BE7716",
+                  letterSpacing: -1,
+                }}
+              >
+                toatre
+              </div>
+            </div>
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "10px 18px",
+                padding: "14px 26px",
                 borderRadius: 999,
-                background: "rgba(91,61,245,0.10)",
+                border: "2px solid #BE7716",
+                color: "#BE7716",
+                background: "rgba(255,255,255,0.76)",
+                fontSize: 28,
+                fontWeight: 700,
               }}
             >
-              Toatre
-            </span>
-            <span style={{ color: "#64748b", fontSize: 24 }}>voice-first time assistant</span>
+              Get the app
+            </div>
           </div>
 
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: 18,
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "38px",
             }}
           >
-            <div style={{ fontSize: 74, lineHeight: 1.02, fontWeight: 800, letterSpacing: -2.6 }}>
-              Own your slice of time.
-            </div>
-            <div style={{ fontSize: 32, lineHeight: 1.3, color: "#334155" }}>
-              Turn what you say into toats: clear slices of your day you can manage, remember, and share.
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%",
+                borderRadius: 32,
+                border: "1px solid rgba(231,222,208,0.92)",
+                background: "rgba(255,255,255,0.92)",
+                padding: "44px 56px",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 18px",
+                    borderRadius: 999,
+                    background: "rgba(190,119,22,0.10)",
+                    color: "#BE7716",
+                    fontSize: 24,
+                    fontWeight: 700,
+                  }}
+                >
+                  Toatre
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 18px",
+                    borderRadius: 999,
+                    background: "rgba(245,158,11,0.12)",
+                    color: "#B45309",
+                    fontSize: 24,
+                    fontWeight: 700,
+                  }}
+                >
+                  Mic-first timeline
+                </div>
+              </div>
+              <div style={{ fontSize: 82, lineHeight: 1, marginBottom: 18 }}>🎙️</div>
+              <div
+                style={{
+                  maxWidth: 760,
+                  fontSize: 72,
+                  lineHeight: 1.05,
+                  fontWeight: 900,
+                  letterSpacing: -2.4,
+                  marginBottom: 20,
+                }}
+              >
+                Turn what you say into toats.
+              </div>
+              <div
+                style={{
+                  maxWidth: 760,
+                  fontSize: 30,
+                  lineHeight: 1.35,
+                  color: "#5F6B7A",
+                }}
+              >
+                Capture plans, meetings, ideas, and errands in one calm, shareable Toatre flow.
+              </div>
             </div>
           </div>
-        </div>
-
-        <div
-          style={{
-            width: 280,
-            height: 280,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 72,
-            background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,247,255,0.92))",
-            boxShadow: "0 40px 90px rgba(91,61,245,0.18)",
-          }}
-        >
-          <img
-            src={iconSrc}
-            alt="Toatre app icon"
-            width={188}
-            height={188}
-            style={{ borderRadius: 42 }}
-          />
         </div>
       </div>
     ),

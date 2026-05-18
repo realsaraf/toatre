@@ -2,8 +2,17 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  type GetObjectCommandInput,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { spacesClient, BUCKET } from "@/lib/spaces/client";
+
+type SignedSpacesUrlOptions = {
+  expiresIn?: number;
+  contentType?: string;
+  contentDisposition?: "inline" | "attachment";
+  filename?: string;
+};
 
 export async function uploadToSpaces(
   key: string,
@@ -38,4 +47,30 @@ export async function getBytesFromSpaces(
     obj.Body as unknown as { transformToByteArray(): Promise<Uint8Array> }
   ).transformToByteArray();
   return { bytes, contentType: obj.ContentType };
+}
+
+export async function getSignedSpacesUrl(
+  key: string,
+  options: SignedSpacesUrlOptions = {}
+): Promise<string> {
+  const signerClient = spacesClient as unknown as Parameters<typeof getSignedUrl>[0];
+  const input: GetObjectCommandInput = {
+    Bucket: BUCKET,
+    Key: key,
+  };
+
+  if (options.contentType) {
+    input.ResponseContentType = options.contentType;
+  }
+
+  if (options.contentDisposition || options.filename) {
+    const disposition = options.contentDisposition ?? "inline";
+    const safeFilename =
+      options.filename?.replace(/[^\w\s.-]/g, "_").trim() || "attachment";
+    input.ResponseContentDisposition = `${disposition}; filename="${safeFilename}"`;
+  }
+
+  return getSignedUrl(signerClient, new GetObjectCommand(input), {
+    expiresIn: options.expiresIn ?? 900,
+  });
 }
