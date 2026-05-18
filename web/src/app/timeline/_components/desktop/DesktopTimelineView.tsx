@@ -85,6 +85,12 @@ export function DesktopTimelineView({
     setSelectedRange(preferredRange);
   }, [hasManualRangeSelection, preferredRange, selectedRange]);
 
+  useEffect(() => {
+    if (!selectedToatId) return;
+    if (sortedToats.some((toat) => toat.id === selectedToatId)) return;
+    setSelectedToatId(null);
+  }, [selectedToatId, sortedToats]);
+
   const visibleToats = useMemo(
     () => sortedToats.filter((toat) => isToatInRange(toat, selectedRange, now)),
     [sortedToats, selectedRange, now],

@@ -1,10 +1,11 @@
 import type { MutableRefObject } from "react";
 import { BellIcon, GrabHandleIcon, PlusIcon } from "@/components/mobile-ui";
 import type { ChecklistItem, DetailVisual, ToatDetail } from "../_types";
-import { checklistStyles, notesStyles, sectionCardStyles, toggleStyles } from "../_styles";
+import { checklistStyles, sectionCardStyles, toggleStyles } from "../_styles";
 import { SectionCard } from "./SectionCard";
 import { LocationBlock } from "./LocationBlock";
 import { SwitchVisual } from "./SwitchVisual";
+import { NotesSection } from "./NotesSection";
 
 export function ChecklistSection({
   checklistLocal,
@@ -18,9 +19,7 @@ export function ChecklistSection({
   onRemoveLocation,
   notesLocal,
   showNotes,
-  setNotesLocal,
-  saveNotesText,
-  notesSaveTimerRef,
+  onEditNotes,
 }: {
   checklistLocal: ChecklistItem[];
   setChecklistLocal: (v: ChecklistItem[]) => void;
@@ -33,9 +32,7 @@ export function ChecklistSection({
   onRemoveLocation: () => void;
   notesLocal: string;
   showNotes: boolean;
-  setNotesLocal: (v: string) => void;
-  saveNotesText: (v: string) => Promise<void>;
-  notesSaveTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  onEditNotes: () => void;
   user: { displayName: string | null } | null;
   toat: ToatDetail;
 }) {
@@ -159,25 +156,7 @@ export function ChecklistSection({
       </SectionCard>
 
       {showNotes || notesLocal.trim() !== "" ? (
-        <SectionCard title="Notes">
-          <textarea
-            style={notesStyles.notesTextarea}
-            value={notesLocal}
-            onChange={(e) => {
-              setNotesLocal(e.target.value);
-              if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
-              notesSaveTimerRef.current = setTimeout(
-                () => {
-                  void saveNotesText(e.target.value);
-                },
-                800,
-              );
-            }}
-            onBlur={() => void saveNotesText(notesLocal)}
-            placeholder="Add a note\u2026"
-            rows={3}
-          />
-        </SectionCard>
+        <NotesSection notes={notesLocal} onEdit={onEditNotes} />
       ) : null}
 
       <SectionCard title="Ping me">

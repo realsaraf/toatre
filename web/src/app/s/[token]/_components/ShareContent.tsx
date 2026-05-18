@@ -1,4 +1,5 @@
 import type { ToatLink, ToatAttachment } from "@/types/documents";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { s } from "./_styles";
 
 interface ShareContentProps {
@@ -86,7 +87,7 @@ export function ShareContent({
       {notes && (
         <div className="share-section" style={s.section}>
           <div className="share-notes" style={s.notes}>
-            <p style={{ margin: 0, fontSize: 14.5, color: "#374151", lineHeight: 1.75 }}>{notes}</p>
+            <MarkdownRenderer markdown={notes} tone="share" />
           </div>
         </div>
       )}

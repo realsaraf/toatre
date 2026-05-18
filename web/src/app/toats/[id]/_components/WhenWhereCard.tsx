@@ -1,12 +1,12 @@
-import type { MutableRefObject } from "react";
-import { BellIcon, ClockIcon, PhoneGlyph, SparkleIcon } from "@/components/mobile-ui";
+import { BellIcon, ClockIcon, PhoneGlyph } from "@/components/mobile-ui";
 import type { ToatDetail, DetailVisual } from "../_types";
-import { formatDate, formatTime, formatShortDate } from "../_utils";
-import { buttonStyles, toggleStyles, notesStyles } from "../_styles";
+import { formatDate, formatTime } from "../_utils";
+import { buttonStyles, toggleStyles } from "../_styles";
 import { SectionCard } from "./SectionCard";
 import { InfoRow } from "./InfoRow";
 import { LocationBlock } from "./LocationBlock";
 import { SwitchVisual } from "./SwitchVisual";
+import { NotesSection } from "./NotesSection";
 
 export function WhenWhereCard({
   startDate,
@@ -17,9 +17,7 @@ export function WhenWhereCard({
   visual,
   notesLocal,
   showNotes,
-  setNotesLocal,
-  saveNotesText,
-  notesSaveTimerRef,
+  onEditNotes,
   onChangeLocation,
   onRemoveLocation,
   onShareOrCall,
@@ -35,9 +33,7 @@ export function WhenWhereCard({
   visual: DetailVisual;
   notesLocal: string;
   showNotes: boolean;
-  setNotesLocal: (v: string) => void;
-  saveNotesText: (v: string) => Promise<void>;
-  notesSaveTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  onEditNotes: () => void;
   onChangeLocation: () => void;
   onRemoveLocation: () => void;
   onShareOrCall: () => void;
@@ -91,34 +87,14 @@ export function WhenWhereCard({
       </SectionCard>
 
       {showNotes || notesLocal.trim() !== "" ? (
-        <SectionCard title="Notes">
-          <textarea
-            style={notesStyles.notesTextarea}
-            value={notesLocal}
-            onChange={(e) => {
-              setNotesLocal(e.target.value);
-              if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
-              notesSaveTimerRef.current = setTimeout(
-                () => {
-                  void saveNotesText(e.target.value);
-                },
-                800,
-              );
-            }}
-            onBlur={() => void saveNotesText(notesLocal)}
-            placeholder="Add a note\u2026"
-            rows={3}
-          />
-          <div style={notesStyles.captureLine}>
-            <span style={notesStyles.captureAvatar}>
-              {user?.displayName?.[0]?.toUpperCase() ?? "T"}
-            </span>
-            <span>Captured {formatShortDate(new Date(toat.createdAt))}</span>
-            <span style={{ color: visual.accent }}>
-              <SparkleIcon size={16} />
-            </span>
-          </div>
-        </SectionCard>
+        <NotesSection
+          notes={notesLocal}
+          onEdit={onEditNotes}
+          showCaptureLine
+          createdAt={toat.createdAt}
+          userInitial={user?.displayName?.[0]?.toUpperCase() ?? "T"}
+          accent={visual.accent}
+        />
       ) : null}
 
       {reminders.length ? (

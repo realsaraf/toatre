@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { getCollections } from "@/lib/mongo/collections";
+import { resolveAccessLevel } from "@/lib/auth/access-policy";
 
 /**
  * Returns the current authenticated user's profile.
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const { users } = await getCollections();
     const mongoUser = await users.findOne({ firebaseUid: user.uid });
+    const accessLevel = await resolveAccessLevel(user.email ?? null);
 
     return NextResponse.json({
       uid: user.uid,
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
       handle: mongoUser?.handle ?? null,
       displayName: mongoUser?.displayName ?? null,
       photoUrl: mongoUser?.photoUrl ?? null,
+      accessLevel,
     });
   } catch (error) {
     console.error("[auth/me] failed", error);

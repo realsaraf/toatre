@@ -48,6 +48,7 @@ import { LinksSection } from "./_components/LinksSection";
 import { LocationSearchModal } from "./_components/LocationSearchModal";
 import { MeetingSection } from "./_components/MeetingSection";
 import { MenuAction } from "./_components/MenuAction";
+import { NotesEditorModal } from "./_components/NotesEditorModal";
 import { RescheduleModal } from "./_components/RescheduleModal";
 import { SectionCard } from "./_components/SectionCard";
 import { ShareToatModal } from "./_components/ShareToatModal";
@@ -99,8 +100,8 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
   const doneButtonRef = useRef<HTMLDivElement>(null);
 
   const [notesLocal, setNotesLocal] = useState<string>("");
-  const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showNotes, setShowNotes] = useState(false);
+  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
 
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [rescheduleValue, setRescheduleValue] = useState("");
@@ -243,16 +244,21 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
   const saveNotesText = useCallback(
     async (text: string) => {
       if (!user || !toat) return;
-      try {
-        const token = await user.getIdToken();
-        await fetch(`/api/toats/${toat.id}`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ notes: text || null }),
-        });
-      } catch {
-        // silently ignore autosave failures
-      }
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/toats/${toat.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: text.trim() ? text : null }),
+      });
+      const data = (await res.json().catch(() => null)) as {
+        toat?: ToatDetail;
+        error?: string;
+      } | null;
+      if (!res.ok || !data?.toat) throw new Error(data?.error ?? "Could not update notes.");
+      setToat(data.toat);
+      setNotesLocal(data.toat.notes ?? "");
+      setShowNotes((current) => current || Boolean(data.toat?.notes?.trim()));
+      setFlash("Saved.");
     },
     [user, toat],
   );
@@ -538,7 +544,7 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
                   <>
                     <MenuAction label="Add reminder" icon={<BellIcon size={20} />} tone="#111827" onClick={() => setReminderPickerOpen(true)} />
                     <MenuAction label="Add location" icon={<LocationIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setLocationSearchOpen(true); }} />
-                    <MenuAction label="Add notes" icon={<EditIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setShowNotes(true); }} />
+                    <MenuAction label="Add notes" icon={<EditIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setShowNotes(true); setNotesEditorOpen(true); }} />
                     <MenuAction label="Add link" icon={<LinkIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); setAddLinkOpen(true); }} />
                     <MenuAction label="Add attachment" icon={<PaperclipIcon size={20} />} tone="#111827" onClick={() => { setMenuOpen(false); attachmentBarRef.current?.triggerUpload(); }} />
                     <MenuAction label="Delete" icon={<TrashIcon size={20} />} tone="#DC2626" onClick={() => { if (window.confirm("Delete this toat?")) { void runMutation("delete", deleteToat); } }} />
@@ -685,7 +691,7 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
       </section>
 
       {!isMeeting && !isChecklist ? (
-        <WhenWhereCard startDate={startDate} endDate={endDate} loc={loc} maps={maps} phone={phone} visual={visual} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimerRef={notesSaveTimer} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} onShareOrCall={() => { if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; } void openShareModal(); }} reminders={reminders} user={user} toat={toat} />
+        <WhenWhereCard startDate={startDate} endDate={endDate} loc={loc} maps={maps} phone={phone} visual={visual} notesLocal={notesLocal} showNotes={showNotes} onEditNotes={() => { setShowNotes(true); setNotesEditorOpen(true); }} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} onShareOrCall={() => { if (phone) { window.open(`tel:${phone.replace(/\s+/g, "")}`, "_self"); return; } void openShareModal(); }} reminders={reminders} user={user} toat={toat} />
       ) : null}
 
       {isMeeting ? (
@@ -693,7 +699,7 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
       ) : null}
 
       {isChecklist ? (
-        <ChecklistSection checklistLocal={checklistLocal} setChecklistLocal={setChecklistLocal} saveChecklistItems={saveChecklistItems} checklistDragIndex={checklistDragIndex} visual={visual} loc={loc} maps={maps} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} notesLocal={notesLocal} showNotes={showNotes} setNotesLocal={setNotesLocal} saveNotesText={saveNotesText} notesSaveTimerRef={notesSaveTimer} user={user} toat={toat} />
+        <ChecklistSection checklistLocal={checklistLocal} setChecklistLocal={setChecklistLocal} saveChecklistItems={saveChecklistItems} checklistDragIndex={checklistDragIndex} visual={visual} loc={loc} maps={maps} onChangeLocation={() => setLocationSearchOpen(true)} onRemoveLocation={() => void runMutation("rm-location", () => patchToat({ "enrichments.place": null }))} notesLocal={notesLocal} showNotes={showNotes} onEditNotes={() => { setShowNotes(true); setNotesEditorOpen(true); }} user={user} toat={toat} />
       ) : null}
 
       {(toat.links ?? []).length > 0 ? (
@@ -729,6 +735,19 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
         {addLinkOpen ? (
           <AddLinkModal busy={actionState === "add-link"} onSave={(url, label) => void addLink(url, label)} onClose={() => setAddLinkOpen(false)} />
         ) : null}
+        {notesEditorOpen ? (
+          <NotesEditorModal
+            value={notesLocal}
+            onChange={setNotesLocal}
+            busy={actionState === "notes"}
+            onSave={() => void runMutation("notes", async () => {
+              await saveNotesText(notesLocal);
+              setShowNotes(true);
+              setNotesEditorOpen(false);
+            })}
+            onClose={() => setNotesEditorOpen(false)}
+          />
+        ) : null}
       </>
     );
   }
@@ -750,6 +769,19 @@ export function ToatDetailView({ id, onClose, embedded = false }: ToatDetailView
       ) : null}
       {addLinkOpen ? (
         <AddLinkModal busy={actionState === "add-link"} onSave={(url, label) => void addLink(url, label)} onClose={() => setAddLinkOpen(false)} />
+      ) : null}
+      {notesEditorOpen ? (
+        <NotesEditorModal
+          value={notesLocal}
+          onChange={setNotesLocal}
+          busy={actionState === "notes"}
+          onSave={() => void runMutation("notes", async () => {
+            await saveNotesText(notesLocal);
+            setShowNotes(true);
+            setNotesEditorOpen(false);
+          })}
+          onClose={() => setNotesEditorOpen(false)}
+        />
       ) : null}
     </div>
   );
