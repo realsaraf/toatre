@@ -1,13 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/config/app_config.dart';
+import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/services/api_service.dart';
 import 'package:toatre/ui/bookings/bookings_screen.dart';
+import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
+import 'package:toatre/widgets/mobile_page_chrome.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Models
@@ -220,6 +224,16 @@ class _InboxScreenState extends State<InboxScreen> {
     await _fetch();
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    if (!mounted) {
+      return;
+    }
+    await _fetch();
+  }
+
   Future<void> _actOnBooking(String id, String state) async {
     setState(() => _actioningId = id);
     try {
@@ -244,6 +258,7 @@ class _InboxScreenState extends State<InboxScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     final requestBadge = _bookingRequests
         .where((r) => r.state == 'pending')
         .length;
@@ -262,71 +277,28 @@ class _InboxScreenState extends State<InboxScreen> {
         showAcceptedShortcut;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: const Color(0xFFF7F1E8),
       body: SafeArea(
         child: RefreshIndicator(
           color: const Color(0xFFBE7716),
           backgroundColor: const Color(0xFFFCF9F4),
           onRefresh: _fetch,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(20, 14, 20, widget.asTab ? 120 : 40),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, widget.asTab ? 120 : 40),
             children: [
-              // Header
-              Row(
-                children: [
-                  if (!widget.asTab) ...[
-                    _IconCircleButton(
-                      icon: Icons.arrow_back_rounded,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Inbox', style: TextStyles.heading2),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Requests and shared toats',
-                          style: TextStyles.small.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (totalCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0x144F46E5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '$totalCount',
-                        style: TextStyles.smallMedium.copyWith(
-                          color: const Color(0xFF4F46E5),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                ],
+              MobileShellTopRow(user: user, onAvatarTap: _openSettings),
+              const SizedBox(height: 14),
+              MobilePageIntro(
+                title: 'Inbox',
+                subtitle: 'Requests and shared toats',
+                count: totalCount,
+                controls: _SegmentedTab(
+                  filter: _filter,
+                  onFilter: (filter) => setState(() => _filter = filter),
+                  onOpenAccepted: _openBookings,
+                ),
               ),
-              const SizedBox(height: 20),
-              // Segmented tab
-              _SegmentedTab(
-                filter: _filter,
-                requestCount: requestBadge,
-                sharedCount: _sharedToats.length,
-                acceptedCount: _acceptedBookingsCount,
-                onFilter: (filter) => setState(() => _filter = filter),
-                onOpenAccepted: _openBookings,
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               if (_loading)
                 const Padding(
                   padding: EdgeInsets.only(top: 60),
@@ -343,6 +315,10 @@ class _InboxScreenState extends State<InboxScreen> {
                   subtitle: _acceptedBookingsCount > 0
                       ? 'Accepted bookings have moved into Bookings. New booking requests and shared toats will appear here.'
                       : 'Booking requests from your handle page and toats shared by your connections will appear here.',
+                  primaryActionLabel: 'Handle settings',
+                  primaryAction: _openSettings,
+                  secondaryActionLabel: 'View Bookings',
+                  secondaryAction: _openBookings,
                 )
               else ...[
                 if (visibleShared.isNotEmpty)
@@ -356,7 +332,7 @@ class _InboxScreenState extends State<InboxScreen> {
                     ),
                   ),
                 if (visibleShared.isNotEmpty && visibleRequests.isNotEmpty)
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                 if (visibleRequests.isNotEmpty)
                   _RequestsList(
                     requests: visibleRequests,
@@ -364,7 +340,7 @@ class _InboxScreenState extends State<InboxScreen> {
                     onAct: _actOnBooking,
                   ),
                 if (showAcceptedShortcut) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   _AcceptedBookingsCard(
                     count: _acceptedBookingsCount,
                     onTap: _openBookings,
@@ -386,55 +362,53 @@ class _InboxScreenState extends State<InboxScreen> {
 class _SegmentedTab extends StatelessWidget {
   const _SegmentedTab({
     required this.filter,
-    required this.requestCount,
-    required this.sharedCount,
-    required this.acceptedCount,
     required this.onFilter,
     required this.onOpenAccepted,
   });
 
   final _InboxFilter filter;
-  final int requestCount;
-  final int sharedCount;
-  final int acceptedCount;
   final ValueChanged<_InboxFilter> onFilter;
   final VoidCallback onOpenAccepted;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50,
+      height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0EAE0),
-        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFEFCF8), Color(0xFFF6F0E7)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x57C0B3FF)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D1F2937),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
           _Segment(
             label: 'All',
-            badge: requestCount + sharedCount,
             active: filter == _InboxFilter.all,
             onTap: () => onFilter(_InboxFilter.all),
           ),
           _Segment(
             label: 'Requests',
-            badge: requestCount,
             active: filter == _InboxFilter.requests,
             onTap: () => onFilter(_InboxFilter.requests),
           ),
           _Segment(
             label: 'Shared',
-            badge: sharedCount,
             active: filter == _InboxFilter.shared,
             onTap: () => onFilter(_InboxFilter.shared),
           ),
-          _Segment(
-            label: 'Accepted',
-            badge: acceptedCount,
-            active: false,
-            onTap: onOpenAccepted,
-          ),
+          _Segment(label: 'Accepted', active: false, onTap: onOpenAccepted),
         ],
       ),
     );
@@ -444,71 +418,50 @@ class _SegmentedTab extends StatelessWidget {
 class _Segment extends StatelessWidget {
   const _Segment({
     required this.label,
-    required this.badge,
     required this.active,
     required this.onTap,
   });
 
   final String label;
-  final int badge;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFFFCF9F4) : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: active
-                ? const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyles.smallMedium.copyWith(
-                  color: active
-                      ? const Color(0xFF171C27)
-                      : const Color(0xFF6A6159),
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFFFDFCFA) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              border: active
+                  ? Border.all(color: const Color(0x14C4B5FD))
+                  : null,
+              boxShadow: active
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x12000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyles.smallMedium.copyWith(
+                color: active
+                    ? const Color(0xFF5B3DF5)
+                    : const Color(0xFF6A6159),
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 12,
               ),
-              if (badge > 0) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$badge',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -544,7 +497,7 @@ class _RequestsList extends StatelessWidget {
       children: [
         for (final request in requests)
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.only(bottom: 12),
             child: _BookingRequestCard(
               request: request,
               actioning: actioningId == request.id,
@@ -1171,54 +1124,6 @@ class _MetaPill extends StatelessWidget {
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0x1A4F46E5),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Icon(icon, color: const Color(0xFF4F46E5)),
-          ),
-          const SizedBox(height: 18),
-          Text(title, style: TextStyles.heading1),
-          const SizedBox(height: 10),
-          Text(
-            subtitle,
-            style: TextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _InlineMessage extends StatelessWidget {
   const _InlineMessage({required this.message});
 
@@ -1227,7 +1132,7 @@ class _InlineMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(20),
@@ -1241,25 +1146,84 @@ class _InlineMessage extends StatelessWidget {
   }
 }
 
-class _IconCircleButton extends StatelessWidget {
-  const _IconCircleButton({required this.icon, required this.onTap});
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.primaryActionLabel,
+    this.primaryAction,
+    this.secondaryActionLabel,
+    this.secondaryAction,
+  });
 
   final IconData icon;
-  final VoidCallback onTap;
+  final String title;
+  final String subtitle;
+  final String? primaryActionLabel;
+  final VoidCallback? primaryAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? secondaryAction;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: AppColors.bgElevated,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: AppColors.text),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0x1A4F46E5),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Icon(icon, color: const Color(0xFF4F46E5)),
+          ),
+          const SizedBox(height: 18),
+          Text(title, style: TextStyles.heading1, textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: TextStyles.body.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (primaryActionLabel != null && primaryAction != null) ...[
+            const SizedBox(height: 18),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 340),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: primaryAction,
+                      child: Text(primaryActionLabel!),
+                    ),
+                  ),
+                  if (secondaryActionLabel != null &&
+                      secondaryAction != null) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: secondaryAction,
+                        child: Text(secondaryActionLabel!),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

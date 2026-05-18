@@ -139,7 +139,7 @@ export const desktopTimelineCss = `
   .desktop-clear-copy h2 { margin: 0; color: #171C27; font-size: 20px; line-height: 1.1; font-weight: 700; }
   .desktop-clear-copy h2 span { color: #BE7716; }
   .desktop-clear-copy p { margin: 6px 0 0; color: #6A6159; font-size: 13px; line-height: 1.4; font-weight: 500; }
-  .desktop-clear-sky { position: absolute; right: -14px; bottom: -18px; width: min(190px, 44%); height: 82%; background-image: url('/skybg.png'); background-repeat: no-repeat; background-size: cover; background-position: right bottom; opacity: 0.9; pointer-events: none; }
+  .desktop-clear-sky { position: absolute; right: -14px; bottom: -18px; width: min(190px, 44%); height: 82%; background-image: url('/skybgnew.png'); background-repeat: no-repeat; background-size: cover; background-position: right bottom; opacity: 0.9; pointer-events: none; }
   .desktop-end-icon { width: 48px; height: 48px; border-radius: 999px; background: #ffffff; color: #4F46E5; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 14px 32px rgba(100,38,255,0.12); }
   .desktop-end-card h2 { margin: 0 0 8px; font-size: 17px; color: #080f2d; }
   .desktop-end-card p { margin: 0; color: #53617f; font-size: 14px; }

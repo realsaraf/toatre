@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
 import 'package:toatre/services/api_service.dart';
+import 'package:toatre/ui/inbox/inbox_screen.dart';
+import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
+import 'package:toatre/widgets/mobile_page_chrome.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Model
@@ -169,8 +173,29 @@ class _BookingsScreenState extends State<BookingsScreen> {
     }
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    if (!mounted) {
+      return;
+    }
+    await _fetch();
+  }
+
+  Future<void> _openInbox() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const InboxScreen()));
+    if (!mounted) {
+      return;
+    }
+    await _fetch();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     final groups = _groupBookingsForDisplay(_bookings, _filter);
     final summary = _buildWeekSummary(_bookings);
     final visibleCount = _filter == _BookingFilter.canceled
@@ -178,78 +203,38 @@ class _BookingsScreenState extends State<BookingsScreen> {
         : _bookings.length;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: const Color(0xFFF7F1E8),
       body: SafeArea(
         child: RefreshIndicator(
           color: const Color(0xFFBE7716),
           backgroundColor: const Color(0xFFFCF9F4),
           onRefresh: _fetch,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(20, 14, 20, widget.asTab ? 120 : 40),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, widget.asTab ? 120 : 40),
             children: [
-              // Header
-              Row(
-                children: [
-                  if (!widget.asTab) ...[
-                    _CircleButton(
-                      icon: Icons.arrow_back_rounded,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Bookings', style: TextStyles.heading2),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Toats booked through your handle page',
-                          style: TextStyles.small.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (visibleCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0x144F46E5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '$visibleCount',
-                        style: TextStyles.smallMedium.copyWith(
-                          color: const Color(0xFF4F46E5),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                ],
+              MobileShellTopRow(user: user, onAvatarTap: _openSettings),
+              const SizedBox(height: 14),
+              MobilePageIntro(
+                title: 'Bookings',
+                subtitle: 'Toats booked through your handle page',
+                count: visibleCount,
+                controls: _FilterBar(
+                  filter: _filter,
+                  onFilter: (f) {
+                    setState(() => _filter = f);
+                    if (f == _BookingFilter.canceled) {
+                      setState(() {
+                        _bookings = [];
+                        _loading = false;
+                        _error = null;
+                      });
+                      return;
+                    }
+                    _fetch();
+                  },
+                ),
               ),
-              const SizedBox(height: 20),
-              // Filter tabs
-              _FilterBar(
-                filter: _filter,
-                onFilter: (f) {
-                  setState(() => _filter = f);
-                  if (f == _BookingFilter.canceled) {
-                    setState(() {
-                      _bookings = [];
-                      _loading = false;
-                      _error = null;
-                    });
-                    return;
-                  }
-                  _fetch();
-                },
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               if (_loading)
                 const Padding(
                   padding: EdgeInsets.only(top: 60),
@@ -258,14 +243,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
               else if (_error != null)
                 _ErrorCard(message: _error!)
               else if (groups.isEmpty)
-                _EmptyCard(filter: _filter)
+                _EmptyCard(
+                  filter: _filter,
+                  onOpenSettings: _openSettings,
+                  onOpenInbox: _openInbox,
+                )
               else
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (summary != null) ...[
                       _SummaryCard(summary: summary),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
                     ],
                     _BookingList(groups: groups, onOpen: _openBooking),
                   ],
@@ -291,11 +280,23 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50,
+      height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0EAE0),
-        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFEFCF8), Color(0xFFF6F0E7)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x57C0B3FF)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D1F2937),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -339,32 +340,40 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFFFCF9F4) : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: active
-                ? const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyles.smallMedium.copyWith(
-              color: active ? const Color(0xFF171C27) : const Color(0xFF6A6159),
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 12,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFFFDFCFA) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              border: active
+                  ? Border.all(color: const Color(0x14C4B5FD))
+                  : null,
+              boxShadow: active
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x12000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
-            textAlign: TextAlign.center,
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyles.smallMedium.copyWith(
+                color: active
+                    ? const Color(0xFF5B3DF5)
+                    : const Color(0xFF6A6159),
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),
@@ -395,9 +404,9 @@ class _BookingList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (int i = 0; i < groups.length; i++) ...[
-          if (i > 0) const SizedBox(height: 18),
+          if (i > 0) const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.only(bottom: 10, left: 4),
+            padding: const EdgeInsets.only(bottom: 8, left: 4),
             child: Text(
               groups[i].label,
               style: TextStyles.small.copyWith(
@@ -572,9 +581,15 @@ class _BookingCard extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────────────────────
 
 class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({required this.filter});
+  const _EmptyCard({
+    required this.filter,
+    required this.onOpenSettings,
+    required this.onOpenInbox,
+  });
 
   final _BookingFilter filter;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onOpenInbox;
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +616,7 @@ class _EmptyCard extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 52,
@@ -616,7 +631,7 @@ class _EmptyCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Text(title, style: TextStyles.heading1),
+          Text(title, style: TextStyles.heading1, textAlign: TextAlign.center),
           const SizedBox(height: 10),
           Text(
             subtitle,
@@ -624,7 +639,31 @@ class _EmptyCard extends StatelessWidget {
               color: AppColors.textSecondary,
               height: 1.5,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (filter != _BookingFilter.canceled) ...[
+            const SizedBox(height: 18),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 340),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: onOpenSettings,
+                      child: const Text('Handle settings'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onOpenInbox,
+                      child: const Text('Open Inbox'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -648,30 +687,6 @@ class _ErrorCard extends StatelessWidget {
       child: Text(
         message,
         style: TextStyles.body.copyWith(color: const Color(0xFFEF4444)),
-      ),
-    );
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: AppColors.bgElevated,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: AppColors.text),
       ),
     );
   }
@@ -831,13 +846,14 @@ String _formatDay(DateTime date) {
 }
 
 String _formatTime(DateTime dt) {
-  final h = dt.hour == 0
+  final hour = dt.hour == 0
       ? 12
       : dt.hour > 12
       ? dt.hour - 12
       : dt.hour;
-  final m = dt.minute.toString().padLeft(2, '0');
-  return '$h:$m ${dt.hour >= 12 ? 'PM' : 'AM'}';
+  final minute = dt.minute.toString().padLeft(2, '0');
+  final period = dt.hour >= 12 ? 'PM' : 'AM';
+  return '$hour:$minute $period';
 }
 
 ({Color background, String emoji}) _bookingVisual(_Booking booking) {

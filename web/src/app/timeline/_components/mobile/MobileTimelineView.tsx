@@ -134,7 +134,18 @@ export function MobileTimelineView({
       onOpenMenu={onOpenMenu}
       onOpenCapture={onOpenCapture}
       topRight={(
-        <div style={{ display: "flex", alignItems: "center", gap: isCompact ? 8 : 10 }}>
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          style={styles.avatarButton}
+          aria-label="Open menu"
+        >
+          <UserAvatar user={user} />
+        </button>
+      )}
+      header={(
+        <>
+          <div style={{ ...styles.toatCountWrap, ...(isCompact ? styles.toatCountWrapCompact : {}) }}>
           <div style={styles.rangeMenuWrap}>
             <button
               type="button"
@@ -173,20 +184,10 @@ export function MobileTimelineView({
               </div>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={onOpenMenu}
-            style={styles.avatarButton}
-            aria-label="Open menu"
-          >
-            <UserAvatar user={user} />
-          </button>
-        </div>
-      )}
-      header={(
-        <>
-          <div style={{ ...styles.toatCountWrap, ...(isCompact ? styles.toatCountWrapCompact : {}) }}>
-            <span style={styles.toatCountPill}>✦ {toatsTodayLabel}</span>
+            <span style={styles.toatCountPill}>
+              <span style={{ color: "#9B6A22", fontSize: isCompact ? 10 : 10, lineHeight: 1 }}>✦</span>
+              <span>{toatsTodayLabel}</span>
+            </span>
           </div>
           <ClearCard isAllDayClear={isAllDayClear} clearAfterText={clearAfterText} compact={isCompact} />
         </>

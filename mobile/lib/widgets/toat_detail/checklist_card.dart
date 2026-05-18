@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
+import 'package:toatre/widgets/toat_detail/section_card.dart';
 
 /// A drag-reorderable, interactive checklist widget.
 class ChecklistCard extends StatefulWidget {
@@ -58,46 +59,41 @@ class _ChecklistCardState extends State<ChecklistCard> {
     final items = widget.items;
     final doneCount = items.where((x) => x['done'] as bool? ?? false).length;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
+    return SectionCard(
+      title: 'Checklist',
+      action: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.saving)
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
+            )
+          else
+            Text(
+              '$doneCount/${items.length}',
+              style: TextStyles.smallMedium.copyWith(
+                color: const Color(0xFF7B8494),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          const SizedBox(width: 10),
+          _AddItemButton(onTap: widget.onAdd),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
-            child: Row(
-              children: [
-                Text(
-                  'Checklist',
-                  style: TextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                if (widget.saving)
-                  const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
-                  )
-                else
-                  Text(
-                    '$doneCount/${items.length}',
-                    style: TextStyles.small.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-              ],
-            ),
-          ),
           ReorderableListView.builder(
             shrinkWrap: true,
+            buildDefaultDragHandles: false,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
+            proxyDecorator: (child, index, animation) {
+              return Material(color: Colors.transparent, child: child);
+            },
             onReorder: (oldIndex, newIndex) {
               final updated = [...items];
               if (newIndex > oldIndex) newIndex -= 1;
@@ -120,78 +116,169 @@ class _ChecklistCardState extends State<ChecklistCard> {
 
               return KeyedSubtree(
                 key: ValueKey(item['id'] ?? index),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 3,
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.drag_handle_rounded,
-                        size: 18,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: Checkbox(
-                          value: done,
-                          onChanged: (_) => widget.onToggle(index),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          ReorderableDelayedDragStartListener(
+                            index: index,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2),
+                              child: Icon(
+                                Icons.drag_indicator_rounded,
+                                size: 18,
+                                color: Color(0xFFD4D8DF),
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          _ChecklistToggleButton(
+                            done: done,
+                            onTap: () => widget.onToggle(index),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: ctrl,
+                              focusNode: focus,
+                              maxLines: 1,
+                              cursorColor: AppColors.primary,
+                              style: TextStyles.body.copyWith(
+                                color: done
+                                    ? const Color(0xFF9A948B)
+                                    : const Color(0xFF111827),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                decoration: done
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'Item text…',
+                                hintStyle: TextStyles.body.copyWith(
+                                  color: const Color(0xFF9CA3AF),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                                border: InputBorder.none,
+                              ),
+                              onChanged: (v) => widget.onTextChanged(index, v),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _ChecklistDeleteButton(
+                            onTap: () => widget.onDelete(index),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (index != items.length - 1)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 56, right: 10),
+                        child: Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: Color(0x26CFC6B8),
                         ),
                       ),
-                      Expanded(
-                        child: TextField(
-                          controller: ctrl,
-                          focusNode: focus,
-                          style: TextStyles.body.copyWith(
-                            color: done ? AppColors.textMuted : AppColors.text,
-                            decoration: done
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
-                          ),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (v) => widget.onTextChanged(index, v),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => widget.onDelete(index),
-                        child: const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 16,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               );
             },
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-            child: TextButton.icon(
-              onPressed: widget.onAdd,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add item'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistToggleButton extends StatelessWidget {
+  const _ChecklistToggleButton({required this.done, required this.onTap});
+
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: done ? const Color(0xFF57C97A) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: done ? const Color(0xFF57C97A) : const Color(0xFF6AD185),
+              width: 1.8,
             ),
           ),
-        ],
+          child: done
+              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _AddItemButton extends StatelessWidget {
+  const _AddItemButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.add_rounded, size: 16),
+      label: Text(
+        'Add item',
+        style: TextStyles.smallMedium.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFFF4EEFF),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+          side: const BorderSide(color: Color(0xFFE2D7FF)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChecklistDeleteButton extends StatelessWidget {
+  const _ChecklistDeleteButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: const SizedBox(
+          width: 24,
+          height: 24,
+          child: Icon(Icons.close_rounded, size: 18, color: Color(0xFF9CA3AF)),
+        ),
       ),
     );
   }

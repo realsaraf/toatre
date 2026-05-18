@@ -71,24 +71,24 @@ class HeroCard extends StatelessWidget {
     final location = _location;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            colors.first.withValues(alpha: 0.10),
-            colors.last.withValues(alpha: 0.05),
+            colors.first.withValues(alpha: 0.09),
+            colors.last.withValues(alpha: 0.04),
             Colors.white.withValues(alpha: 0.86),
           ],
         ),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: colors.last.withValues(alpha: 0.12)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x16000000),
-            blurRadius: 30,
-            offset: Offset(0, 12),
+            blurRadius: 22,
+            offset: Offset(0, 10),
           ),
         ],
       ),
@@ -97,26 +97,24 @@ class HeroCard extends StatelessWidget {
         children: [
           // Icon
           Container(
-            width: 60,
-            height: 60,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(15),
               gradient: LinearGradient(colors: colors),
               boxShadow: [
                 BoxShadow(
                   color: colors.last.withValues(alpha: 0.24),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
-            child: Icon(
-              detailEnrichmentIcon(toat),
-              color: Colors.white,
-              size: 28,
+            child: Center(
+              child: detailEnrichmentGlyph(toat, size: 23, color: Colors.white),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           // Content column
           Expanded(
             child: Column(
@@ -125,17 +123,22 @@ class HeroCard extends StatelessWidget {
                 // Title
                 Text(
                   toat.title,
-                  style: TextStyles.display.copyWith(fontSize: 22, height: 1.2),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyles.display.copyWith(
+                    fontSize: 18,
+                    height: 1.14,
+                  ),
                 ),
                 // Time + action row
                 if (hasTime || actionLabel != null) ...[
-                  const SizedBox(height: 10),
-                  Row(
+                  const SizedBox(height: 9),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (hasTime)
                         _TimeChip(label: _relativeTimeLabel(toat.datetime!)),
-                      if (hasTime && actionLabel != null)
-                        const SizedBox(width: 8),
                       if (actionLabel != null)
                         _ActionButton(
                           icon: _actionIcon,
@@ -192,10 +195,10 @@ class _TimeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.80),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(color: AppColors.softPurple),
       ),
       child: Row(
@@ -203,13 +206,16 @@ class _TimeChip extends StatelessWidget {
         children: [
           const Icon(
             Icons.schedule_rounded,
-            size: 15,
+            size: 14,
             color: AppColors.textSecondary,
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyles.smallMedium.copyWith(color: AppColors.text),
+            style: TextStyles.small.copyWith(
+              color: AppColors.text,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -245,8 +251,8 @@ class _ActionButton extends StatelessWidget {
       return GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 36,
-          height: 36,
+          width: 38,
+          height: 38,
           decoration: decoration,
           child: Center(child: iconWidget),
         ),
@@ -257,7 +263,7 @@ class _ActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: decoration,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -266,7 +272,7 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label!,
-              style: TextStyles.smallMedium.copyWith(
+              style: TextStyles.small.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
               ),

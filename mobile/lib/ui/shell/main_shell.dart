@@ -89,22 +89,22 @@ class _AppTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 8),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 86,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            height: 76,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
               color: const Color(0xFFFCF9F4),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(color: const Color(0xFFE8DFD2)),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x14000000),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
+                  blurRadius: 20,
+                  offset: Offset(0, 6),
                 ),
               ],
             ),
@@ -123,9 +123,9 @@ class _AppTabBar extends StatelessWidget {
                   active: selectedIndex == 1,
                   onTap: onInboxTap,
                 ),
-                const SizedBox(width: 72),
+                const SizedBox(width: 68),
                 _TabItem(
-                  icon: Icons.event_note_rounded,
+                  icon: Icons.calendar_today_outlined,
                   label: 'Bookings',
                   active: selectedIndex == 2,
                   onTap: onBookingsTap,
@@ -140,7 +140,7 @@ class _AppTabBar extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: -14,
+            top: -12,
             left: 0,
             right: 0,
             child: Center(child: _MicButton(onTap: onVoiceTap)),
@@ -179,18 +179,19 @@ class _TabItem extends StatelessWidget {
         children: [
           SizedBox(
             width: 42,
-            height: 36,
-            child: Icon(icon, color: color, size: 21),
+            height: 32,
+            child: Icon(icon, color: color, size: 23),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             label,
             style: TextStyles.tiny.copyWith(
               color: color,
+              fontSize: 10,
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
         ],
       ),
     );
@@ -211,40 +212,23 @@ class _MicButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 72,
-        height: 72,
-        padding: const EdgeInsets.all(5),
+        width: 74,
+        height: 74,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0xFFFCF9F4),
           boxShadow: [
             BoxShadow(
-              color: Color(0x24BE7716),
-              blurRadius: 26,
-              offset: Offset(0, 12),
+              color: Color(0x0FBE7716),
+              blurRadius: 8,
+              offset: Offset(0, 8),
             ),
           ],
         ),
         child: Semantics(
           label: 'Capture a toat',
           button: true,
-          child: const DecoratedBox(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF5B23FF),
-                  Color(0xFF8F35FF),
-                  Color(0xFFFF4B90),
-                  Color(0xFFFF6B4A),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Icon(Icons.mic_rounded, color: Colors.white, size: 32),
-            ),
+          child: ClipOval(
+            child: Image.asset('assets/images/micicon.png', fit: BoxFit.cover),
           ),
         ),
       ),

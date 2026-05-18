@@ -10,7 +10,7 @@ import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toatre_mark.dart';
 import 'package:toatre/widgets/toat_detail/toat_detail_utils.dart'
-    show detailEnrichmentKey, toatSmartIcon;
+    show detailEnrichmentGlyph;
 
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key});
@@ -727,7 +727,6 @@ class _CaptureToatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = toatSmartIcon(detailEnrichmentKey(toat), toat.title);
     return GestureDetector(
       onTap: onToggle,
       child: Container(
@@ -762,7 +761,13 @@ class _CaptureToatCard extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 17, color: AppColors.primary),
+              child: Center(
+                child: detailEnrichmentGlyph(
+                  toat,
+                  size: 17,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

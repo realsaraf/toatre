@@ -22,6 +22,7 @@ class SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgElevated,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE8DFD2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,10 +30,21 @@ class SectionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(title, style: TextStyles.heading3)),
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  style: TextStyles.smallMedium.copyWith(
+                    color: const Color(0xFF6B7280),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
               if (action != null) ...[const SizedBox(width: 12), action!],
             ],
           ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
           const SizedBox(height: 14),
           child,
         ],

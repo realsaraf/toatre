@@ -7,15 +7,23 @@ int _lastConfettiMs = 0;
 /// Fires a confetti burst from the bottom of the screen.
 /// Throttled to one burst per 500 ms globally.
 void showConfetti(BuildContext context) {
+  showConfettiOnOverlay(
+    overlay: Overlay.of(context, rootOverlay: true),
+    size: MediaQuery.sizeOf(context),
+  );
+}
+
+void showConfettiOnOverlay({
+  required OverlayState overlay,
+  required Size size,
+}) {
   final nowMs = DateTime.now().millisecondsSinceEpoch;
   if (nowMs - _lastConfettiMs < 500) return;
   _lastConfettiMs = nowMs;
 
-  final size = MediaQuery.sizeOf(context);
   // Origin near the bottom where the Done button lives.
   final origin = Offset(size.width / 2, size.height * 0.78);
 
-  final overlay = Overlay.of(context, rootOverlay: true);
   late OverlayEntry entry;
   entry = OverlayEntry(
     builder: (_) => Positioned.fill(

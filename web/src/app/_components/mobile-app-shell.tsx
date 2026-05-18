@@ -268,10 +268,10 @@ const shellStyles: Record<string, CSSProperties> = {
   micButton: {
     position: "absolute",
     left: "50%",
-    top: -24,
+    top: -18,
     transform: "translateX(-50%)",
-    width: 80,
-    height: 80,
+    width: 76,
+    height: 76,
     borderRadius: "50%",
     border: "none",
     background: "transparent",
@@ -289,8 +289,9 @@ const shellStyles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #6B34FF 0%, #8D3CFF 42%, #FF5A9A 72%, #FF9A4A 100%)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 10px 22px rgba(190,119,22,0.16)",
+    overflow: "hidden",
+    background: "transparent",
+    boxShadow: "0 8px 16px rgba(190,119,22,0.10)",
   },
 };
 
@@ -371,14 +372,14 @@ export function MobileAppShell({
             onClick={onOpenCapture}
             style={{
               ...shellStyles.micButton,
-              width: resolvedCompact ? 76 : shellStyles.micButton.width,
-              height: resolvedCompact ? 76 : shellStyles.micButton.height,
-              top: resolvedCompact ? -24 : shellStyles.micButton.top,
+              width: resolvedCompact ? 74 : shellStyles.micButton.width,
+              height: resolvedCompact ? 74 : shellStyles.micButton.height,
+              top: resolvedCompact ? -14 : shellStyles.micButton.top,
             }}
           >
             <span aria-hidden style={shellStyles.micOrb}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/micicon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <img src="/micicon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </span>
           </button>
 

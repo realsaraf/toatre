@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Toatre uses the microphone when you capture toats by voice.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Toatre uses your photo library when you choose an image to attach to a toat.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Toatre transcribes your voice on-device for faster, private capture.</string>
 	<key>GIDClientID</key>

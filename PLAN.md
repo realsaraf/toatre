@@ -22,10 +22,65 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-05-18 (Timeline/detail parity cleanup) — completed
+- Finished the latest mobile-web parity cleanup across Timeline and Toat detail: Flutter and web mobile timeline rows now expose a persistent round done control, the clear-state card/mic treatment was tightened again on both surfaces, and the web mobile clear card now uses a broader ribbon graphic instead of the thin stray line treatment.
+- Cleaned up the Flutter checklist detail view so grocery-style lists use lighter web-like rows with softer separators, and removed the duplicate time-only `When & where` card on non-meeting toats when no location is set because the hero card already carries the time.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/ui/shell/main_shell.dart lib/ui/toat/toat_detail_screen.dart lib/widgets/toat_detail/checklist_card.dart` clean across the follow-up slices; `npm run typecheck` plus `npm run build` clean in `web/`; repeated hot reloads on `emulator-5554` confirmed the latest Flutter timeline/detail polish.
+
+### Session 2026-05-18 (Timeline mobile + web correction pass) — completed
+- Tightened the Flutter Timeline header again after the previous pass overshot the sizes: the calendar pill and `toats today` pill are smaller, the text alignment is cleaner, the clear-state hero card is shorter, and the dock mic now uses only a subtle shadow instead of the stronger glow shell.
+- Mirrored the same Timeline header structure in the web mobile Timeline view by moving the calendar control out of `topRight` and into the same header row as the `toats today` pill, then tightened the web mobile pill and clear-card sizing to match the corrected mobile direction.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/ui/shell/main_shell.dart` clean; `npm run typecheck` clean in `web/`; hot reload on `emulator-5554` succeeded and a fresh emulator screenshot confirmed the tightened mobile Timeline surface.
+
+### Session 2026-05-18 (Flutter timeline card + mic tone-down pass) — completed
+- Removed the heavy decorative glow treatment from the Flutter dock mic and simplified it back to a cleaner single-orb button with a subtler shadow, while keeping it positioned close to the dock.
+- Matched the Flutter Timeline header pills back to the web/reference proportions by restoring the calendar pill and `toats today` pill sizing, spacing, and font scale closer to the mobile web source of truth.
+- Reworked the Flutter clear-state hero card toward the approved screenshot with lighter proportions, a larger check medallion, softer card shadowing, and ribbon-style right-edge arcs instead of the earlier sky-heavy treatment.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/ui/shell/main_shell.dart` clean; hot reload on `emulator-5554` succeeded; emulator screenshot confirmed the calmer mic treatment plus the updated clear card and header pill sizing on the timeline screen.
+
+### Session 2026-05-18 (Flutter timeline picker + dock micro polish) — completed
+- Replaced the Flutter timeline's anchored range popover with a phone-native bottom sheet so the range chooser no longer floats awkwardly far from the calendar pill.
+- Reduced the calendar pill and `toats today` pill sizing to tighten the timeline header row without changing the underlying range/count behavior.
+- Lowered the floating capture mic closer to the dock and rebuilt it with a layered radial glow, warmer gradient ring, and deeper shadow so it feels more intentional against the bottom tab bar.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/ui/shell/main_shell.dart` clean; hot reload on `emulator-5554` succeeded; emulator screenshots plus UI dumps confirmed the smaller pills, the slide-up range sheet, and the lowered/glowing dock mic on-device.
+
+### Session 2026-05-18 (Flutter shell + widget parity polish) — completed
+- Aligned the Flutter mobile shell more tightly across Timeline, Inbox, Bookings, and Settings by warming the Inbox and Bookings backgrounds to the same surface tone, adding a solid dark `toatre` wordmark path, and reducing/darkening the page intro titles so tab switches no longer jump between different brand scales.
+- Finished the latest Flutter Timeline follow-up by splitting the header into a brand/avatar row plus a date/count row, matching the outer padding to the other tabs, adding more air after the clear-state card, shrinking the row typography/action pill slightly, and tinting each group label from the first toat's visual theme color.
+- Reworked the iOS WidgetKit small/medium/large families to cap visible toats instead of squeezing in every item, replaced the custom-drawn widget glyph with the official Toatre icon imageset, warmed the palette toward the app shell, and replaced the old footer stats with a `+N more toats` pill when extra items exist.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart` clean; hot reload on `emulator-5554` succeeded and a fresh emulator screenshot plus UI dump confirmed the updated timeline shell/row layout; VS Code diagnostics are clean for `mobile/ios/ToatreWidget/ToatreWidget.swift`, and the widget extension now has `mobile/ios/ToatreWidget/Assets.xcassets/OfficialToatreIcon.imageset`. Full WidgetKit compile/render validation still requires Xcode or Codemagic because this host is Windows.
+
+### Session 2026-05-18 (Flutter timeline row parity follow-up) — completed
+- Aligned the Flutter timeline rail more closely to the web mobile row by centering the time block to the rail dot and extending the vertical rail fade so it no longer dies off too early through the card stack.
+- Removed the extra three-dot overflow/share affordance from Flutter timeline rows because the web mobile timeline row only exposes the primary action pill there.
+- Switched timeline action-pill colors to the shared per-toat visual palette so Directions and other row actions now inherit the same accent/soft color treatment the web mobile row uses.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/widgets/toat_detail/toat_detail_utils.dart` clean; `flutter run -d emulator-5554 --target lib/main.dart` rebuilt and launched on `emulator-5554`; emulator screenshot/UI dump confirmed the overflow button is gone and the updated row layout rendered on-device.
+
+### Session 2026-05-18 (Flutter timeline glyph + range parity polish) — completed
+- Ported the exact web mobile SVG toat glyph set into Flutter and switched timeline, detail, and capture icon tiles over to the shared glyph renderer so mobile icon shapes now match the web source of truth instead of falling back to Material icon approximations.
+- Reworked the Flutter timeline range picker into a compact anchored menu with the web mobile ordering: `Next 7 days`, `Next 30 days`, `Next 3 months`, then the individual day entries.
+- Tightened Flutter timeline row layout toward the web mobile reference by widening the time rail to stop `10:00`-style wrapping, shrinking rail/title/subtitle typography, grouping aggregate ranges by date, and letting row titles wrap instead of truncating with ellipsis.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/widgets/toat_glyph.dart lib/widgets/toat_detail/toat_detail_utils.dart lib/widgets/toat_detail/hero_card.dart lib/ui/capture/capture_screen.dart` clean; `flutter run -d emulator-5554 --target lib/main.dart` rebuilt, installed, and launched on `emulator-5554`; emulator UI dump and screenshot spot-check confirmed the anchored range menu order on the timeline screen.
+
+### Session 2026-05-18 (Flutter settings + detail parity polish) — completed
+- Reworked Flutter Settings toward the web mobile source of truth with lighter grouped menu cards, web-style second-level drill-ins, and expanded booking settings state/persistence for booking page copy, timezone, limits, and visitor-option toggles already supported by the backend.
+- Tightened Flutter Toat detail presentation toward the web mobile reference by slimming the hero/title card, shifting detail section headers to the smaller uppercase treatment, merging non-meeting location/map content into the main `When & where` card, and replacing the native overflow popup with a custom anchored action menu.
+- Aligned Flutter's shared timeline/detail visual resolver with the web mobile `getToatVisual` categories so school, medical, transport, dining, sports, and default task rows no longer collapse into the older purple-heavy fallback on mobile.
+- Validation: `flutter analyze lib/ui/toat/toat_detail_screen.dart lib/widgets/toat_detail/hero_card.dart lib/widgets/toat_detail/section_card.dart lib/widgets/toat_detail/when_where_card.dart lib/ui/settings/settings_screen.dart` clean; `flutter analyze lib/ui/timeline/timeline_screen.dart lib/widgets/toat_detail/toat_detail_utils.dart lib/widgets/toat_detail/hero_card.dart lib/ui/capture/capture_screen.dart lib/ui/toat/toat_detail_screen.dart` clean; `flutter run -d emulator-5554 --target lib/main.dart` rebuilt, installed, and launched to the signed-in flow on Android emulator `emulator-5554`.
+
 ### Session 2026-05-18 (Flutter parity pass: inbox, bookings, settings, detail actions) — completed
 - Expanded the Flutter Inbox, Bookings, and Settings surfaces toward mobile-web parity, including richer filtering and summaries, accepted-booking navigation into the Bookings tab, and extra settings drill-ins for Help, Availability, Booking rules, and Theme.
+- Added a shared Flutter mobile page chrome for the brand/avatar shell and page intro, then aligned the Inbox, Bookings, and Toat detail headers plus empty-state actions more closely to the web mobile treatment.
+- Followed with a micro polish pass on Flutter spacing and chrome: lighter segmented controls on Inbox and Bookings, tighter intro-to-content spacing, centered empty states, and a cleaner Toat detail top bar.
 - Restored missing toat-detail overflow actions on Flutter with reminder, link, and attachment entry points, plus a mobile add-link sheet, attachment picker/upload flow, and MIME-aware multipart uploads.
-- Validation: `flutter analyze lib/services/api_service.dart lib/ui/inbox/inbox_screen.dart lib/ui/bookings/bookings_screen.dart lib/ui/settings/settings_screen.dart lib/ui/shell/main_shell.dart lib/ui/toat/toat_detail_screen.dart` clean.
+- Validation: `flutter analyze lib/services/api_service.dart lib/widgets/mobile_page_chrome.dart lib/widgets/toat_detail/pill.dart lib/ui/inbox/inbox_screen.dart lib/ui/bookings/bookings_screen.dart lib/ui/settings/settings_screen.dart lib/ui/shell/main_shell.dart lib/ui/toat/toat_detail_screen.dart` clean.
+
+### Session 2026-05-18 (Flutter timeline + dock parity micro pass) — completed
+- Removed the extra Flutter-only timeline concepts that did not match the web mobile source of truth, including the `Up next` card and the trailing all-clear card at the bottom of the list.
+- Tightened Flutter timeline row density toward the web mobile layout with slimmer rail geometry, closer date-header alignment, reduced card spacing, and date labels that no longer prepend the star glyph.
+- Shifted the default Flutter timeline task visual away from the warm orange gradient so row icons track the cooler web-mobile palette more closely.
+- Slimmed the Flutter bottom dock, enlarged the tab icons, switched Bookings to a calendar-style icon, and replaced the generic mic glyph with the shared `assets/images/micicon.png` art.
+- Validation: `flutter analyze lib/ui/timeline/timeline_screen.dart lib/ui/shell/main_shell.dart lib/utils/confetti.dart` clean; `flutter run -d emulator-5554 --target lib/main.dart` rebuilt, installed, and launched to the signed-in flow on Android emulator `emulator-5554`.
 
 ### Session 2026-05-18 (invite preview + public share polish) — completed
 - Rebuilt `/invite-preview` to match the approved desktop and mobile mockups with the branded outer shell, sky illustration panel, responsive mobile layout, waitlist email validation, and sign-out returning to `/`.

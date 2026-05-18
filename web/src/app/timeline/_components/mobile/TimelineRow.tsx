@@ -39,34 +39,20 @@ export function TimelineRow({
   const doneRowRef = useRef<HTMLButtonElement>(null);
   const isDone = toat.state === "done";
 
-  const status = isDone
+  const status = action
     ? {
-      label: "Done",
-      color: "#2E9D45",
-      background: "#E8F6E8",
-      border: "1px solid #D2ECD4",
+      label: action.label,
+      color: visual.accent,
+      background: visual.soft,
+      border: "1px solid rgba(255,255,255,0.45)",
     }
-    : action
-      ? {
-        label: action.label,
-        color: visual.accent,
-        background: visual.soft,
-        border: "1px solid rgba(255,255,255,0.45)",
-      }
-      : {
-        label: "Done",
-        color: "#677286",
-        background: "#F0F3F7",
-        border: "1px solid #E3E8F0",
-      };
+    : null;
 
-  const statusIcon = isDone
-    ? "check"
-    : status.label === "Directions"
+  const statusIcon = status?.label === "Directions"
       ? "directions"
-      : status.label === "Join"
+      : status?.label === "Join"
         ? "join"
-        : status.label === "Call"
+        : status?.label === "Call"
           ? "call"
           : null;
 
@@ -159,37 +145,51 @@ export function TimelineRow({
           </div>
 
           <div style={{ ...styles.cardActions, ...(compact ? styles.cardActionsCompact : {}) }}>
+            {status ? (
+              <button
+                type="button"
+                onClick={runAction}
+                style={{
+                  ...styles.statusPill,
+                  ...(compact ? styles.statusPillCompact : {}),
+                  color: status.color,
+                  background: status.background,
+                  border: status.border,
+                }}
+                aria-label={`Open ${action?.label}`}
+              >
+                {statusIcon === "directions" ? (
+                  <>
+                    <DirectionsIcon size={compact ? 12 : 14} /> {status.label}
+                  </>
+                ) : statusIcon === "join" ? (
+                  <>
+                    <VideoIcon size={compact ? 12 : 14} /> {status.label}
+                  </>
+                ) : statusIcon === "call" ? (
+                  <>
+                    <PhoneIcon size={compact ? 12 : 14} /> {status.label}
+                  </>
+                ) : (
+                  status.label
+                )}
+              </button>
+            ) : null}
             <button
               ref={doneRowRef}
               type="button"
-              onClick={action ? runAction : runDone}
-              disabled={isDone || (doneDisabled && !action)}
+              onClick={runDone}
+              disabled={isDone || doneDisabled}
               style={{
-                ...styles.statusPill,
-                ...(compact ? styles.statusPillCompact : {}),
-                color: status.color,
-                background: status.background,
-                border: status.border,
+                ...styles.doneCircleButton,
+                ...(compact ? styles.doneCircleButtonCompact : {}),
+                ...(isDone ? styles.doneCircleButtonDone : {}),
+                opacity: isDone || doneDisabled ? 0.7 : 1,
+                cursor: isDone || doneDisabled ? "default" : "pointer",
               }}
-              aria-label={isDone ? "Toat done" : action ? `Open ${action.label}` : "Mark done"}
+              aria-label={isDone ? "Toat done" : "Mark done"}
             >
-              {statusIcon === "directions" ? (
-                <>
-                  <DirectionsIcon size={compact ? 13 : 15} /> {status.label}
-                </>
-              ) : statusIcon === "join" ? (
-                <>
-                  <VideoIcon size={compact ? 13 : 15} /> {status.label}
-                </>
-              ) : statusIcon === "call" ? (
-                <>
-                  <PhoneIcon size={compact ? 13 : 15} /> {status.label}
-                </>
-              ) : statusIcon === "check" ? (
-                <>✓ {status.label}</>
-              ) : (
-                status.label
-              )}
+              ✓
             </button>
           </div>
         </div>

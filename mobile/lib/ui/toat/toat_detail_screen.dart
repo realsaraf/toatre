@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:toatre/providers/auth_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/toat_summary.dart';
@@ -11,9 +12,11 @@ import 'package:toatre/services/analytics_service.dart';
 import 'package:toatre/services/api_service.dart';
 import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/ui/toat/share_toat_screen.dart';
+import 'package:toatre/ui/settings/settings_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/confetti.dart';
 import 'package:toatre/utils/text_styles.dart';
+import 'package:toatre/widgets/mobile_page_chrome.dart';
 import 'package:toatre/widgets/toat_detail/action_strip_card.dart';
 import 'package:toatre/widgets/toat_detail/attachments_card.dart';
 import 'package:toatre/widgets/toat_detail/checklist_card.dart';
@@ -42,6 +45,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   bool _loading = true;
   String? _error;
   String? _workingAction;
+  final GlobalKey _menuButtonKey = GlobalKey();
 
   // Checklist state (only used when template == 'checklist')
   List<Map<String, dynamic>> _checklistItems = [];
@@ -59,117 +63,51 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(
                 children: [
                   IconCircleButton(
                     icon: Icons.arrow_back_rounded,
                     onTap: () => Navigator.of(context).pop(),
+                    size: 42,
+                    iconSize: 18,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('Toat', style: TextStyles.heading2)),
+                  const Spacer(),
+                  MobileUserAvatarButton(
+                    user: user,
+                    onTap: _openSettings,
+                    size: 46,
+                    showStatusDot: false,
+                  ),
+                  const SizedBox(width: 8),
                   IconCircleButton(
                     icon: Icons.ios_share_rounded,
                     onTap: _shareToat,
+                    size: 42,
+                    iconSize: 18,
                   ),
                   const SizedBox(width: 8),
-                  PopupMenuButton<String>(
-                    enabled: _workingAction == null,
-                    icon: const Icon(Icons.more_horiz_rounded),
-                    color: AppColors.bgElevated,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    onSelected: (value) {
-                      _handleMenuAction(value);
-                    },
-                    itemBuilder: (context) => [
-                      if (_toat.datetime != null)
-                        PopupMenuItem<String>(
-                          value: 'add_reminder',
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.notifications_active_outlined,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Add reminder'),
-                            ],
-                          ),
-                        ),
-                      PopupMenuItem<String>(
-                        value: 'add_location',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.add_location_outlined, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Add location'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'add_notes',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit_note_rounded, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Add notes'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'add_link',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.link_rounded, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Add link'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'add_attachment',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.attach_file_rounded, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Add attachment'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.delete_outline_rounded,
-                              size: 20,
-                              color: Color(0xFFDC2626),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Delete',
-                              style: TextStyle(color: Color(0xFFDC2626)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  IconCircleButton(
+                    key: _menuButtonKey,
+                    icon: Icons.more_horiz_rounded,
+                    onTap: _workingAction == null ? _openActionMenu : () {},
+                    size: 42,
+                    iconSize: 18,
                   ),
                 ],
               ),
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
                 children: [
                   if (_loading) ...[
                     const Padding(
@@ -305,6 +243,111 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         await _delete();
         return;
     }
+  }
+
+  List<_DetailMenuAction> _buildActionMenuItems() {
+    return <_DetailMenuAction>[
+      if (_toat.datetime != null)
+        const _DetailMenuAction(
+          value: 'add_reminder',
+          icon: Icons.notifications_active_outlined,
+          label: 'Add reminder',
+        ),
+      const _DetailMenuAction(
+        value: 'add_location',
+        icon: Icons.add_location_outlined,
+        label: 'Add location',
+      ),
+      const _DetailMenuAction(
+        value: 'add_notes',
+        icon: Icons.edit_note_rounded,
+        label: 'Add notes',
+      ),
+      const _DetailMenuAction(
+        value: 'add_link',
+        icon: Icons.link_rounded,
+        label: 'Add link',
+      ),
+      const _DetailMenuAction(
+        value: 'add_attachment',
+        icon: Icons.attach_file_rounded,
+        label: 'Add attachment',
+      ),
+      const _DetailMenuAction(
+        value: 'delete',
+        icon: Icons.delete_outline_rounded,
+        label: 'Delete',
+        tone: Color(0xFFDC2626),
+      ),
+    ];
+  }
+
+  Future<void> _openActionMenu() async {
+    if (_workingAction != null) {
+      return;
+    }
+
+    final menuContext = _menuButtonKey.currentContext;
+    if (menuContext == null) {
+      return;
+    }
+
+    final buttonBox = menuContext.findRenderObject() as RenderBox?;
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (buttonBox == null || overlayBox == null) {
+      return;
+    }
+
+    final bottomRight = buttonBox.localToGlobal(
+      buttonBox.size.bottomRight(Offset.zero),
+      ancestor: overlayBox,
+    );
+    final menuWidth = 220.0;
+    final left = (bottomRight.dx - menuWidth).clamp(
+      12.0,
+      overlayBox.size.width - menuWidth - 12.0,
+    );
+    final actions = _buildActionMenuItems();
+
+    final selected = await showGeneralDialog<String>(
+      context: context,
+      barrierLabel: 'Toat actions',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.08),
+      transitionDuration: const Duration(milliseconds: 140),
+      pageBuilder: (dialogContext, _, __) {
+        return SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+              Positioned(
+                top: bottomRight.dy + 8,
+                left: left.toDouble(),
+                child: _DetailActionMenuCard(actions: actions),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (dialogContext, animation, _, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: child,
+        );
+      },
+    );
+
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    await _handleMenuAction(selected);
   }
 
   Future<void> _addLink() async {
@@ -946,6 +989,12 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     );
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+  }
+
   Future<void> _runAction(
     String action,
     Future<void> Function() callback,
@@ -984,6 +1033,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     final hasLocation = _toat.location?.isNotEmpty == true;
     final hasNotes = _toat.notes?.trim().isNotEmpty == true;
     final hasChecklist = isChecklist && _checklistItems.isNotEmpty;
+    final showWhenWhereCard = !isMeeting && hasLocation;
 
     return [
       HeroCard(
@@ -1013,21 +1063,20 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         onReschedule: _workingAction == null ? _reschedule : null,
         onDuplicate: _workingAction == null ? _duplicate : null,
       ),
-      const SizedBox(height: 16),
+      if (showWhenWhereCard || isMeeting) const SizedBox(height: 16),
       if (isMeeting) ...[
         MeetingDetailsCard(toat: _toat),
         const SizedBox(height: 16),
-      ] else ...[
+      ] else if (showWhenWhereCard) ...[
         WhenWhereCard(
           toat: _toat,
+          onChangeDuration: _workingAction == null ? _editDuration : null,
           onChangeLocation: _workingAction == null ? _openLocationSearch : null,
           onRemoveLocation: _workingAction == null ? _removeLocation : null,
-          onChangeDuration: _workingAction == null ? _editDuration : null,
-          onChangeReminder: _workingAction == null ? _editReminder : null,
         ),
         const SizedBox(height: 16),
       ],
-      if (hasLocation) ...[
+      if (hasLocation && isMeeting) ...[
         LocationSection(
           location: _toat.location!,
           onChangeLocation: _workingAction == null ? _openLocationSearch : null,
@@ -1293,6 +1342,89 @@ String? _normalizeLinkUrl(String rawValue) {
   }
 
   return parsed.toString();
+}
+
+class _DetailMenuAction {
+  const _DetailMenuAction({
+    required this.value,
+    required this.icon,
+    required this.label,
+    this.tone = const Color(0xFF111827),
+  });
+
+  final String value;
+  final IconData icon;
+  final String label;
+  final Color tone;
+}
+
+class _DetailActionMenuCard extends StatelessWidget {
+  const _DetailActionMenuCard({required this.actions});
+
+  final List<_DetailMenuAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white.withValues(alpha: 0.98),
+              Colors.white.withValues(alpha: 0.88),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.94)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x24313A55),
+              blurRadius: 80,
+              offset: Offset(0, 28),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final action in actions)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).pop(action.value),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(action.icon, size: 20, color: action.tone),
+                        const SizedBox(width: 10),
+                        Text(
+                          action.label,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: action.tone,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AddLinkDraft {

@@ -113,13 +113,13 @@ struct ToatreWidgetProvider: TimelineProvider {
 
 // MARK: - Widget palette (matches the light app/widget mockups)
 
-private let bgColor = Color(red: 0.988, green: 0.985, blue: 1.0)
-private let bgGlowPink = Color(red: 1.0, green: 0.73, blue: 0.82, opacity: 0.18)
-private let bgGlowBlue = Color(red: 0.72, green: 0.84, blue: 1.0, opacity: 0.18)
-private let surfaceColor = Color.white
-private let softSurface = Color(red: 0.972, green: 0.969, blue: 0.995)
-private let strokeColor = Color(red: 0.91, green: 0.89, blue: 0.98)
-private let shadowColor = Color(red: 0.17, green: 0.14, blue: 0.33, opacity: 0.08)
+private let bgColor = Color(red: 0.969, green: 0.945, blue: 0.909)
+private let bgGlowPink = Color(red: 0.95, green: 0.63, blue: 0.76, opacity: 0.12)
+private let bgGlowBlue = Color(red: 0.99, green: 0.76, blue: 0.39, opacity: 0.12)
+private let surfaceColor = Color(red: 0.996, green: 0.984, blue: 0.965)
+private let softSurface = Color(red: 0.973, green: 0.945, blue: 0.910)
+private let strokeColor = Color(red: 0.91, green: 0.87, blue: 0.81)
+private let shadowColor = Color(red: 0.21, green: 0.15, blue: 0.10, opacity: 0.08)
 private let textPrimary = Color(red: 0.08, green: 0.11, blue: 0.23)
 private let textSecondary = Color(red: 0.43, green: 0.46, blue: 0.57)
 private let brandBlue = Color(red: 0.27, green: 0.34, blue: 0.95)
@@ -254,59 +254,12 @@ private struct ToatreGlyph: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [brandBlue, brandPurple, brandPink, brandOrange],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            ZStack {
-                Capsule(style: .continuous)
-                    .fill(Color.white)
-                    .frame(width: size * 0.15, height: size * 0.52)
-                    .offset(x: -size * 0.16, y: -size * 0.18)
-
-                Capsule(style: .continuous)
-                    .fill(Color.white)
-                    .frame(width: size * 0.36, height: size * 0.15)
-                    .offset(x: -size * 0.27, y: -size * 0.03)
-
-                Capsule(style: .continuous)
-                    .fill(Color.white)
-                    .frame(width: size * 0.34, height: size * 0.15)
-                    .offset(x: size * 0.02, y: -size * 0.03)
-
-                Circle()
-                    .stroke(Color.white, style: StrokeStyle(lineWidth: size * 0.15, lineCap: .round))
-                    .frame(width: size * 0.54, height: size * 0.54)
-                    .offset(x: size * 0.14, y: size * 0.13)
-
-                ZStack {
-                    Capsule(style: .continuous)
-                        .fill(Color.white)
-                        .frame(width: size * 0.06, height: size * 0.16)
-                        .offset(x: -size * 0.02, y: -size * 0.01)
-                        .rotationEffect(.degrees(18))
-
-                    Capsule(style: .continuous)
-                        .fill(Color.white)
-                        .frame(width: size * 0.15, height: size * 0.06)
-                        .offset(x: size * 0.04, y: size * 0.05)
-                    
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: size * 0.05, height: size * 0.05)
-                }
-                .frame(width: size * 0.22, height: size * 0.22)
-                .offset(x: size * 0.14, y: size * 0.13)
-            }
-        }
-        .frame(width: size, height: size)
-        .shadow(color: brandPurple.opacity(0.18), radius: 18, x: 0, y: 10)
+        Image("OfficialToatreIcon")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            .shadow(color: brandPurple.opacity(0.16), radius: 14, x: 0, y: 8)
     }
 }
 
@@ -316,18 +269,9 @@ private struct ToatreHeader: View {
     var body: some View {
         HStack(spacing: compact ? 8 : 10) {
             ToatreGlyph(size: compact ? 24 : 28)
-
-            VStack(alignment: .leading, spacing: compact ? 1 : 2) {
-                Text("toatre")
-                    .font(.system(size: compact ? 13 : 14, weight: .bold, design: .rounded))
-                    .foregroundColor(textPrimary)
-
-                if !compact {
-                    Text("timeline")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(textSecondary)
-                }
-            }
+            Text("toatre")
+                .font(.system(size: compact ? 13 : 14, weight: .bold, design: .rounded))
+                .foregroundColor(textPrimary)
         }
     }
 }
@@ -595,17 +539,19 @@ private struct ScheduleRow: View {
     }
 }
 
-private struct FooterStats: View {
-    let total: Int
-    let attention: Int
+private struct MorePill: View {
+    let count: Int
 
     var body: some View {
-        HStack(spacing: 16) {
-            Label("\(total) open", systemImage: "clock")
-            Label("\(attention) focus", systemImage: "exclamationmark.circle")
-        }
-        .font(.system(size: 10, weight: .medium))
-        .foregroundColor(textSecondary)
+        Text("+\(count) more toats")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.72))
+            )
     }
 }
 
@@ -620,52 +566,48 @@ private struct SmallWidgetView: View {
         WidgetShell {
             Group {
                 if let first {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            ToatreHeader(compact: true)
-                            Spacer()
-                            TierPill(tier: first.tier)
-                        }
+                    SurfaceCard(radius: 28) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                ToatreHeader(compact: true)
+                                Spacer()
+                                TierPill(tier: first.tier)
+                            }
 
-                        Text("NEXT UP")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(brandPurple)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(brandPurpleSoft))
+                            HStack(alignment: .top, spacing: 10) {
+                                TimelineMarker(color: kindAccent(first.kind), showTail: false)
+                                    .padding(.top, 2)
 
-                        HStack(alignment: .top, spacing: 10) {
-                            TimelineMarker(color: kindAccent(first.kind), showTail: true)
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text("NEXT UP")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(brandPurple)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().fill(brandPurpleSoft))
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(first.title)
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(textPrimary)
-                                    .lineLimit(2)
+                                    Text(first.title)
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(textPrimary)
+                                        .lineLimit(2)
 
-                                Text(timeSubtitle(for: first))
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(textSecondary)
-                                    .lineLimit(1)
+                                    Text(timeSubtitle(for: first))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(textSecondary)
+                                        .lineLimit(1)
 
-                                HStack(spacing: 6) {
-                                    KindIconTile(toat: first, size: 28)
-                                    if let date = parseISO(first.time) {
-                                        Text(awayLabel(date))
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(kindAccent(first.kind))
-                                    } else {
-                                        Text("Open now")
+                                    HStack(spacing: 6) {
+                                        KindIconTile(toat: first, size: 28)
+                                        Text(parseISO(first.time).map(awayLabel) ?? "Open now")
                                             .font(.system(size: 11, weight: .semibold))
                                             .foregroundColor(kindAccent(first.kind))
                                     }
                                 }
                             }
                         }
-
-                        Spacer(minLength: 0)
+                        .padding(14)
                     }
-                    .padding(14)
+                    .padding(12)
                 } else {
                     VStack {
                         Spacer(minLength: 0)
@@ -685,10 +627,11 @@ private struct MediumWidgetView: View {
 
     private var hero: WidgetToat? { entry.toats.first }
     private var supporting: [WidgetToat] { Array(entry.toats.dropFirst().prefix(1)) }
+    private var remainingCount: Int { max(entry.toats.count - 2, 0) }
 
     var body: some View {
         WidgetShell {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     ToatreHeader(compact: true)
                     Spacer()
@@ -718,6 +661,11 @@ private struct MediumWidgetView: View {
                         }
                     }
 
+                    if remainingCount > 0 {
+                        MorePill(count: remainingCount)
+                            .padding(.leading, 2)
+                    }
+
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 0)
@@ -735,22 +683,18 @@ private struct LargeWidgetView: View {
     let entry: ToatEntry
 
     private var hero: WidgetToat? { entry.toats.first }
-    private var rows: [WidgetToat] { Array(entry.toats.dropFirst().prefix(3)) }
+    private var rows: [WidgetToat] { Array(entry.toats.dropFirst().prefix(2)) }
+    private var remainingCount: Int { max(entry.toats.count - 3, 0) }
 
     var body: some View {
         WidgetShell {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("TODAY")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(brandPurple)
-                        Text("Own your slice of time")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(textSecondary)
-                    }
-                    Spacer()
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
                     ToatreHeader(compact: true)
+                    Spacer()
+                    Text("Own your slice of time")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(textSecondary)
                 }
 
                 if let hero {
@@ -767,11 +711,10 @@ private struct LargeWidgetView: View {
                         }
                     }
 
-                    FooterStats(
-                        total: entry.toats.count,
-                        attention: attentionCount(entry.toats)
-                    )
-                    .padding(.horizontal, 4)
+                    if remainingCount > 0 {
+                        MorePill(count: remainingCount)
+                            .padding(.horizontal, 2)
+                    }
                 } else {
                     Spacer(minLength: 0)
                     EmptyStateView()

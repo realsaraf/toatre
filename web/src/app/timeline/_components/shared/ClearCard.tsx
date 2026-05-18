@@ -25,13 +25,13 @@ export function ClearCard({ isAllDayClear = true, clearAfterText = null, compact
         ) : (
           <>
             <h2 style={{ ...styles.clearHeroTitle, ...(compact ? styles.clearHeroTitleCompact : {}) }}>
-              You&apos;re all clear <br />after <span style={styles.clearHeroTime}>{clearAfterText}</span>
+              You&apos;re all clear after <span style={styles.clearHeroTime}>{clearAfterText}</span>
             </h2>
             <p style={styles.clearHeroSubtitle}>Your evening looks light. Enjoy!</p>
           </>
         )}
       </div>
-      <div style={styles.clearHeroSky} aria-hidden />
+      <div style={{ ...styles.clearHeroSky, ...(compact ? styles.clearHeroSkyCompact : {}) }} aria-hidden />
     </section>
   );
 }

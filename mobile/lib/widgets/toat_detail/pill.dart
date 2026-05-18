@@ -24,24 +24,40 @@ class Pill extends StatelessWidget {
 
 /// A circular icon button used in the top bar.
 class IconCircleButton extends StatelessWidget {
-  const IconCircleButton({super.key, required this.icon, required this.onTap});
+  const IconCircleButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.size = 46,
+    this.iconSize = 20,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+  final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: AppColors.bgElevated,
+          color: const Color(0xFFFCF9F4),
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: const Color(0xFFE9E0D5)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 16,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
-        child: Icon(icon, color: AppColors.text),
+        alignment: Alignment.center,
+        child: Icon(icon, size: iconSize, color: AppColors.text),
       ),
     );
   }
