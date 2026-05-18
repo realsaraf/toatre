@@ -9,9 +9,11 @@ interface ToatreMarkProps {
   width?: number;
   /** CSS class names to add to the outer <svg> element */
   className?: string;
+  /** Render wordmark in dark ink (#080f2d) instead of the brand gradient */
+  dark?: boolean;
 }
 
-export function ToatreMark({ width = 120, className = "" }: ToatreMarkProps) {
+export function ToatreMark({ width = 120, className = "", dark = false }: ToatreMarkProps) {
   // Aspect ratio of the wordmark text (approximate)
   const height = Math.round(width * 0.28);
 
@@ -26,20 +28,22 @@ export function ToatreMark({ width = 120, className = "" }: ToatreMarkProps) {
       role="img"
       className={className}
     >
-      <defs>
-        <linearGradient
-          id="toatre-mark-gradient"
-          x1="0"
-          y1="0"
-          x2="120"
-          y2="0"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#5B3DF5" />
-          <stop offset="55%" stopColor="#E01E85" />
-          <stop offset="100%" stopColor="#F58020" />
-        </linearGradient>
-      </defs>
+      {!dark ? (
+        <defs>
+          <linearGradient
+            id="toatre-mark-gradient"
+            x1="0"
+            y1="0"
+            x2="120"
+            y2="0"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="#5B3DF5" />
+            <stop offset="55%" stopColor="#E01E85" />
+            <stop offset="100%" stopColor="#F58020" />
+          </linearGradient>
+        </defs>
+      ) : null}
 
       {/* "toatre" rendered as a text element with Inter SemiBold */}
       <text
@@ -48,7 +52,7 @@ export function ToatreMark({ width = 120, className = "" }: ToatreMarkProps) {
         fontFamily="Inter, -apple-system, sans-serif"
         fontWeight="700"
         fontSize="28"
-        fill="url(#toatre-mark-gradient)"
+        fill={dark ? "#080f2d" : "url(#toatre-mark-gradient)"}
         letterSpacing="-0.5"
       >
         toatre

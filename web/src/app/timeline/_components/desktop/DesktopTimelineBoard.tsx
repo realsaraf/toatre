@@ -1,35 +1,33 @@
 ﻿"use client";
 
-import { getToatVisual } from "@/components/toat-visual";
-import {
-  type TimelineToat,
-  type MomentGroup,
-  toatTime,
-  toatEndTime,
-  toatLocation,
-  toatPeople,
-  formatRailTime,
-  formatMinutesLabel,
-  getPrimaryAction,
-} from "../../_utils/timeline-helpers";
-import { FilterIcon, KeyboardIcon, ListIcon, MicIcon, SparkleIcon } from "./desktop-icons";
+import Image from "next/image";
+import { type TimelineToat, type MomentGroup } from "../../_utils/timeline-helpers";
+import { TimelineRow } from "../mobile/TimelineRow";
+import { ClearCard } from "../shared/ClearCard";
+import { FilterIcon, KeyboardIcon, ListIcon } from "./desktop-icons";
 
 interface DesktopTimelineBoardProps {
   momentGroups: MomentGroup[];
-  selectedToatId: string | null;
   removingToatId: string | null;
+  finishingToatId: string | null;
   captureModalOpen: boolean;
-  onSelectToat: (id: string) => void;
+  isAllDayClear: boolean;
+  clearAfterText: string | null;
+  onOpenToat: (toat: TimelineToat) => void;
+  onMarkDone: (toat: TimelineToat, anchor?: HTMLElement | null) => void;
   onOpenCapture: () => void;
   onOpenTextCapture: () => void;
 }
 
 export function DesktopTimelineBoard({
   momentGroups,
-  selectedToatId,
   removingToatId,
+  finishingToatId,
   captureModalOpen,
-  onSelectToat,
+  isAllDayClear,
+  clearAfterText,
+  onOpenToat,
+  onMarkDone,
   onOpenCapture,
   onOpenTextCapture,
 }: DesktopTimelineBoardProps) {
@@ -60,88 +58,28 @@ export function DesktopTimelineBoard({
         </div>
       ) : (
         <div className="desktop-timeline-list">
+          <ClearCard isAllDayClear={isAllDayClear} clearAfterText={clearAfterText} />
+
           {momentGroups.map((group) => (
             <div className="desktop-section-block" key={group.key}>
               <div className="desktop-section-head" style={{ color: group.color }}>
                 {group.icon ? <span aria-hidden>{group.icon}</span> : null}
                 {group.title}
               </div>
-              {group.toats.map((toat) => {
-                const visual = getToatVisual(toat.title, toat.enrichments);
-                const when = toatTime(toat);
-                const timeDate = when ? new Date(when) : null;
-                const rail = timeDate ? formatRailTime(timeDate) : { time: "--", period: "" };
-                const duration =
-                  toat.enrichments?.time?.duration ??
-                  (toatEndTime(toat) && when
-                    ? Math.round(
-                        (new Date(toatEndTime(toat)!).getTime() - new Date(when).getTime()) / 60000,
-                      )
-                    : null);
-                const meta = toatLocation(toat) ?? toat.notes ?? "No extra details";
-                const guest =
-                  toatPeople(toat)[0] ?? toat.enrichments?.communication?.contact ?? null;
-                const isSelected = selectedToatId === toat.id;
-                const action = getPrimaryAction(toat);
-
-                return (
-                  <div
+              <div className="desktop-section-rows">
+                {group.toats.map((toat) => (
+                  <TimelineRow
                     key={toat.id}
-                    className={`desktop-timeline-row${removingToatId === toat.id ? " removing" : ""}`}
-                  >
-                    <div className="desktop-rail-column">
-                      <div className="desktop-rail-time">{rail.time}</div>
-                      <div className="desktop-rail-duration">
-                        {duration ? formatMinutesLabel(duration) : ""}
-                      </div>
-                      <span
-                        className={`desktop-rail-dot${isSelected ? " active" : ""}`}
-                        style={{ background: visual.tint }}
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`desktop-toat-card${isSelected ? " active" : ""}`}
-                      onClick={() => onSelectToat(toat.id)}
-                    >
-                      <div className="desktop-toat-icon" style={{ background: visual.gradient }}>
-                        <visual.Icon size={18} color="#FFFFFF" />
-                      </div>
-                      <div className="desktop-toat-copy">
-                        <strong>{toat.title}</strong>
-                        <span>{meta}</span>
-                      </div>
-                      <div className="desktop-toat-tags">
-                        {guest ? (
-                          <span className="desktop-toat-chip accent">Booked by {guest}</span>
-                        ) : null}
-                        {action ? (
-                          <span className="desktop-toat-chip action">
-                            {action.label === "Join" ? "Join meeting" : action.label}
-                          </span>
-                        ) : null}
-                        <span className="desktop-toat-chip plain">{visual.label}</span>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
+                    toat={toat}
+                    removing={removingToatId === toat.id}
+                    doneDisabled={finishingToatId === toat.id}
+                    onOpen={() => onOpenToat(toat)}
+                    onDone={(anchor) => onMarkDone(toat, anchor)}
+                  />
+                ))}
+              </div>
             </div>
           ))}
-
-          <div className="desktop-end-card">
-            <div className="desktop-end-icon">
-              <SparkleIcon size={22} />
-            </div>
-            <div>
-              <h2>You&apos;re all clear after 6:00 PM</h2>
-              <p>Nothing else scheduled for today.</p>
-            </div>
-            <div className="desktop-end-art" aria-hidden>
-              <span />
-            </div>
-          </div>
         </div>
       )}
 
@@ -153,7 +91,7 @@ export function DesktopTimelineBoard({
             onClick={onOpenTextCapture}
             aria-label="Type a toat"
           >
-            <KeyboardIcon size={20} />
+            <KeyboardIcon size={26} />
           </button>
           <button
             type="button"
@@ -161,7 +99,7 @@ export function DesktopTimelineBoard({
             onClick={onOpenCapture}
             aria-label="Speak a toat"
           >
-            <MicIcon size={30} />
+            <Image src="/micicon.png" alt="" width={30} height={30} aria-hidden />
           </button>
         </div>
       ) : null}

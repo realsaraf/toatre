@@ -173,7 +173,7 @@ export const styles: Record<string, React.CSSProperties> = {
     position: "absolute",
     right: -14,
     bottom: -18,
-    width: "44%",
+    width: "min(190px, 44%)",
     height: "82%",
     backgroundImage: "url('/skybg.png')",
     backgroundRepeat: "no-repeat",

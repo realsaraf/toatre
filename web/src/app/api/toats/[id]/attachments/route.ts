@@ -131,7 +131,12 @@ export async function POST(
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
   const key = `attachments/${user.mongoId}/${id}/${attachmentId}.${ext}`;
 
-  await uploadToSpaces(key, buffer, file.type);
+  try {
+    await uploadToSpaces(key, buffer, file.type);
+  } catch (err) {
+    console.error("[attachments] Spaces upload failed:", err);
+    return NextResponse.json({ error: "File storage unavailable" }, { status: 503 });
+  }
 
   const label = await generateLabel(file.name, file.type, buffer);
 
@@ -144,11 +149,16 @@ export async function POST(
     createdAt: new Date(),
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (toats as any).updateOne(
-    { _id: new ObjectId(id) },
-    { $push: { attachments: attachment } }
-  );
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (toats as any).updateOne(
+      { _id: new ObjectId(id) },
+      { $push: { attachments: attachment } }
+    );
+  } catch (err) {
+    console.error("[attachments] DB write failed:", err);
+    return NextResponse.json({ error: "Failed to save attachment" }, { status: 500 });
+  }
 
   return NextResponse.json(
     {

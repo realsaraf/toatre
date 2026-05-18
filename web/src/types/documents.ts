@@ -36,6 +36,9 @@ export interface ToatLink {
   id: string;    // crypto.randomUUID()
   url: string;
   label: string; // user-provided or auto-derived from URL hostname
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
   createdAt: Date;
 }
 
@@ -43,6 +46,9 @@ export interface SerializedLink {
   id: string;
   url: string;
   label: string;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
   createdAt: string; // ISO
 }
 

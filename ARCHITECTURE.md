@@ -16,8 +16,6 @@
 - **Repo:** `github.com/realsaraf/toatre` (will be force-pushed clean,
   replacing the legacy Plotto/Expo codebase)
 - **Local workspace:** `C:\DRIVE\src\Toatre\`
-- **Stage:** Greenfield. Nothing built yet.
-- **Active phase:** Phase 0 — accounts + scaffolding.
 
 ---
 

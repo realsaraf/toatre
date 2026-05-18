@@ -24,12 +24,12 @@ interface BottomTabItem {
   onClick?: () => void;
 }
 
-export function AppBrand() {
+export function AppBrand({ dark = false }: { dark?: boolean } = {}) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon.png" alt="Toatre" style={{ width: "clamp(34px, 9vw, 42px)", height: "clamp(34px, 9vw, 42px)", borderRadius: "clamp(12px, 3.2vw, 14px)", objectFit: "cover" }} />
-      <ToatreMark width={124} />
+      <ToatreMark width={124} dark={dark} />
     </div>
   );
 }

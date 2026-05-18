@@ -36,7 +36,7 @@ export function DesktopAppSidebar({
   return (
     <aside className="desktop-app-sidebar">
       <div className="desktop-app-brand-wrap">
-        <AppBrand />
+        <AppBrand dark />
       </div>
 
       <div className="desktop-sidebar-group">

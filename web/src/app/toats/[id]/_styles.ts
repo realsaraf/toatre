@@ -132,15 +132,18 @@ export const heroStyles = {
     textTransform: "uppercase",
   } as CSSProperties,
   heroTitle: {
-    fontSize: "clamp(40px, 10vw, 60px)",
-    lineHeight: 0.96,
-    letterSpacing: "-0.05em",
+    fontSize: "clamp(24px, 6vw, 36px)",
+    lineHeight: 1.15,
+    letterSpacing: "-0.03em",
     color: "#0F1B4C",
     fontWeight: 800,
     marginBottom: 14,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   } as CSSProperties,
   heroTitleCompact: {
-    fontSize: 25,
+    fontSize: 19,
+    lineHeight: 1.2,
     marginBottom: 7,
   } as CSSProperties,
   heroLocation: {

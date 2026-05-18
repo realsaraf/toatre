@@ -1,9 +1,8 @@
 import type { MutableRefObject } from "react";
-import { BellIcon, ClockIcon, EditIcon, LocationIcon, PhoneGlyph, SparkleIcon } from "@/components/mobile-ui";
-import { ChevronRightIcon } from "@/components/mobile-ui";
+import { BellIcon, ClockIcon, PhoneGlyph, SparkleIcon } from "@/components/mobile-ui";
 import type { ToatDetail, DetailVisual } from "../_types";
 import { formatDate, formatTime, formatShortDate } from "../_utils";
-import { sectionCardStyles, buttonStyles, toggleStyles, notesStyles } from "../_styles";
+import { buttonStyles, toggleStyles, notesStyles } from "../_styles";
 import { SectionCard } from "./SectionCard";
 import { InfoRow } from "./InfoRow";
 import { LocationBlock } from "./LocationBlock";
@@ -48,14 +47,7 @@ export function WhenWhereCard({
 }) {
   return (
     <>
-      <SectionCard
-        title="When & where"
-        action={
-          <button type="button" style={sectionCardStyles.inlineGhost}>
-            <EditIcon size={18} /> Edit
-          </button>
-        }
-      >
+      <SectionCard title="When & where">
         {startDate ? (
           <InfoRow
             icon={<ClockIcon size={22} />}
@@ -68,22 +60,7 @@ export function WhenWhereCard({
             }
           />
         ) : null}
-        {loc ? (
-          <InfoRow
-            icon={<LocationIcon size={22} />}
-            label="Where"
-            title={loc}
-            subtitle={maps ? "Open in Maps" : null}
-            onClick={maps ? () => window.open(maps, "_blank", "noopener,noreferrer") : undefined}
-            trailing={
-              maps ? (
-                <span style={{ color: "#6B7280" }}>
-                  <ChevronRightIcon size={18} />
-                </span>
-              ) : undefined
-            }
-          />
-        ) : null}
+
         {phone ? (
           <InfoRow icon={<PhoneGlyph size={22} />} label="Contact" title={phone} />
         ) : null}

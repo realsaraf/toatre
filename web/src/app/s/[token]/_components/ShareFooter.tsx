@@ -9,26 +9,12 @@ export function ShareFooter() {
         href="https://toatre.com"
         target="_blank"
         rel="noopener noreferrer"
-        style={{ ...s.footerBrand, gap: 8, alignItems: "center" }}
+        style={s.footerBrand}
       >
-        <Image
-          src="/icon.png"
-          alt=""
-          width={32}
-          height={32}
-          style={{ borderRadius: 8, flexShrink: 0 }}
-        />
-        <ToatreMark width={64} />
+        <Image src="/icon.png" alt="" width={20} height={20} style={{ borderRadius: 5 }} />
+        <ToatreMark width={52} />
       </a>
-      <p style={s.footerTagline}>Your mic-first personal timeline.</p>
-      <a
-        href="https://toatre.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={s.footerLink}
-      >
-        Create your own toats →
-      </a>
+      <span style={s.footerTagline}>·  Own your slice of time.</span>
     </footer>
   );
 }

@@ -15,12 +15,18 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-05-16
+**Last updated:** 2026-05-18
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; STT+edit review+email reminders+defaultTier+account deletion+schedule suggest shipped; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-18 (invite preview + public share polish) — completed
+- Rebuilt `/invite-preview` to match the approved desktop and mobile mockups with the branded outer shell, sky illustration panel, responsive mobile layout, waitlist email validation, and sign-out returning to `/`.
+- Polished public shared-toat pages at `/s/[token]` with toat-specific OG/Twitter metadata, a warmer branded background shell, and a simplified CTA row that keeps `Open in Toatre app` beside `Save to calendar` while removing the redundant bottom map action.
+- Tightened shared/detail media surfaces, including portrait-safe share attachment rendering and image thumbnails in the timeline attachment bar with cache-first loading plus authenticated fetch fallback.
+- Validation: `npx tsc --noEmit` and `npm run build` clean in `web/`.
 
 ### Session 2026-05-16 (invite-only web access + admin allowlist) — completed
 - Added invite-only web access control backed by Mongo `approved_users` and `waitlist` collections, with new indexes and a shared access-policy helper.

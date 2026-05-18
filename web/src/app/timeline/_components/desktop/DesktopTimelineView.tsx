@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getToatVisual } from "@/components/toat-visual";
 import {
   type TimelineToat,
   type TimelineRange,
   type MomentGroup,
   type RangeOption,
-  toatTime,
-  toatEndTime,
-  toatLocation,
-  toatPeople,
-  mapHref,
-  getPrimaryAction,
   sortToats,
   dateKey,
   rangeEquals,
@@ -20,13 +13,15 @@ import {
   getPreferredRange,
   buildRangeOptions,
   buildMomentGroups,
+  toatTime,
+  formatTime,
 } from "../../_utils/timeline-helpers";
 import { desktopTimelineCss } from "./desktop.css";
 import { DesktopAppSidebar } from "./DesktopAppSidebar";
 import { DesktopTopbar } from "./DesktopTopbar";
 import { DesktopTimelineBoard } from "./DesktopTimelineBoard";
-import { DesktopDetailPanel } from "./DesktopDetailPanel";
 import { DesktopCaptureModal } from "./DesktopCaptureModal";
+import { DesktopToatPanel } from "./DesktopToatPanel";
 import { DesktopPageIntro } from "@/app/_components/desktop-page-intro";
 
 interface DesktopUserSummary {
@@ -100,35 +95,20 @@ export function DesktopTimelineView({
     [visibleToats, selectedRange, now],
   );
 
-  const selectedToat = visibleToats.find((t) => t.id === selectedToatId) ?? visibleToats[0] ?? null;
+  const { clearAfterText, isAllDayClear } = useMemo(() => {
+    const times = visibleToats
+      .map((toat) => toatTime(toat))
+      .filter((v): v is string => Boolean(v))
+      .map((v) => new Date(v))
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (!times.length) return { clearAfterText: null, isAllDayClear: true };
+    return { clearAfterText: formatTime(times[times.length - 1]), isAllDayClear: false };
+  }, [visibleToats]);
 
   const bookingCount = useMemo(
     () => toats.filter((toat) => Boolean((toat as TimelineToat & { bookingRequestId?: string | null }).bookingRequestId)).length,
     [toats],
   );
-
-  const selectedVisual = selectedToat
-    ? getToatVisual(selectedToat.title, selectedToat.enrichments)
-    : null;
-  const selectedLocation = selectedToat ? toatLocation(selectedToat) : null;
-  const selectedPeople = selectedToat ? toatPeople(selectedToat) : [];
-  const selectedAction = selectedToat ? getPrimaryAction(selectedToat) : null;
-  const selectedActionHref = selectedAction?.href ?? mapHref(selectedLocation) ?? undefined;
-  const selectedStart = selectedToat ? toatTime(selectedToat) : null;
-  const selectedEnd = selectedToat ? toatEndTime(selectedToat) : null;
-  const durationMinutes = (() => {
-    if (!selectedStart || !selectedEnd) {
-      return selectedToat?.enrichments?.time?.duration ?? null;
-    }
-    return Math.max(
-      15,
-      Math.round(
-        (new Date(selectedEnd).getTime() - new Date(selectedStart).getTime()) / 60000,
-      ),
-    );
-  })();
-  const guestLabel =
-    selectedPeople[0] ?? selectedToat?.enrichments?.communication?.contact ?? null;
 
   return (
     <div className="desktop-timeline-page">
@@ -153,50 +133,44 @@ export function DesktopTimelineView({
           onRangeChange={(range) => {
             setHasManualRangeSelection(true);
             setSelectedRange(range);
-            setSelectedToatId(null);
           }}
           onOpenSearch={onOpenSearch}
           onOpenSettings={onOpenSettings}
         />
 
-        <DesktopPageIntro
-          title="Your timeline"
-          subtitle="Everything in chronological order"
-        />
+        <div className={`desktop-content-grid${selectedToatId ? " desktop-content-grid--panel" : ""}`}>
+          <div className="desktop-timeline-column">
+            <DesktopPageIntro
+              title="Your timeline"
+              subtitle="Everything in chronological order"
+            />
 
-        <div className="desktop-content-grid">
-          <DesktopTimelineBoard
-            momentGroups={momentGroups}
-            selectedToatId={selectedToat?.id ?? null}
-            removingToatId={removingToatId}
-            captureModalOpen={captureModalOpen}
-            onSelectToat={setSelectedToatId}
-            onOpenCapture={() => {
-              setCaptureModalMode("voice");
-              setCaptureModalOpen(true);
-            }}
-            onOpenTextCapture={() => {
-              setCaptureModalMode("type");
-              setCaptureModalOpen(true);
-            }}
-          />
+            <DesktopTimelineBoard
+              momentGroups={momentGroups}
+              removingToatId={removingToatId}
+              finishingToatId={finishingToatId}
+              captureModalOpen={captureModalOpen}
+              isAllDayClear={isAllDayClear}
+              clearAfterText={clearAfterText}
+              onOpenToat={(toat) => setSelectedToatId(toat.id)}
+              onMarkDone={onMarkDone}
+              onOpenCapture={() => {
+                setCaptureModalMode("voice");
+                setCaptureModalOpen(true);
+              }}
+              onOpenTextCapture={() => {
+                setCaptureModalMode("type");
+                setCaptureModalOpen(true);
+              }}
+            />
+          </div>
 
-          <DesktopDetailPanel
-            selectedToat={selectedToat}
-            selectedVisual={selectedVisual}
-            selectedStart={selectedStart}
-            durationMinutes={durationMinutes}
-            guestLabel={guestLabel}
-            selectedLocation={selectedLocation}
-            selectedAction={selectedAction}
-            selectedActionHref={selectedActionHref}
-            finishingToatId={finishingToatId}
-            archivingToatId={archivingToatId}
-            onClearSelection={() => setSelectedToatId(null)}
-            onOpenToat={onOpenToat}
-            onMarkDone={onMarkDone}
-            onArchiveToat={onArchiveToat}
-          />
+          {selectedToatId ? (
+            <DesktopToatPanel
+              toatId={selectedToatId}
+              onClose={() => setSelectedToatId(null)}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -210,6 +184,7 @@ export function DesktopTimelineView({
           }}
         />
       ) : null}
+
     </div>
   );
 }

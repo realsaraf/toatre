@@ -101,16 +101,28 @@ export function getChecklistItems(toat: ToatDetail): Array<{ id: string; text: s
   return toat.enrichments?.action?.checklist ?? [];
 }
 
+export function formatReminderOffset(minutes: number): string {
+  if (minutes < 60) return `${minutes} min before`;
+  if (minutes === 60) return "1 hour before";
+  if (minutes < 1440) return `${Math.round(minutes / 60)} hours before`;
+  if (minutes === 1440) return "1 day before";
+  return `${Math.round(minutes / 1440)} days before`;
+}
+
 export function buildReminderLines(toat: ToatDetail): Array<{ title: string; subtitle: string }> {
   const t = toatTime(toat);
   if (!t) return [];
   const start = new Date(t);
   const tenMinutesBefore = new Date(start.getTime() - 10 * 60000);
-  const dayBefore = new Date(start.getTime() - 24 * 60 * 60000);
-  return [
+  const lines: Array<{ title: string; subtitle: string }> = [
     { title: `Leave by ${formatTime(tenMinutesBefore)}`, subtitle: "10 minutes before" },
-    { title: "Day before reminder", subtitle: `${formatShortDate(dayBefore)} at ${formatTime(dayBefore)}` },
   ];
+  const stored = toat.enrichments?.time?.reminderOffset;
+  if (stored && stored !== 10) {
+    const at = new Date(start.getTime() - stored * 60000);
+    lines.push({ title: `Ping at ${formatTime(at)}`, subtitle: formatReminderOffset(stored) });
+  }
+  return lines;
 }
 
 export function qrDigits(id: string): string {

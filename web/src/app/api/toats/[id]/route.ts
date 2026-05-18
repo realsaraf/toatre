@@ -171,6 +171,9 @@ function serializeToat(doc: any) {
         id: l.id,
         url: l.url,
         label: l.label,
+        ogTitle: l.ogTitle ?? null,
+        ogDescription: l.ogDescription ?? null,
+        ogImage: l.ogImage ?? null,
         createdAt: (l.createdAt instanceof Date ? l.createdAt : new Date(l.createdAt)).toISOString(),
       }))
     : [];
