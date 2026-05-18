@@ -963,9 +963,9 @@ REMINDER_FROM_EMAIL=Toatre <hello@toatre.com>
 # Legacy SPACES_* names are still accepted for backward compatibility.
 DO_SPACES_KEY=
 DO_SPACES_SECRET=
-DO_SPACES_REGION=nyc3
-DO_SPACES_BUCKET=toatre-prod
-DO_SPACES_ENDPOINT=https://nyc3.digitaloceanspaces.com
+DO_SPACES_REGION=sfo3
+DO_SPACES_BUCKET=toatre-bucket
+DO_SPACES_ENDPOINT=https://sfo3.digitaloceanspaces.com
 
 # Sentry
 SENTRY_DSN=

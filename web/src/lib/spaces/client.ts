@@ -1,6 +1,6 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
-const DEFAULT_REGION = "nyc3";
+const DEFAULT_REGION = "sfo3";
 
 function readEnv(...keys: string[]): string | undefined {
   for (const key of keys) {

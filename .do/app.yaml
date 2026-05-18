@@ -100,9 +100,9 @@ services:
         scope: RUN_TIME
         type: SECRET
       - key: DO_SPACES_BUCKET
-        value: toatre-prod
+        value: toatre-bucket
       - key: DO_SPACES_REGION
-        value: nyc3
+        value: sfo3
       # ── Sentry ───────────────────────────────────────────────────────────
       - key: SENTRY_DSN
         scope: RUN_TIME
