@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/models/connection.dart';
 import 'package:toatre/models/user_settings.dart';
@@ -14,7 +16,17 @@ import 'package:toatre/ui/auth/login_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
-enum SettingsTab { general, connections, pings, sync, toatlink }
+enum SettingsTab {
+  general,
+  connections,
+  pings,
+  sync,
+  toatlink,
+  availability,
+  bookingRules,
+  theme,
+  help,
+}
 
 enum _NoticeTone { success, error }
 
@@ -160,42 +172,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             icon: Icons.tune_rounded,
                             title: 'General',
                             subtitle: 'Timezone, work hours, defaults',
-                            onTap: () =>
-                                setState(() => _activeSection = SettingsTab.general),
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.general,
+                            ),
                           ),
                           const _MenuDivider(),
                           _SettingsMenuItem(
                             icon: Icons.people_outline_rounded,
                             title: 'Connections',
                             subtitle: 'Manage your people',
-                            onTap: () =>
-                                setState(() => _activeSection = SettingsTab.connections),
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.connections,
+                            ),
                           ),
                           const _MenuDivider(),
                           _SettingsMenuItem(
                             icon: Icons.notifications_outlined,
                             title: 'Pings',
                             subtitle: 'Notification preferences',
-                            onTap: () =>
-                                setState(() => _activeSection = SettingsTab.pings),
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.pings,
+                            ),
                           ),
                           const _MenuDivider(),
                           _SettingsMenuItem(
                             icon: Icons.sync_rounded,
                             title: 'Sync',
                             subtitle: 'Google Calendar, Zoom & more',
-                            onTap: () =>
-                                setState(() => _activeSection = SettingsTab.sync),
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.sync,
+                            ),
                           ),
                           const _MenuDivider(),
                           _SettingsMenuItem(
                             icon: Icons.link_rounded,
-                            title: 'Toat Link',
-                            subtitle: 'Your public booking link',
+                            title: 'Handle / Toat Link',
+                            subtitle: 'Your public booking link and rules',
                             onTap: () {
-                              setState(() => _activeSection = SettingsTab.toatlink);
+                              setState(
+                                () => _activeSection = SettingsTab.toatlink,
+                              );
                               if (!_loadingBooking) _loadBookingSettings();
                             },
+                          ),
+                          const _MenuDivider(),
+                          _SettingsMenuItem(
+                            icon: Icons.calendar_today_rounded,
+                            title: 'Availability',
+                            subtitle: 'Set your available days and times',
+                            onTap: () {
+                              setState(
+                                () => _activeSection = SettingsTab.availability,
+                              );
+                              if (!_loadingBooking) _loadBookingSettings();
+                            },
+                          ),
+                          const _MenuDivider(),
+                          _SettingsMenuItem(
+                            icon: Icons.rule_rounded,
+                            title: 'Booking rules',
+                            subtitle:
+                                'Control slot length, buffers, and notice',
+                            onTap: () {
+                              setState(
+                                () => _activeSection = SettingsTab.bookingRules,
+                              );
+                              if (!_loadingBooking) _loadBookingSettings();
+                            },
+                          ),
+                          const _MenuDivider(),
+                          _SettingsMenuItem(
+                            icon: Icons.palette_outlined,
+                            title: 'Theme',
+                            subtitle: 'Review app appearance',
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.theme,
+                            ),
+                          ),
+                          const _MenuDivider(),
+                          _SettingsMenuItem(
+                            icon: Icons.help_outline_rounded,
+                            title: 'Help & feedback',
+                            subtitle: 'Support, feedback, and contact options',
+                            onTap: () => setState(
+                              () => _activeSection = SettingsTab.help,
+                            ),
                           ),
                         ],
                       ),
@@ -333,13 +394,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               () => _googleCalendarDirection = direction,
                             ),
                             onMicrosoftDirectionChanged: (direction) =>
-                                setState(
-                                  () => _microsoftDirection = direction,
-                                ),
+                                setState(() => _microsoftDirection = direction),
                             onCalendlyDirectionChanged: (direction) =>
-                                setState(
-                                  () => _calendlyDirection = direction,
-                                ),
+                                setState(() => _calendlyDirection = direction),
                             onZoomDirectionChanged: (direction) =>
                                 setState(() => _zoomDirection = direction),
                             onConnectGoogle: () =>
@@ -360,14 +417,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _disconnectCalendly(settingsProvider),
                             onSyncCalendly: () =>
                                 _syncCalendlyNow(settingsProvider),
-                            onConnectZoom: () =>
-                                _connectZoom(settingsProvider),
+                            onConnectZoom: () => _connectZoom(settingsProvider),
                             onDisconnectZoom: () =>
                                 _disconnectZoom(settingsProvider),
                             onSyncZoom: () => _syncZoomNow(settingsProvider),
                           ),
                         if (_activeSection == SettingsTab.toatlink)
                           _ToatLinkTab(
+                            mode: _ToatLinkTabMode.link,
                             handle: payload.profile.handle,
                             enabled: _bookingEnabled,
                             windowDays: _bookingWindowDays,
@@ -396,6 +453,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onMaxDaysChanged: (v) =>
                                 setState(() => _bookingMaxDays = v),
                             onSave: _saveBookingSettings,
+                          ),
+                        if (_activeSection == SettingsTab.availability)
+                          _ToatLinkTab(
+                            mode: _ToatLinkTabMode.availability,
+                            handle: payload.profile.handle,
+                            enabled: _bookingEnabled,
+                            windowDays: _bookingWindowDays,
+                            windowStart: _bookingWindowStart,
+                            windowEnd: _bookingWindowEnd,
+                            slotLength: _bookingSlotLength,
+                            buffer: _bookingBuffer,
+                            advance: _bookingAdvance,
+                            maxDays: _bookingMaxDays,
+                            loading: _loadingBooking,
+                            saving: _savingBooking,
+                            onEnabledChanged: (v) =>
+                                setState(() => _bookingEnabled = v),
+                            onWindowDaysChanged: (v) =>
+                                setState(() => _bookingWindowDays = v),
+                            onWindowStartChanged: (v) =>
+                                setState(() => _bookingWindowStart = v),
+                            onWindowEndChanged: (v) =>
+                                setState(() => _bookingWindowEnd = v),
+                            onSlotLengthChanged: (v) =>
+                                setState(() => _bookingSlotLength = v),
+                            onBufferChanged: (v) =>
+                                setState(() => _bookingBuffer = v),
+                            onAdvanceChanged: (v) =>
+                                setState(() => _bookingAdvance = v),
+                            onMaxDaysChanged: (v) =>
+                                setState(() => _bookingMaxDays = v),
+                            onSave: _saveBookingSettings,
+                          ),
+                        if (_activeSection == SettingsTab.bookingRules)
+                          _ToatLinkTab(
+                            mode: _ToatLinkTabMode.bookingRules,
+                            handle: payload.profile.handle,
+                            enabled: _bookingEnabled,
+                            windowDays: _bookingWindowDays,
+                            windowStart: _bookingWindowStart,
+                            windowEnd: _bookingWindowEnd,
+                            slotLength: _bookingSlotLength,
+                            buffer: _bookingBuffer,
+                            advance: _bookingAdvance,
+                            maxDays: _bookingMaxDays,
+                            loading: _loadingBooking,
+                            saving: _savingBooking,
+                            onEnabledChanged: (v) =>
+                                setState(() => _bookingEnabled = v),
+                            onWindowDaysChanged: (v) =>
+                                setState(() => _bookingWindowDays = v),
+                            onWindowStartChanged: (v) =>
+                                setState(() => _bookingWindowStart = v),
+                            onWindowEndChanged: (v) =>
+                                setState(() => _bookingWindowEnd = v),
+                            onSlotLengthChanged: (v) =>
+                                setState(() => _bookingSlotLength = v),
+                            onBufferChanged: (v) =>
+                                setState(() => _bookingBuffer = v),
+                            onAdvanceChanged: (v) =>
+                                setState(() => _bookingAdvance = v),
+                            onMaxDaysChanged: (v) =>
+                                setState(() => _bookingMaxDays = v),
+                            onSave: _saveBookingSettings,
+                          ),
+                        if (_activeSection == SettingsTab.theme)
+                          const _ThemeTab(),
+                        if (_activeSection == SettingsTab.help)
+                          _HelpTab(
+                            onCopyEmail: _copySupportEmail,
+                            onOpenSupportDraft: _openSupportDraft,
+                            onOpenFeedbackDraft: _openFeedbackDraft,
                           ),
                       ],
                     ],
@@ -782,8 +911,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Pings';
       case SettingsTab.toatlink:
         return 'Toat Link';
+      case SettingsTab.availability:
+        return 'Availability';
+      case SettingsTab.bookingRules:
+        return 'Booking rules';
+      case SettingsTab.theme:
+        return 'Theme';
       case SettingsTab.sync:
         return 'Sync';
+      case SettingsTab.help:
+        return 'Help & feedback';
     }
   }
 
@@ -849,6 +986,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _savingBooking = false);
     }
+  }
+
+  Future<void> _copySupportEmail() async {
+    await Clipboard.setData(const ClipboardData(text: 'help@toatre.com'));
+    if (!mounted) {
+      return;
+    }
+    _showNotice('Support email copied.', _NoticeTone.success);
+  }
+
+  Future<void> _openSupportDraft() async {
+    await _openMailDraft(
+      subject: 'Toatre support',
+      body:
+          'What happened?\n\nWhat were you trying to do?\n\nWhat did you expect instead?',
+    );
+  }
+
+  Future<void> _openFeedbackDraft() async {
+    await _openMailDraft(
+      subject: 'Toatre feedback',
+      body:
+          'What were you trying to do?\n\nWhat felt confusing or slow?\n\nWhat should happen instead?',
+    );
+  }
+
+  Future<void> _openMailDraft({
+    required String subject,
+    required String body,
+  }) async {
+    final launched = await launchUrl(
+      Uri(
+        scheme: 'mailto',
+        path: 'help@toatre.com',
+        queryParameters: <String, String>{'subject': subject, 'body': body},
+      ),
+      mode: LaunchMode.externalApplication,
+    );
+    if (launched || !mounted) {
+      return;
+    }
+    _showNotice('Could not open your mail app.', _NoticeTone.error);
   }
 
   void _editConnection(ToatreConnection connection) {
@@ -996,41 +1175,6 @@ class _HeroCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: active ? AppColors.softPurple : AppColors.bgElevated,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active ? const Color(0x335B3DF5) : AppColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyles.smallMedium.copyWith(
-            color: active ? AppColors.primary : AppColors.textSecondary,
-          ),
-        ),
       ),
     );
   }
@@ -2809,8 +2953,178 @@ class _DangerZoneCard extends StatelessWidget {
   }
 }
 
+class _HelpTab extends StatelessWidget {
+  const _HelpTab({
+    required this.onCopyEmail,
+    required this.onOpenSupportDraft,
+    required this.onOpenFeedbackDraft,
+  });
+
+  final VoidCallback onCopyEmail;
+  final VoidCallback onOpenSupportDraft;
+  final VoidCallback onOpenFeedbackDraft;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      title: 'Get support or send feedback',
+      eyebrow: 'Help & feedback',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Use the support email for bugs, booking issues, access problems, or product feedback.',
+            style: TextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.bgElevated,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('help@toatre.com', style: TextStyles.bodyMedium),
+                const SizedBox(height: 8),
+                Text(
+                  'Share what happened, what you expected, and anything blocking your flow.',
+                  style: TextStyles.small,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onCopyEmail,
+              child: const Text('Copy support email'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onOpenSupportDraft,
+              child: const Text('Open support draft'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onOpenFeedbackDraft,
+              child: const Text('Send feedback'),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text('What we can help with', style: TextStyles.heading3),
+          const SizedBox(height: 10),
+          for (final item in const <String>[
+            'Booking requests not showing up in Inbox',
+            'Shared toats from connections',
+            'Calendar sync and Ping behavior',
+            'Handle, booking page, and account settings',
+          ]) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 5),
+                  child: Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeTab extends StatelessWidget {
+  const _ThemeTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PanelCard(
+      title: 'Review app appearance',
+      eyebrow: 'Theme',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Toatre stays on the dark-off, warm-light appearance used across the current mobile experience.',
+            style: TextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.bgElevated,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.palette_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Current appearance', style: TextStyles.bodyMedium),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Warm light surfaces, soft neutrals, and the current Toatre brand gradient.',
+                        style: TextStyles.small,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _ToatLinkTabMode { link, availability, bookingRules }
+
 class _ToatLinkTab extends StatelessWidget {
   const _ToatLinkTab({
+    required this.mode,
     required this.handle,
     required this.enabled,
     required this.windowDays,
@@ -2833,6 +3147,7 @@ class _ToatLinkTab extends StatelessWidget {
     required this.onSave,
   });
 
+  final _ToatLinkTabMode mode;
   final String? handle;
   final bool enabled;
   final List<int> windowDays;
@@ -2866,6 +3181,30 @@ class _ToatLinkTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showLink = mode == _ToatLinkTabMode.link;
+    final showAvailability =
+        mode == _ToatLinkTabMode.link || mode == _ToatLinkTabMode.availability;
+    final showRules =
+        mode == _ToatLinkTabMode.link || mode == _ToatLinkTabMode.bookingRules;
+    final title = switch (mode) {
+      _ToatLinkTabMode.link => 'Toat Link',
+      _ToatLinkTabMode.availability => 'Availability',
+      _ToatLinkTabMode.bookingRules => 'Booking rules',
+    };
+    final subtitle = switch (mode) {
+      _ToatLinkTabMode.link =>
+        'Let others book time with you. Blocked slots hide your content.',
+      _ToatLinkTabMode.availability =>
+        'Choose which days and hours stay open for booking requests.',
+      _ToatLinkTabMode.bookingRules =>
+        'Control slot length, buffers, minimum notice, and how far ahead people can book.',
+    };
+    final saveLabel = switch (mode) {
+      _ToatLinkTabMode.link => 'Save Toat Link settings',
+      _ToatLinkTabMode.availability => 'Save availability',
+      _ToatLinkTabMode.bookingRules => 'Save booking rules',
+    };
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -2876,13 +3215,10 @@ class _ToatLinkTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Toat Link', style: TextStyles.heading3),
+          Text(title, style: TextStyles.heading3),
           const SizedBox(height: 4),
-          Text(
-            'Let others book time with you. Blocked slots hide your content.',
-            style: TextStyles.small,
-          ),
-          if (handle != null) ...[
+          Text(subtitle, style: TextStyles.small),
+          if (showLink && handle != null) ...[
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2905,134 +3241,141 @@ class _ToatLinkTab extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 18),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Enable Toat Link', style: TextStyles.bodyMedium),
-            subtitle: Text(
-              'Allow others to request meetings',
-              style: TextStyles.small,
+          if (showLink) ...[
+            const SizedBox(height: 18),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Enable Toat Link', style: TextStyles.bodyMedium),
+              subtitle: Text(
+                'Allow others to request meetings',
+                style: TextStyles.small,
+              ),
+              value: enabled,
+              onChanged: onEnabledChanged,
+              activeColor: AppColors.primary,
             ),
-            value: enabled,
-            onChanged: onEnabledChanged,
-            activeColor: AppColors.primary,
-          ),
+          ],
           if (loading) ...[
             const SizedBox(height: 24),
             const Center(child: CircularProgressIndicator()),
-          ] else if (enabled) ...[
-            const SizedBox(height: 18),
-            Text('Available days', style: TextStyles.label),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _days.map((d) {
-                final active = windowDays.contains(d.n);
-                return GestureDetector(
-                  onTap: () {
-                    final updated = List<int>.from(windowDays);
-                    if (active)
-                      updated.remove(d.n);
-                    else
-                      updated
-                        ..add(d.n)
-                        ..sort();
-                    onWindowDaysChanged(updated);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active
-                          ? AppColors.primary.withAlpha(30)
-                          : AppColors.bg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
+          ] else ...[
+            if (showAvailability) ...[
+              const SizedBox(height: 18),
+              Text('Available days', style: TextStyles.label),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _days.map((d) {
+                  final active = windowDays.contains(d.n);
+                  return GestureDetector(
+                    onTap: () {
+                      final updated = List<int>.from(windowDays);
+                      if (active) {
+                        updated.remove(d.n);
+                      } else {
+                        updated
+                          ..add(d.n)
+                          ..sort();
+                      }
+                      onWindowDaysChanged(updated);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
                         color: active
-                            ? AppColors.primary.withAlpha(80)
-                            : AppColors.border,
-                        width: 1.5,
+                            ? AppColors.primary.withAlpha(30)
+                            : AppColors.bg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.primary.withAlpha(80)
+                              : AppColors.border,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        d.label,
+                        style: TextStyles.smallMedium.copyWith(
+                          color: active
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      d.label,
-                      style: TextStyles.smallMedium.copyWith(
-                        color: active
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                      ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimeField(
+                      label: 'Window start',
+                      value: windowStart,
+                      onChanged: onWindowStartChanged,
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _TimeField(
-                    label: 'Window start',
-                    value: windowStart,
-                    onChanged: onWindowStartChanged,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TimeField(
+                      label: 'Window end',
+                      value: windowEnd,
+                      onChanged: onWindowEndChanged,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TimeField(
-                    label: 'Window end',
-                    value: windowEnd,
-                    onChanged: onWindowEndChanged,
+                ],
+              ),
+            ],
+            if (showRules) ...[
+              const SizedBox(height: 18),
+              Text('Slot length', style: TextStyles.label),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _SlotLengthButton(
+                    label: '30 min',
+                    active: slotLength == 30,
+                    onTap: () => onSlotLengthChanged(30),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Text('Slot length', style: TextStyles.label),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _SlotLengthButton(
-                  label: '30 min',
-                  active: slotLength == 30,
-                  onTap: () => onSlotLengthChanged(30),
-                ),
-                const SizedBox(width: 10),
-                _SlotLengthButton(
-                  label: '1 hour',
-                  active: slotLength == 60,
-                  onTap: () => onSlotLengthChanged(60),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _NumberField(
-                    label: 'Buffer (min)',
-                    value: buffer,
-                    onChanged: onBufferChanged,
+                  const SizedBox(width: 10),
+                  _SlotLengthButton(
+                    label: '1 hour',
+                    active: slotLength == 60,
+                    onTap: () => onSlotLengthChanged(60),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _NumberField(
-                    label: 'Min notice (min)',
-                    value: advance,
-                    onChanged: onAdvanceChanged,
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _NumberField(
+                      label: 'Buffer (min)',
+                      value: buffer,
+                      onChanged: onBufferChanged,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _NumberField(
-              label: 'Max days ahead',
-              value: maxDays,
-              onChanged: onMaxDaysChanged,
-            ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _NumberField(
+                      label: 'Min notice (min)',
+                      value: advance,
+                      onChanged: onAdvanceChanged,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _NumberField(
+                label: 'Max days ahead',
+                value: maxDays,
+                onChanged: onMaxDaysChanged,
+              ),
+            ],
           ],
           const SizedBox(height: 22),
           SizedBox(
@@ -3048,7 +3391,7 @@ class _ToatLinkTab extends StatelessWidget {
                 ),
               ),
               child: Text(
-                saving ? 'Saving�' : 'Save Toat Link settings',
+                saving ? 'Saving…' : saveLabel,
                 style: TextStyles.bodyMedium,
               ),
             ),

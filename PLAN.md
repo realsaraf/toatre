@@ -22,6 +22,11 @@
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
+### Session 2026-05-18 (Flutter parity pass: inbox, bookings, settings, detail actions) — completed
+- Expanded the Flutter Inbox, Bookings, and Settings surfaces toward mobile-web parity, including richer filtering and summaries, accepted-booking navigation into the Bookings tab, and extra settings drill-ins for Help, Availability, Booking rules, and Theme.
+- Restored missing toat-detail overflow actions on Flutter with reminder, link, and attachment entry points, plus a mobile add-link sheet, attachment picker/upload flow, and MIME-aware multipart uploads.
+- Validation: `flutter analyze lib/services/api_service.dart lib/ui/inbox/inbox_screen.dart lib/ui/bookings/bookings_screen.dart lib/ui/settings/settings_screen.dart lib/ui/shell/main_shell.dart lib/ui/toat/toat_detail_screen.dart` clean.
+
 ### Session 2026-05-18 (invite preview + public share polish) — completed
 - Rebuilt `/invite-preview` to match the approved desktop and mobile mockups with the branded outer shell, sky illustration panel, responsive mobile layout, waitlist email validation, and sign-out returning to `/`.
 - Polished public shared-toat pages at `/s/[token]` with toat-specific OG/Twitter metadata, a warmer branded background shell, and a simplified CTA row that keeps `Open in Toatre app` beside `Save to calendar` while removing the redundant bottom map action.
@@ -533,7 +538,7 @@ empty TestFlight build is queued.
 - [ ] Empty states per section
 
 ### 3.2 — Mobile detail editor
-- [ ] `mobile/lib/ui/toat_detail/toat_detail_screen.dart`
+- [x] `mobile/lib/ui/toat/toat_detail_screen.dart` (2026-05-18)
 - [ ] Kind picker, tier picker, time picker, people picker
 - [ ] Audit log tab (collapsed by default)
 
@@ -568,8 +573,8 @@ empty TestFlight build is queued.
 - [x] `mobile/lib/services/local_ping_service.dart` — local Ping scheduling with `flutter_local_notifications` and settings-aware gating (2026-05-07)
 - [x] `mobile/lib/services/push_ping_service.dart` — FCM token registration, foreground push presentation, and push tap handoff (2026-05-07)
 - [x] Schedule local pings on toat fetch/update/duplicate/delete sync paths (2026-05-07)
-- [ ] Re-schedule on app foreground
-- [ ] Handle FCM background messages
+- [x] Re-schedule on app foreground (2026-05-11)
+- [x] Handle FCM background messages (2026-05-11)
 - [x] Tap → deep-link to toat detail (local + push) (2026-05-07)
 
 ### 4.3 — DO scheduled job
@@ -600,7 +605,7 @@ empty TestFlight build is queued.
 ## 6. Phase 6 — Settings + Privacy
 
 - [ ] Settings screen (mobile + web): timezone, work schedule, voice retention, default tier, language
-- [ ] Account deletion (truly deletes everything — see `ARCHITECTURE.md §16`)
+- [x] Account deletion (truly deletes everything — see `ARCHITECTURE.md §16`) (2026-05-12)
 - [ ] Data export (JSON download)
 - [ ] Privacy policy + ToS pages (carry over Plotto-era text, update sub-processor list)
 - [ ] Cookie banner (web)

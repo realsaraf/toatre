@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'package:toatre/config/app_config.dart';
 
@@ -98,6 +99,7 @@ class ApiService {
     required String fileField,
     required String filePath,
     Map<String, String> fields = const <String, String>{},
+    String? contentType,
     bool authenticated = false,
   }) async {
     final headers = await _headers(authenticated: authenticated);
@@ -109,6 +111,7 @@ class ApiService {
         fileField,
         filePath,
         filename: File(filePath).uri.pathSegments.last,
+        contentType: contentType == null ? null : MediaType.parse(contentType),
       ),
     );
 

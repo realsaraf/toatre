@@ -32,9 +32,9 @@ class _MainShellState extends State<MainShell> {
     final capture = context.read<CaptureProvider>();
     capture.reset();
     capture.setMode(CaptureInputMode.voice);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const CaptureScreen()));
     if (!mounted) return;
     await context.read<ToatsProvider>().fetchToats();
   }
@@ -48,7 +48,7 @@ class _MainShellState extends State<MainShell> {
         index: _tab,
         children: [
           TimelineScreen(onSwitchToSettings: () => _switchTab(3)),
-          const InboxScreen(asTab: true),
+          InboxScreen(asTab: true, onOpenBookingsTab: () => _switchTab(2)),
           const BookingsScreen(asTab: true),
           const SettingsScreen(asTab: true),
         ],
@@ -143,9 +143,7 @@ class _AppTabBar extends StatelessWidget {
             top: -14,
             left: 0,
             right: 0,
-            child: Center(
-              child: _MicButton(onTap: onVoiceTap),
-            ),
+            child: Center(child: _MicButton(onTap: onVoiceTap)),
           ),
         ],
       ),

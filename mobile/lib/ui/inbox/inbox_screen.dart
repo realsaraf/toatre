@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:toatre/config/app_config.dart';
 import 'package:toatre/services/api_service.dart';
+import 'package:toatre/ui/bookings/bookings_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
@@ -34,6 +35,9 @@ class _SharedToat {
     required this.createdAt,
     required this.sender,
     required this.title,
+    this.timeLabel,
+    this.location,
+    this.relationship,
   });
 
   final String id;
@@ -42,9 +46,13 @@ class _SharedToat {
   final DateTime createdAt;
   final _SharedSender sender;
   final String title;
+  final String? timeLabel;
+  final String? location;
+  final String? relationship;
 
   factory _SharedToat.fromJson(Map<String, dynamic> json) {
     final toat = json['toat'] as Map<String, dynamic>? ?? {};
+    final recipient = json['recipient'] as Map<String, dynamic>? ?? {};
     return _SharedToat(
       id: json['id'] as String? ?? '',
       token: json['token'] as String? ?? '',
@@ -56,6 +64,9 @@ class _SharedToat {
         json['sender'] as Map<String, dynamic>? ?? {},
       ),
       title: toat['title'] as String? ?? 'Shared toat',
+      timeLabel: _shareTimeLabelFromToatJson(toat),
+      location: _shareLocationFromToatJson(toat),
+      relationship: recipient['relationship'] as String?,
     );
   }
 }
@@ -63,6 +74,7 @@ class _SharedToat {
 class _BookingRequest {
   const _BookingRequest({
     required this.id,
+    required this.toatId,
     required this.title,
     required this.name,
     required this.email,
@@ -77,6 +89,7 @@ class _BookingRequest {
   });
 
   final String id;
+  final String? toatId;
   final String title;
   final String name;
   final String email;
@@ -93,6 +106,7 @@ class _BookingRequest {
     Map<String, dynamic> json,
   ) => _BookingRequest(
     id: json['id'] as String? ?? '',
+    toatId: json['toatId'] as String?,
     title: json['title'] as String? ?? '',
     name: json['name'] as String? ?? '',
     email: json['email'] as String? ?? '',
@@ -114,21 +128,23 @@ class _BookingRequest {
 // Screen
 // ──────────────────────────────────────────────────────────────────────────────
 
-enum _InboxTab { requests, shared }
+enum _InboxFilter { all, requests, shared }
 
 class InboxScreen extends StatefulWidget {
-  const InboxScreen({super.key, this.asTab = false});
+  const InboxScreen({super.key, this.asTab = false, this.onOpenBookingsTab});
 
   final bool asTab;
+  final VoidCallback? onOpenBookingsTab;
 
   @override
   State<InboxScreen> createState() => _InboxScreenState();
 }
 
 class _InboxScreenState extends State<InboxScreen> {
-  _InboxTab _tab = _InboxTab.requests;
+  _InboxFilter _filter = _InboxFilter.all;
   List<_SharedToat> _sharedToats = [];
   List<_BookingRequest> _bookingRequests = [];
+  int _acceptedBookingsCount = 0;
   bool _loading = true;
   String? _error;
   String? _actioningId;
@@ -145,12 +161,25 @@ class _InboxScreenState extends State<InboxScreen> {
       _error = null;
     });
     try {
-      final data = await ApiService.instance.getJson(
-        '/api/inbox',
-        authenticated: true,
-      );
+      final responses = await Future.wait<Map<String, dynamic>>([
+        ApiService.instance.getJson('/api/inbox', authenticated: true),
+        ApiService.instance.getJson(
+          '/api/booking/requests',
+          authenticated: true,
+          queryParameters: const <String, String>{
+            'state': 'accepted',
+            'range': 'all',
+          },
+        ),
+      ]);
+      final data = responses[0];
+      final bookings = responses[1];
       final rawShared = data['sharedToats'] as List<dynamic>? ?? [];
       final rawBookings = data['bookingRequests'] as List<dynamic>? ?? [];
+      final acceptedRequests = bookings['requests'] as List<dynamic>? ?? [];
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _sharedToats = rawShared
             .cast<Map<String, dynamic>>()
@@ -163,14 +192,32 @@ class _InboxScreenState extends State<InboxScreen> {
                 .where((r) => r.state == 'pending')
                 .toList()
               ..sort((a, b) => a.slotStart.compareTo(b.slotStart));
+        _acceptedBookingsCount = acceptedRequests.length;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = 'Could not load inbox. Pull to refresh.';
         _loading = false;
       });
     }
+  }
+
+  Future<void> _openBookings() async {
+    if (widget.asTab) {
+      widget.onOpenBookingsTab?.call();
+      return;
+    }
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const BookingsScreen()));
+    if (!mounted) {
+      return;
+    }
+    await _fetch();
   }
 
   Future<void> _actOnBooking(String id, String state) async {
@@ -200,6 +247,20 @@ class _InboxScreenState extends State<InboxScreen> {
     final requestBadge = _bookingRequests
         .where((r) => r.state == 'pending')
         .length;
+    final totalCount = requestBadge + _sharedToats.length;
+    final visibleRequests = _filter == _InboxFilter.shared
+        ? const <_BookingRequest>[]
+        : _bookingRequests;
+    final visibleShared = _filter == _InboxFilter.requests
+        ? const <_SharedToat>[]
+        : _sharedToats;
+    final showAcceptedShortcut =
+        _filter == _InboxFilter.all && _acceptedBookingsCount > 0;
+    final hasVisibleContent =
+        visibleRequests.isNotEmpty ||
+        visibleShared.isNotEmpty ||
+        showAcceptedShortcut;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -220,16 +281,50 @@ class _InboxScreenState extends State<InboxScreen> {
                     ),
                     const SizedBox(width: 12),
                   ],
-                  Expanded(child: Text('Inbox', style: TextStyles.heading2)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Inbox', style: TextStyles.heading2),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Requests and shared toats',
+                          style: TextStyles.small.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (totalCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0x144F46E5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$totalCount',
+                        style: TextStyles.smallMedium.copyWith(
+                          color: const Color(0xFF4F46E5),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
               // Segmented tab
               _SegmentedTab(
-                tab: _tab,
+                filter: _filter,
                 requestCount: requestBadge,
                 sharedCount: _sharedToats.length,
-                onTab: (t) => setState(() => _tab = t),
+                acceptedCount: _acceptedBookingsCount,
+                onFilter: (filter) => setState(() => _filter = filter),
+                onOpenAccepted: _openBookings,
               ),
               const SizedBox(height: 20),
               if (_loading)
@@ -239,22 +334,43 @@ class _InboxScreenState extends State<InboxScreen> {
                 )
               else if (_error != null)
                 _InlineMessage(message: _error!)
-              else if (_tab == _InboxTab.requests)
-                _RequestsList(
-                  requests: _bookingRequests,
-                  actioningId: _actioningId,
-                  onAct: _actOnBooking,
+              else if (!hasVisibleContent)
+                _EmptyCard(
+                  icon: Icons.inbox_outlined,
+                  title: showAcceptedShortcut
+                      ? 'Nothing waiting here.'
+                      : 'Inbox is clear.',
+                  subtitle: _acceptedBookingsCount > 0
+                      ? 'Accepted bookings have moved into Bookings. New booking requests and shared toats will appear here.'
+                      : 'Booking requests from your handle page and toats shared by your connections will appear here.',
                 )
-              else
-                _SharedList(
-                  sharedToats: _sharedToats,
-                  onOpen: (token) => unawaited(
-                    launchUrl(
-                      AppConfig.apiUri('/s/$token'),
-                      mode: LaunchMode.externalApplication,
+              else ...[
+                if (visibleShared.isNotEmpty)
+                  _SharedList(
+                    sharedToats: visibleShared,
+                    onOpen: (token) => unawaited(
+                      launchUrl(
+                        AppConfig.apiUri('/s/$token'),
+                        mode: LaunchMode.externalApplication,
+                      ),
                     ),
                   ),
-                ),
+                if (visibleShared.isNotEmpty && visibleRequests.isNotEmpty)
+                  const SizedBox(height: 16),
+                if (visibleRequests.isNotEmpty)
+                  _RequestsList(
+                    requests: visibleRequests,
+                    actioningId: _actioningId,
+                    onAct: _actOnBooking,
+                  ),
+                if (showAcceptedShortcut) ...[
+                  const SizedBox(height: 16),
+                  _AcceptedBookingsCard(
+                    count: _acceptedBookingsCount,
+                    onTap: _openBookings,
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -269,21 +385,25 @@ class _InboxScreenState extends State<InboxScreen> {
 
 class _SegmentedTab extends StatelessWidget {
   const _SegmentedTab({
-    required this.tab,
+    required this.filter,
     required this.requestCount,
     required this.sharedCount,
-    required this.onTab,
+    required this.acceptedCount,
+    required this.onFilter,
+    required this.onOpenAccepted,
   });
 
-  final _InboxTab tab;
+  final _InboxFilter filter;
   final int requestCount;
   final int sharedCount;
-  final ValueChanged<_InboxTab> onTab;
+  final int acceptedCount;
+  final ValueChanged<_InboxFilter> onFilter;
+  final VoidCallback onOpenAccepted;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
+      height: 50,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: const Color(0xFFF0EAE0),
@@ -292,16 +412,28 @@ class _SegmentedTab extends StatelessWidget {
       child: Row(
         children: [
           _Segment(
+            label: 'All',
+            badge: requestCount + sharedCount,
+            active: filter == _InboxFilter.all,
+            onTap: () => onFilter(_InboxFilter.all),
+          ),
+          _Segment(
             label: 'Requests',
             badge: requestCount,
-            active: tab == _InboxTab.requests,
-            onTap: () => onTab(_InboxTab.requests),
+            active: filter == _InboxFilter.requests,
+            onTap: () => onFilter(_InboxFilter.requests),
           ),
           _Segment(
             label: 'Shared',
             badge: sharedCount,
-            active: tab == _InboxTab.shared,
-            onTap: () => onTab(_InboxTab.shared),
+            active: filter == _InboxFilter.shared,
+            onTap: () => onFilter(_InboxFilter.shared),
+          ),
+          _Segment(
+            label: 'Accepted',
+            badge: acceptedCount,
+            active: false,
+            onTap: onOpenAccepted,
           ),
         ],
       ),
@@ -370,7 +502,7 @@ class _Segment extends StatelessWidget {
                     '$badge',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -733,96 +865,156 @@ class _SharedToatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onOpen,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
-          ),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE8DFD2)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFEFBF6), Color(0xFFF8F1E8)],
         ),
-        child: Row(
-          children: [
-            // Avatar
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF818CF8), Color(0xFFF59E0B)],
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8DFD2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF818CF8), Color(0xFFF59E0B)],
+                  ),
                 ),
+                alignment: Alignment.center,
+                child: share.sender.photoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          share.sender.photoUrl!,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _avatarInitial(share.sender.name),
+                        ),
+                      )
+                    : _avatarInitial(share.sender.name),
               ),
-              alignment: Alignment.center,
-              child: share.sender.photoUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        share.sender.photoUrl!,
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _avatarInitial(share.sender.name),
-                      ),
-                    )
-                  : _avatarInitial(share.sender.name),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          share.sender.name,
-                          style: TextStyles.smallMedium.copyWith(
-                            color: const Color(0xFF37302A),
-                            fontWeight: FontWeight.w700,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            share.sender.name,
+                            style: TextStyles.smallMedium.copyWith(
+                              color: const Color(0xFF37302A),
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        _timeAgo(share.createdAt),
-                        style: TextStyles.tiny.copyWith(
-                          color: const Color(0xFF9C9289),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0x144F46E5),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Shared toat',
+                            style: TextStyles.tiny.copyWith(
+                              color: const Color(0xFF4F46E5),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    share.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyles.body.copyWith(
-                      color: const Color(0xFF171C27),
-                      fontWeight: FontWeight.w600,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      share.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyles.body.copyWith(
+                        color: const Color(0xFF171C27),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      share.relationship != null &&
+                              share.relationship!.isNotEmpty
+                          ? '${_firstName(share.sender.name)} shared this toat with you as ${share.relationship}.'
+                          : '${_firstName(share.sender.name)} shared this toat with you.',
+                      style: TextStyles.small.copyWith(
+                        color: const Color(0xFF6A6159),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB9A99A)),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              if (share.timeLabel != null && share.timeLabel!.isNotEmpty)
+                _MetaPill(
+                  icon: Icons.calendar_today_rounded,
+                  label: share.timeLabel!,
+                ),
+              if (share.location != null && share.location!.isNotEmpty)
+                _MetaPill(
+                  icon: Icons.location_on_outlined,
+                  label: share.location!,
+                ),
+              _MetaPill(
+                icon: Icons.lock_open_rounded,
+                label: share.role == 'edit' ? 'Can edit' : 'Can view',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                _timeAgo(share.createdAt),
+                style: TextStyles.tiny.copyWith(color: const Color(0xFF9C9289)),
+              ),
+              const Spacer(),
+              _ActionButton(
+                label: 'Open',
+                color: const Color(0xFF4F46E5),
+                bgColor: Colors.white,
+                borderColor: const Color(0x804F46E5),
+                onTap: onOpen,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -843,6 +1035,135 @@ class _SharedToatCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
+  }
+
+  String _firstName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return 'Someone';
+    }
+    return trimmed.split(RegExp(r'\s+')).first;
+  }
+}
+
+class _AcceptedBookingsCard extends StatelessWidget {
+  const _AcceptedBookingsCard({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.bgElevated,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0x1A22C55E),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.event_available_rounded,
+                  color: Color(0xFF15803D),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Accepted bookings',
+                      style: TextStyles.bodyMedium.copyWith(
+                        color: const Color(0xFF171C27),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$count booking${count == 1 ? '' : 's'} moved into Bookings.',
+                      style: TextStyles.small.copyWith(
+                        color: const Color(0xFF6A6159),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x1A22C55E),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Accepted',
+                  style: TextStyles.tiny.copyWith(
+                    color: const Color(0xFF15803D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: _ActionButton(
+              label: 'Open Bookings',
+              color: const Color(0xFF4F46E5),
+              bgColor: Colors.white,
+              borderColor: const Color(0x804F46E5),
+              onTap: onTap,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x0C4F46E5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF6A6159)),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyles.tiny.copyWith(color: const Color(0xFF6A6159)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -942,4 +1263,53 @@ class _IconCircleButton extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _shareTimeLabelFromToatJson(Map<String, dynamic> toat) {
+  final enrichments = toat['enrichments'] as Map<String, dynamic>? ?? const {};
+  final time = enrichments['time'] as Map<String, dynamic>? ?? const {};
+  final value =
+      time['at'] as String? ??
+      time['startAt'] as String? ??
+      time['dueAt'] as String?;
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) {
+    return null;
+  }
+
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final hour = parsed.hour == 0
+      ? 12
+      : parsed.hour > 12
+      ? parsed.hour - 12
+      : parsed.hour;
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  final period = parsed.hour >= 12 ? 'PM' : 'AM';
+  return '${months[parsed.month - 1]} ${parsed.day} · $hour:$minute $period';
+}
+
+String? _shareLocationFromToatJson(Map<String, dynamic> toat) {
+  final enrichments = toat['enrichments'] as Map<String, dynamic>? ?? const {};
+  final place = enrichments['place'] as Map<String, dynamic>? ?? const {};
+  final event = enrichments['event'] as Map<String, dynamic>? ?? const {};
+  return place['address'] as String? ??
+      place['placeName'] as String? ??
+      event['venueName'] as String? ??
+      event['address'] as String?;
 }

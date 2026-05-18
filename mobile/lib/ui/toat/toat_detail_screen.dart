@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -79,22 +80,30 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                   ),
                   const SizedBox(width: 8),
                   PopupMenuButton<String>(
+                    enabled: _workingAction == null,
                     icon: const Icon(Icons.more_horiz_rounded),
                     color: AppColors.bgElevated,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     onSelected: (value) {
-                      switch (value) {
-                        case 'add_location':
-                          _openLocationSearch();
-                        case 'add_notes':
-                          _editNotes();
-                        case 'delete':
-                          _delete();
-                      }
+                      _handleMenuAction(value);
                     },
                     itemBuilder: (context) => [
+                      if (_toat.datetime != null)
+                        PopupMenuItem<String>(
+                          value: 'add_reminder',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.notifications_active_outlined,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Add reminder'),
+                            ],
+                          ),
+                        ),
                       PopupMenuItem<String>(
                         value: 'add_location',
                         child: Row(
@@ -115,6 +124,27 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                           ],
                         ),
                       ),
+                      PopupMenuItem<String>(
+                        value: 'add_link',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.link_rounded, size: 20),
+                            const SizedBox(width: 12),
+                            const Text('Add link'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'add_attachment',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.attach_file_rounded, size: 20),
+                            const SizedBox(width: 12),
+                            const Text('Add attachment'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
                       PopupMenuItem<String>(
                         value: 'delete',
                         child: Row(
@@ -252,6 +282,151 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     }
 
     await _runAction('notes', () => _saveNotes(nextNotes));
+  }
+
+  Future<void> _handleMenuAction(String value) async {
+    switch (value) {
+      case 'add_reminder':
+        await _editReminder();
+        return;
+      case 'add_location':
+        _openLocationSearch();
+        return;
+      case 'add_notes':
+        await _editNotes();
+        return;
+      case 'add_link':
+        await _addLink();
+        return;
+      case 'add_attachment':
+        await _addAttachment();
+        return;
+      case 'delete':
+        await _delete();
+        return;
+    }
+  }
+
+  Future<void> _addLink() async {
+    final draft = await showModalBottomSheet<_AddLinkDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _AddLinkSheet(),
+    );
+
+    if (draft == null || !mounted) {
+      return;
+    }
+
+    await _runAction('link', () async {
+      final response = await ApiService.instance.postJson(
+        '/api/toats/${_toat.id}/links',
+        body: <String, Object?>{
+          'url': draft.url,
+          if (draft.label.isNotEmpty) 'label': draft.label,
+        },
+        authenticated: true,
+      );
+
+      final rawLink = response['link'];
+      if (rawLink is! Map) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Link saved, but the response was incomplete.',
+        );
+      }
+
+      final nextLink = ToatLink.fromJson(Map<String, dynamic>.from(rawLink));
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _toat = _toat.copyWith(
+          links: <ToatLink>[..._toat.links, nextLink],
+          updatedAt: nextLink.createdAt ?? DateTime.now(),
+        );
+      });
+      _showMessage('Link added.');
+    });
+  }
+
+  Future<void> _addAttachment() async {
+    final result = await FilePicker.pickFiles(
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: _attachmentMimeTypes.keys.toList(),
+      dialogTitle: 'Add attachment',
+    );
+
+    if (result == null || result.files.isEmpty || !mounted) {
+      return;
+    }
+
+    final file = result.files.single;
+    final filePath = file.path;
+    final mimeType = _attachmentMimeType(file);
+
+    if (filePath == null || filePath.isEmpty) {
+      _showMessage('Could not access that file. Try another attachment.');
+      return;
+    }
+
+    if (mimeType == null) {
+      _showMessage('Only images and PDF files are supported.');
+      return;
+    }
+
+    await _runAction('attachment', () async {
+      final response = await ApiService.instance.postMultipart(
+        '/api/toats/${_toat.id}/attachments',
+        fileField: 'file',
+        filePath: filePath,
+        contentType: mimeType,
+        authenticated: true,
+      );
+
+      final rawAttachment = response['attachment'];
+      if (rawAttachment is! Map) {
+        throw const ApiServiceException(
+          statusCode: 500,
+          message: 'Attachment uploaded, but the response was incomplete.',
+        );
+      }
+
+      final nextAttachment = ToatAttachment.fromJson(
+        Map<String, dynamic>.from(rawAttachment),
+      );
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _toat = _toat.copyWith(
+          attachments: <ToatAttachment>[..._toat.attachments, nextAttachment],
+          updatedAt: nextAttachment.createdAt ?? DateTime.now(),
+        );
+      });
+      _showMessage('Attachment added.');
+    });
+  }
+
+  String? _attachmentMimeType(PlatformFile file) {
+    final extension = (file.extension ?? _extensionFromName(file.name))
+        ?.toLowerCase();
+    if (extension == null || extension.isEmpty) {
+      return null;
+    }
+    return _attachmentMimeTypes[extension];
+  }
+
+  String? _extensionFromName(String value) {
+    final dotIndex = value.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == value.length - 1) {
+      return null;
+    }
+    return value.substring(dotIndex + 1);
   }
 
   Future<void> _saveChecklist(List<Map<String, dynamic>> items) async {
@@ -1083,6 +1258,242 @@ class _TipCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+const Map<String, String> _attachmentMimeTypes = <String, String>{
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'webp': 'image/webp',
+  'gif': 'image/gif',
+  'pdf': 'application/pdf',
+};
+
+String? _normalizeLinkUrl(String rawValue) {
+  final trimmed = rawValue.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  final withScheme =
+      RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)
+      ? trimmed
+      : 'https://$trimmed';
+  final parsed = Uri.tryParse(withScheme);
+  if (parsed == null || parsed.host.isEmpty) {
+    return null;
+  }
+
+  final scheme = parsed.scheme.toLowerCase();
+  if (scheme != 'http' && scheme != 'https') {
+    return null;
+  }
+
+  return parsed.toString();
+}
+
+class _AddLinkDraft {
+  const _AddLinkDraft({required this.url, required this.label});
+
+  final String url;
+  final String label;
+}
+
+class _AddLinkSheet extends StatefulWidget {
+  const _AddLinkSheet();
+
+  @override
+  State<_AddLinkSheet> createState() => _AddLinkSheetState();
+}
+
+class _AddLinkSheetState extends State<_AddLinkSheet> {
+  late final TextEditingController _urlController;
+  late final TextEditingController _labelController;
+
+  String? get _normalizedUrl => _normalizeLinkUrl(_urlController.text);
+
+  @override
+  void initState() {
+    super.initState();
+    _urlController = TextEditingController();
+    _labelController = TextEditingController();
+    _urlController.addListener(_handleChanged);
+    _labelController.addListener(_handleChanged);
+  }
+
+  @override
+  void dispose() {
+    _urlController
+      ..removeListener(_handleChanged)
+      ..dispose();
+    _labelController
+      ..removeListener(_handleChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _submit() {
+    final normalizedUrl = _normalizedUrl;
+    if (normalizedUrl == null) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _AddLinkDraft(url: normalizedUrl, label: _labelController.text.trim()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final canSave = _normalizedUrl != null;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33111827),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Add link', style: TextStyles.heading2),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Attach tickets, docs, maps, articles, or any other useful URL.',
+                            style: TextStyles.small.copyWith(
+                              color: AppColors.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _urlController,
+                  autofocus: true,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.none,
+                  decoration: InputDecoration(
+                    labelText: 'URL',
+                    hintText: 'https://example.com',
+                    errorText: _urlController.text.trim().isEmpty || canSave
+                        ? null
+                        : 'Enter a valid http or https link.',
+                    filled: true,
+                    fillColor: const Color(0xFFF8F7FB),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    if (canSave) {
+                      _submit();
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _labelController,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 80,
+                  decoration: InputDecoration(
+                    labelText: 'Label (optional)',
+                    hintText: 'Tickets, Docs, Booking page',
+                    counterText: '',
+                    filled: true,
+                    fillColor: const Color(0xFFF8F7FB),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    if (canSave) {
+                      _submit();
+                    }
+                  },
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color: AppColors.textMuted.withValues(alpha: 0.22),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: canSave ? _submit : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: AppColors.textMuted
+                              .withValues(alpha: 0.18),
+                          disabledForegroundColor: AppColors.textSecondary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: const Text('Save link'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
