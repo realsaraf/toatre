@@ -1,3 +1,92 @@
+class ToatAttachment {
+  const ToatAttachment({
+    required this.id,
+    required this.label,
+    required this.mimeType,
+    required this.size,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String label;
+  final String mimeType;
+  final int size;
+  final DateTime? createdAt;
+
+  bool get isImage => mimeType.startsWith('image/');
+
+  factory ToatAttachment.fromJson(Map<String, dynamic> json) => ToatAttachment(
+    id: json['id'] as String? ?? '',
+    label: json['label'] as String? ?? 'Attachment',
+    mimeType: json['mimeType'] as String? ?? 'application/octet-stream',
+    size: json['size'] as int? ?? 0,
+    createdAt: ToatSummary._parseDate(json['createdAt']),
+  );
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'label': label,
+      'mimeType': mimeType,
+      'size': size,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
+}
+
+class ToatLink {
+  const ToatLink({
+    required this.id,
+    required this.url,
+    required this.label,
+    required this.createdAt,
+    this.ogTitle,
+    this.ogDescription,
+    this.ogImage,
+  });
+
+  final String id;
+  final String url;
+  final String label;
+  final String? ogTitle;
+  final String? ogDescription;
+  final String? ogImage;
+  final DateTime? createdAt;
+
+  String? get hostLabel {
+    final parsed = Uri.tryParse(url);
+    if (parsed == null || parsed.host.isEmpty) return null;
+    return parsed.host.replaceFirst(RegExp(r'^www\.'), '');
+  }
+
+  bool get hasOpenGraph =>
+      (ogTitle?.isNotEmpty ?? false) ||
+      (ogDescription?.isNotEmpty ?? false) ||
+      (ogImage?.isNotEmpty ?? false);
+
+  factory ToatLink.fromJson(Map<String, dynamic> json) => ToatLink(
+    id: json['id'] as String? ?? '',
+    url: json['url'] as String? ?? '',
+    label: json['label'] as String? ?? '',
+    ogTitle: json['ogTitle'] as String?,
+    ogDescription: json['ogDescription'] as String?,
+    ogImage: json['ogImage'] as String?,
+    createdAt: ToatSummary._parseDate(json['createdAt']),
+  );
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'url': url,
+      'label': label,
+      'ogTitle': ogTitle,
+      'ogDescription': ogDescription,
+      'ogImage': ogImage,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
+}
+
 class ToatSummary {
   const ToatSummary({
     required this.id,
@@ -9,6 +98,8 @@ class ToatSummary {
     required this.captureId,
     required this.createdAt,
     required this.updatedAt,
+    this.attachments = const <ToatAttachment>[],
+    this.links = const <ToatLink>[],
     this.source,
     this.bookingRequestId,
     this.attachmentCount = 0,
@@ -32,6 +123,8 @@ class ToatSummary {
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<ToatAttachment> attachments;
+  final List<ToatLink> links;
   final String? source;
   final String? bookingRequestId;
 
@@ -111,6 +204,15 @@ class ToatSummary {
 
   factory ToatSummary.fromJson(Map<String, dynamic> json) {
     final enrichmentsJson = json['enrichments'];
+    final attachmentList =
+        (json['attachments'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map<String, dynamic>>()
+            .map(ToatAttachment.fromJson)
+            .toList();
+    final linkList = (json['links'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map<String, dynamic>>()
+        .map(ToatLink.fromJson)
+        .toList();
 
     return ToatSummary(
       id: json['id'] as String? ?? '',
@@ -124,10 +226,12 @@ class ToatSummary {
       captureId: json['captureId'] as String?,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
+      attachments: attachmentList,
+      links: linkList,
       source: json['source'] as String?,
       bookingRequestId: json['bookingRequestId'] as String?,
-      attachmentCount: (json['attachments'] as List?)?.length ?? 0,
-      linkCount: (json['links'] as List?)?.length ?? 0,
+      attachmentCount: attachmentList.length,
+      linkCount: linkList.length,
     );
   }
 
@@ -143,11 +247,16 @@ class ToatSummary {
     bool clearCaptureId = false,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<ToatAttachment>? attachments,
+    List<ToatLink>? links,
     String? source,
     String? bookingRequestId,
     int? attachmentCount,
     int? linkCount,
   }) {
+    final nextAttachments = attachments ?? this.attachments;
+    final nextLinks = links ?? this.links;
+
     return ToatSummary(
       id: id ?? this.id,
       tier: tier ?? this.tier,
@@ -158,10 +267,12 @@ class ToatSummary {
       captureId: clearCaptureId ? null : captureId ?? this.captureId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      attachments: nextAttachments,
+      links: nextLinks,
       source: source ?? this.source,
       bookingRequestId: bookingRequestId ?? this.bookingRequestId,
-      attachmentCount: attachmentCount ?? this.attachmentCount,
-      linkCount: linkCount ?? this.linkCount,
+      attachmentCount: attachmentCount ?? nextAttachments.length,
+      linkCount: linkCount ?? nextLinks.length,
     );
   }
 
@@ -176,6 +287,10 @@ class ToatSummary {
       'captureId': captureId,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'attachments': attachments
+          .map((attachment) => attachment.toJson())
+          .toList(),
+      'links': links.map((link) => link.toJson()).toList(),
       'source': source,
       'bookingRequestId': bookingRequestId,
     };

@@ -13,6 +13,7 @@ enum AuthStatus {
   unknown,
   unauthenticated,
   authenticating,
+  blocked,
   needsHandle,
   authenticated,
   error,
@@ -155,9 +156,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       final profile = await _authService.fetchProfile();
       _handle = profile.handle;
-      _status = profile.hasHandle
+      _status = profile.isBlocked
+          ? AuthStatus.blocked
+          : profile.hasHandle
           ? AuthStatus.authenticated
           : AuthStatus.needsHandle;
+      _errorMessage = null;
       await AnalyticsService.identifyUser(
         uid: user.uid,
         email: user.email,

@@ -116,6 +116,10 @@ class ApiService {
     return _decodeMap(response);
   }
 
+  Future<Map<String, String>> authenticatedHeaders() {
+    return _headers(authenticated: true);
+  }
+
   Future<Map<String, String>> _headers({required bool authenticated}) async {
     final headers = <String, String>{'Accept': 'application/json'};
 

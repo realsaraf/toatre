@@ -46,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _routeForStatus(auth.status);
     }
 
-    final showApple = Theme.of(context).platform == TargetPlatform.iOS;
+    final isBlocked = auth.status == AuthStatus.blocked;
+    final showApple =
+        Theme.of(context).platform == TargetPlatform.iOS && !isBlocked;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -82,7 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Center(child: ToatreMark(fontSize: 48)),
                     const SizedBox(height: 12),
                     Text(
-                      'Hey. Sign in and start turning what\'s on your mind into toats.',
+                      isBlocked
+                          ? 'This account is still in invite-only preview. Shared toats and waitlist updates stay on the web for now.'
+                          : 'Hey. Sign in and start turning what\'s on your mind into toats.',
                       textAlign: TextAlign.center,
                       style: TextStyles.body.copyWith(
                         color: AppColors.textSecondary,
@@ -90,13 +94,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    _SignInButton(
-                      label: auth.isBusy
-                          ? 'Connecting to Google…'
-                          : 'Continue with Google',
-                      icon: Icons.g_mobiledata_rounded,
-                      onTap: auth.isBusy ? null : auth.signInWithGoogle,
-                    ),
+                    if (isBlocked)
+                      _SignInButton(
+                        label: 'Sign out',
+                        icon: Icons.logout_rounded,
+                        onTap: auth.signOut,
+                      )
+                    else ...[
+                      _SignInButton(
+                        label: auth.isBusy
+                            ? 'Connecting to Google…'
+                            : 'Continue with Google',
+                        icon: Icons.g_mobiledata_rounded,
+                        onTap: auth.isBusy ? null : auth.signInWithGoogle,
+                      ),
+                    ],
                     if (showApple) ...[
                       const SizedBox(height: 12),
                       _SignInButton(
@@ -107,19 +119,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: auth.isBusy ? null : auth.signInWithApple,
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _SignInButton(
-                      label: 'Email magic link is next',
-                      icon: Icons.mail_outline_rounded,
-                      onTap: null,
-                    ),
+                    if (!isBlocked) ...[
+                      const SizedBox(height: 12),
+                      _SignInButton(
+                        label: 'Email magic link is next',
+                        icon: Icons.mail_outline_rounded,
+                        onTap: null,
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Text(
-                      'Your voice is private. Audio is not stored by default.',
+                      isBlocked
+                          ? 'Open shared links in the browser while mobile parity catches up.'
+                          : 'Your voice is private. Audio is not stored by default.',
                       textAlign: TextAlign.center,
                       style: TextStyles.small,
                     ),
-                    if (auth.errorMessage != null) ...[
+                    if (!isBlocked && auth.errorMessage != null) ...[
                       const SizedBox(height: 18),
                       Container(
                         padding: const EdgeInsets.symmetric(

@@ -3,7 +3,9 @@
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:toatre/config/app_config.dart';
 import 'package:toatre/config/theme_config.dart';
 import 'package:toatre/providers/auth_provider.dart';
 import 'package:toatre/providers/toats_provider.dart';
@@ -18,7 +20,6 @@ import 'package:toatre/providers/schedule_provider.dart';
 import 'package:toatre/services/local_ping_service.dart';
 import 'package:toatre/services/push_ping_service.dart';
 import 'package:toatre/ui/splash/splash_screen.dart';
-import 'package:toatre/ui/toat/shared_toat_screen.dart';
 import 'package:toatre/ui/toat/toat_detail_screen.dart';
 
 class ToatreApp extends StatefulWidget {
@@ -78,16 +79,18 @@ class _ToatreAppState extends State<ToatreApp> {
 
   void _showPendingSharedToat() {
     final token = _pendingSharedToken;
-    final navigator = _navigatorKey.currentState;
 
-    if (token == null || navigator == null) {
+    if (token == null) {
       return;
     }
 
     _pendingSharedToken = null;
     _lastHandledSharedToken = token;
-    navigator.push(
-      MaterialPageRoute<void>(builder: (_) => SharedToatScreen(token: token)),
+    unawaited(
+      launchUrl(
+        AppConfig.apiUri('/s/$token'),
+        mode: LaunchMode.externalApplication,
+      ),
     );
   }
 

@@ -62,6 +62,9 @@ class _SplashScreenState extends State<SplashScreen>
         if (!mounted) return;
         dest = const MainShell();
         break;
+      case AuthStatus.blocked:
+        dest = const LoginScreen();
+        break;
       case AuthStatus.needsHandle:
         dest = const HandleScreen();
         break;

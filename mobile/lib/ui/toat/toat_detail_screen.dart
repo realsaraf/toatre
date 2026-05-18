@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,8 +14,10 @@ import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/confetti.dart';
 import 'package:toatre/utils/text_styles.dart';
 import 'package:toatre/widgets/toat_detail/action_strip_card.dart';
+import 'package:toatre/widgets/toat_detail/attachments_card.dart';
 import 'package:toatre/widgets/toat_detail/checklist_card.dart';
 import 'package:toatre/widgets/toat_detail/hero_card.dart';
+import 'package:toatre/widgets/toat_detail/links_card.dart';
 import 'package:toatre/widgets/toat_detail/location_search_content.dart';
 import 'package:toatre/widgets/toat_detail/location_section.dart';
 import 'package:toatre/widgets/toat_detail/meeting_details_card.dart';
@@ -42,29 +42,19 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
   String? _error;
   String? _workingAction;
 
-  // Notes editing state
-  late TextEditingController _notesCtrl;
-  Timer? _notesSaveTimer;
-
   // Checklist state (only used when template == 'checklist')
   List<Map<String, dynamic>> _checklistItems = [];
   bool _savingChecklist = false;
-  bool _showNotesField = false;
 
   @override
   void initState() {
     super.initState();
     _toat = widget.initialToat;
-    _notesCtrl = TextEditingController(text: _toat.notes ?? '');
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   @override
-  void dispose() {
-    _notesCtrl.dispose();
-    _notesSaveTimer?.cancel();
-    super.dispose();
-  }
+  void dispose() => super.dispose();
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +89,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
                         case 'add_location':
                           _openLocationSearch();
                         case 'add_notes':
-                          setState(() => _showNotesField = true);
+                          _editNotes();
                         case 'delete':
                           _delete();
                       }
@@ -217,7 +207,6 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       setState(() {
         _toat = toat;
         _checklistItems = items;
-        _notesCtrl.text = toat.notes ?? '';
       });
     } catch (error) {
       if (!mounted) {
@@ -235,17 +224,34 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
     }
   }
 
-  Future<void> _saveNotes() async {
-    final notes = _notesCtrl.text.trim();
-    try {
-      final updated = await context.read<ToatsProvider>().updateToat(
-        _toat.id,
-        <String, Object?>{'notes': notes},
-      );
-      if (mounted) setState(() => _toat = updated);
-    } catch (_) {
-      // best-effort save — don't block the user
+  Future<void> _saveNotes(String notes) async {
+    final trimmedNotes = notes.trim();
+    final updated = await context.read<ToatsProvider>().updateToat(
+      _toat.id,
+      <String, Object?>{'notes': trimmedNotes.isEmpty ? null : trimmedNotes},
+    );
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      _toat = updated;
+    });
+    _showMessage('Saved.');
+  }
+
+  Future<void> _editNotes() async {
+    final nextNotes = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => NotesEditorSheet(initialValue: _toat.notes ?? ''),
+    );
+
+    if (nextNotes == null || !mounted) {
+      return;
+    }
+
+    await _runAction('notes', () => _saveNotes(nextNotes));
   }
 
   Future<void> _saveChecklist(List<Map<String, dynamic>> items) async {
@@ -801,7 +807,7 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
         true;
     final isChecklist = _toat.actionEnrichment?['type'] == 'checklist';
     final hasLocation = _toat.location?.isNotEmpty == true;
-    final hasNotes = (_toat.notes?.isNotEmpty == true) || _showNotesField;
+    final hasNotes = _toat.notes?.trim().isNotEmpty == true;
     final hasChecklist = isChecklist && _checklistItems.isNotEmpty;
 
     return [
@@ -905,12 +911,17 @@ class _ToatDetailScreenState extends State<ToatDetailScreen> {
       ],
       if (hasNotes) ...[
         NotesCard(
-          controller: _notesCtrl,
-          onChanged: (_) {
-            _notesSaveTimer?.cancel();
-            _notesSaveTimer = Timer(const Duration(seconds: 2), _saveNotes);
-          },
+          notes: _toat.notes,
+          onEdit: _workingAction == null ? _editNotes : () {},
         ),
+        const SizedBox(height: 16),
+      ],
+      if (_toat.links.isNotEmpty) ...[
+        LinksCard(links: _toat.links),
+        const SizedBox(height: 16),
+      ],
+      if (_toat.attachments.isNotEmpty) ...[
+        AttachmentsCard(toatId: _toat.id, attachments: _toat.attachments),
         const SizedBox(height: 16),
       ],
       // Reminders — only when there is a datetime

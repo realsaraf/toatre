@@ -25,6 +25,7 @@ class UserProfile {
     required this.handle,
     required this.displayName,
     required this.photoUrl,
+    required this.accessLevel,
   });
 
   final String uid;
@@ -32,8 +33,10 @@ class UserProfile {
   final String? handle;
   final String? displayName;
   final String? photoUrl;
+  final String accessLevel;
 
   bool get hasHandle => (handle ?? '').isNotEmpty;
+  bool get isBlocked => accessLevel == 'blocked';
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
     uid: json['uid'] as String,
@@ -41,6 +44,7 @@ class UserProfile {
     handle: json['handle'] as String?,
     displayName: json['displayName'] as String?,
     photoUrl: json['photoUrl'] as String?,
+    accessLevel: json['accessLevel'] as String? ?? 'approved',
   );
 }
 

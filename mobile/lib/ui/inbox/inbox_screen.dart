@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'dart:async';
 
-import 'package:toatre/providers/auth_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:toatre/config/app_config.dart';
 import 'package:toatre/services/api_service.dart';
-import 'package:toatre/ui/toat/shared_toat_screen.dart';
 import 'package:toatre/utils/app_colors.dart';
 import 'package:toatre/utils/text_styles.dart';
 
@@ -12,21 +13,17 @@ import 'package:toatre/utils/text_styles.dart';
 // ──────────────────────────────────────────────────────────────────────────────
 
 class _SharedSender {
-  const _SharedSender({
-    required this.name,
-    this.handle,
-    this.photoUrl,
-  });
+  const _SharedSender({required this.name, this.handle, this.photoUrl});
 
   final String name;
   final String? handle;
   final String? photoUrl;
 
   factory _SharedSender.fromJson(Map<String, dynamic> json) => _SharedSender(
-        name: (json['name'] as String?) ?? 'Someone',
-        handle: json['handle'] as String?,
-        photoUrl: json['photoUrl'] as String?,
-      );
+    name: (json['name'] as String?) ?? 'Someone',
+    handle: json['handle'] as String?,
+    photoUrl: json['photoUrl'] as String?,
+  );
 }
 
 class _SharedToat {
@@ -52,7 +49,9 @@ class _SharedToat {
       id: json['id'] as String? ?? '',
       token: json['token'] as String? ?? '',
       role: json['role'] as String? ?? 'viewer',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
       sender: _SharedSender.fromJson(
         json['sender'] as Map<String, dynamic>? ?? {},
       ),
@@ -90,20 +89,25 @@ class _BookingRequest {
   final String? location;
   final DateTime createdAt;
 
-  factory _BookingRequest.fromJson(Map<String, dynamic> json) => _BookingRequest(
-        id: json['id'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        phone: json['phone'] as String?,
-        bookerHandle: json['bookerHandle'] as String?,
-        message: json['message'] as String?,
-        slotStart: DateTime.tryParse(json['slotStart'] as String? ?? '') ?? DateTime.now(),
-        slotEnd: DateTime.tryParse(json['slotEnd'] as String? ?? '') ?? DateTime.now(),
-        state: json['state'] as String? ?? 'pending',
-        location: json['location'] as String?,
-        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      );
+  factory _BookingRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => _BookingRequest(
+    id: json['id'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    phone: json['phone'] as String?,
+    bookerHandle: json['bookerHandle'] as String?,
+    message: json['message'] as String?,
+    slotStart:
+        DateTime.tryParse(json['slotStart'] as String? ?? '') ?? DateTime.now(),
+    slotEnd:
+        DateTime.tryParse(json['slotEnd'] as String? ?? '') ?? DateTime.now(),
+    state: json['state'] as String? ?? 'pending',
+    location: json['location'] as String?,
+    createdAt:
+        DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -152,12 +156,13 @@ class _InboxScreenState extends State<InboxScreen> {
             .cast<Map<String, dynamic>>()
             .map(_SharedToat.fromJson)
             .toList();
-        _bookingRequests = rawBookings
-            .cast<Map<String, dynamic>>()
-            .map(_BookingRequest.fromJson)
-            .where((r) => r.state == 'pending')
-            .toList()
-          ..sort((a, b) => a.slotStart.compareTo(b.slotStart));
+        _bookingRequests =
+            rawBookings
+                .cast<Map<String, dynamic>>()
+                .map(_BookingRequest.fromJson)
+                .where((r) => r.state == 'pending')
+                .toList()
+              ..sort((a, b) => a.slotStart.compareTo(b.slotStart));
         _loading = false;
       });
     } catch (e) {
@@ -192,7 +197,9 @@ class _InboxScreenState extends State<InboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final requestBadge = _bookingRequests.where((r) => r.state == 'pending').length;
+    final requestBadge = _bookingRequests
+        .where((r) => r.state == 'pending')
+        .length;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -206,7 +213,7 @@ class _InboxScreenState extends State<InboxScreen> {
               // Header
               Row(
                 children: [
-                  if (!widget.asTab) ...[  
+                  if (!widget.asTab) ...[
                     _IconCircleButton(
                       icon: Icons.arrow_back_rounded,
                       onTap: () => Navigator.of(context).pop(),
@@ -241,9 +248,10 @@ class _InboxScreenState extends State<InboxScreen> {
               else
                 _SharedList(
                   sharedToats: _sharedToats,
-                  onOpen: (token) => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SharedToatScreen(token: token),
+                  onOpen: (token) => unawaited(
+                    launchUrl(
+                      AppConfig.apiUri('/s/$token'),
+                      mode: LaunchMode.externalApplication,
                     ),
                   ),
                 ),
@@ -341,14 +349,19 @@ class _Segment extends StatelessWidget {
               Text(
                 label,
                 style: TextStyles.smallMedium.copyWith(
-                  color: active ? const Color(0xFF171C27) : const Color(0xFF6A6159),
+                  color: active
+                      ? const Color(0xFF171C27)
+                      : const Color(0xFF6A6159),
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               if (badge > 0) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF4F46E5),
                     borderRadius: BorderRadius.circular(999),
@@ -459,9 +472,7 @@ class _BookingRequestCard extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  request.name.isNotEmpty
-                      ? request.name[0].toUpperCase()
-                      : '?',
+                  request.name.isNotEmpty ? request.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -514,7 +525,9 @@ class _BookingRequestCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   _formatSlot(request.slotStart, request.slotEnd),
-                  style: TextStyles.small.copyWith(color: const Color(0xFF6A6159)),
+                  style: TextStyles.small.copyWith(
+                    color: const Color(0xFF6A6159),
+                  ),
                 ),
               ),
             ],
@@ -532,7 +545,9 @@ class _BookingRequestCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     request.location!,
-                    style: TextStyles.small.copyWith(color: const Color(0xFF6A6159)),
+                    style: TextStyles.small.copyWith(
+                      color: const Color(0xFF6A6159),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -608,14 +623,32 @@ class _BookingRequestCard extends StatelessWidget {
   }
 
   String _formatSlot(DateTime start, DateTime end) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final date = '${months[start.month - 1]} ${start.day}';
-    String _t(DateTime d) {
-      final h = d.hour == 0 ? 12 : d.hour > 12 ? d.hour - 12 : d.hour;
+    String formatTime(DateTime d) {
+      final h = d.hour == 0
+          ? 12
+          : d.hour > 12
+          ? d.hour - 12
+          : d.hour;
       final m = d.minute.toString().padLeft(2, '0');
       return '$h:$m ${d.hour >= 12 ? "PM" : "AM"}';
     }
-    return '$date · ${_t(start)} – ${_t(end)}';
+
+    return '$date · ${formatTime(start)} – ${formatTime(end)}';
   }
 }
 
@@ -663,10 +696,7 @@ class _ActionButton extends StatelessWidget {
 // ──────────────────────────────────────────────────────────────────────────────
 
 class _SharedList extends StatelessWidget {
-  const _SharedList({
-    required this.sharedToats,
-    required this.onOpen,
-  });
+  const _SharedList({required this.sharedToats, required this.onOpen});
 
   final List<_SharedToat> sharedToats;
   final ValueChanged<String> onOpen;
@@ -790,10 +820,7 @@ class _SharedToatCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Color(0xFFB9A99A),
-            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB9A99A)),
           ],
         ),
       ),
@@ -916,4 +943,3 @@ class _IconCircleButton extends StatelessWidget {
     );
   }
 }
-
