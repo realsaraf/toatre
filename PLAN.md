@@ -23,7 +23,7 @@
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
 
 ### Session 2026-05-19 (iOS camera purpose string fix) — completed
-- Added the missing `NSCameraUsageDescription` entry to `/home/runner/work/toatre/toatre/mobile/ios/Runner/Info.plist` so the iOS app bundle declares camera access for SDK or attachment flows that reference camera APIs during App Store validation.
+- Added the missing `NSCameraUsageDescription` entry to `mobile/ios/Runner/Info.plist` so the iOS app bundle declares camera access for SDK or attachment flows that reference camera APIs during App Store validation.
 - Validation: attempted `flutter analyze && flutter test` in `mobile/`, but this runner does not have the Flutter CLI installed (`flutter: command not found`); verified the updated plist parses successfully with Python `plistlib`.
 
 ### Session 2026-05-18 (Timeline/detail parity cleanup) — completed
