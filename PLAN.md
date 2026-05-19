@@ -15,12 +15,16 @@
 
 ## 📊 Status Summary
 
-**Last updated:** 2026-05-18
+**Last updated:** 2026-05-19
 **Current phase:** Phase 0 — Accounts + scaffold (iOS CI ✅ deployed to TestFlight; STT+edit review+email reminders+defaultTier+account deletion+schedule suggest shipped; remaining: Playwright account steps)
 **Platforms:** iOS (TestFlight first), Android (always-buildable, ships to Play Internal in Phase 8), Web (toatre.com)
 **Build mode:** AI-driven. Owner directs, agent builds end-to-end.
 
 **Implementation note:** Code delivery has advanced into Phases 1–3 on web and mobile while several external account/dashboard steps in Phase 0 still remain open.
+
+### Session 2026-05-19 (iOS camera purpose string fix) — completed
+- Added the missing `NSCameraUsageDescription` entry to `mobile/ios/Runner/Info.plist` so the iOS app bundle declares camera access for SDK or attachment flows that reference camera APIs during App Store validation.
+- Validation: attempted `flutter analyze && flutter test` in `mobile/`, but this runner does not have the Flutter CLI installed (`flutter: command not found`); verified the updated plist parses successfully with Python `plistlib`.
 
 ### Session 2026-05-18 (Timeline/detail parity cleanup) — completed
 - Finished the latest mobile-web parity cleanup across Timeline and Toat detail: Flutter and web mobile timeline rows now expose a persistent round done control, the clear-state card/mic treatment was tightened again on both surfaces, and the web mobile clear card now uses a broader ribbon graphic instead of the thin stray line treatment.
